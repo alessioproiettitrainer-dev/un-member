@@ -96,13 +96,13 @@ function render() {
 // ---- esercizi ---------------------------------------------------------------
 function exercisesView() {
   const e = S.exercises.find((x) => x.id === S.exId);
-  return `<div class="cols">
+  return `<div class="cols ${e ? 'has-sel' : ''}">
     <div class="side"><button class="btn primary add" data-act="ex-new">+ Nuovo esercizio</button>
       ${S.exercises.map((x) => `<button class="it ${x.id === S.exId ? 'on' : ''}" data-ex="${x.id}">
         ${x.video ? `<video class="thumb" src="${esc(x.video)}#t=0.5" muted preload="metadata"></video>` : '<div class="thumb"></div>'}
         <div><div style="font-weight:800">${esc(x.name)}</div><div class="meta">${esc(x.category || '')}${x.video ? '' : ' · senza video'}</div></div></button>`).join('') || '<div class="muted small" style="padding:8px">Nessun esercizio ancora.</div>'}
     </div>
-    <div class="panel">${e ? `
+    <div class="panel">${e ? `<button class="sbtn mback" data-act="ex-back">‹ Torna all\'elenco</button>
       <div class="grid2"><div class="f"><label>Nome</label><input type="text" data-exf="name" value="${esc(e.name)}"></div>
       <div class="f"><label>Categoria</label><input type="text" data-exf="category" value="${esc(e.category)}" placeholder="es. Swing, Squat, Core"></div></div>
       <div class="f"><label>Indicazioni tecniche (cue)</label><textarea data-exf="cues" placeholder="es. Spingi l'anca, braccia rilassate">${esc(e.cues)}</textarea></div>
@@ -161,7 +161,7 @@ function usersView() {
     .sort((a, b) => (a.accessUntil || '').localeCompare(b.accessUntil || ''));
   const filters = [['all', 'Tutti'], ['pending', 'In attesa'], ['soon', 'In scadenza'], ['expired', 'Scaduti'], ['ok', 'Attivi']];
   const pend = Object.entries(S.pending);
-  return `<div class="cols" style="grid-template-columns:1fr 320px">
+  return `<div class="cols two">
     <div class="panel">
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><input type="text" id="uq" placeholder="Cerca nome o email (es. quella del pagamento Stripe)" value="${esc(S.uq)}" style="flex:1;min-width:220px">
         ${filters.map(([k, l]) => `<button class="sbtn ${S.uf === k ? 'acc' : ''}" data-uf="${k}">${l} ${counts[k] || 0}</button>`).join('')}</div>
@@ -202,7 +202,7 @@ function userDetail(u) {
 }
 
 function staffView() {
-  return `<div class="cols" style="grid-template-columns:1fr 360px">
+  return `<div class="cols two">
     <div class="panel"><div class="h2" style="margin-top:0">Staff</div>
       <div class="muted small" style="margin-bottom:12px">I delegati entrano in /admin con email e password e vedono solo la sezione Membri: attivano gli abbonamenti, pre-attivano le email e impostano calorie e macro. Non possono toccare programmi, esercizi o impostazioni, né eliminare membri.</div>
       ${S.staff.map((x) => `<div class="row" style="justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)"><div><b>${esc(x.name)}</b><div class="muted small">${esc(x.email)} · dal ${fmtDate(x.created)}</div></div><button class="sbtn ghost danger" data-act="staff-del" data-id="${x.id}">Rimuovi</button></div>`).join('') || '<div class="muted">Nessun delegato.</div>'}
@@ -229,12 +229,12 @@ function settingsView() {
 // ---- programmi --------------------------------------------------------------
 function programsView() {
   const p = S.draft;
-  return `<div class="cols">
+  return `<div class="cols ${p ? 'has-sel' : ''}">
     <div class="side"><button class="btn primary add" data-act="p-new">+ Nuovo programma</button>
       ${S.programs.map((x) => `<button class="it ${x.id === S.progId ? 'on' : ''}" data-prog="${x.id}"><div><div style="font-weight:800">${esc(x.title)}</div>
         <div class="meta">${x.published ? '● Pubblicato' : '○ Bozza'} · ${x.kind === 'cycle' ? `ciclo dal ${esc(x.startDate || '?')}` : 'base'} · ${(x.workouts || []).length} allenamenti</div></div></button>`).join('') || '<div class="muted small" style="padding:8px">Nessun programma ancora.</div>'}
     </div>
-    <div class="panel">${p ? programEditor(p) : '<div class="muted">Scegli un programma o creane uno nuovo. Struttura: programma → allenamenti (per settimana) → fasi (riscaldamento, workout, defaticamento) → blocchi (EMOM, AMRAP, AFAP, round a tempo, serie) → esercizi.</div>'}</div>
+    <div class="panel">${p ? `<button class="sbtn mback" data-act="p-back">‹ Torna all\'elenco</button>` + programEditor(p) : '<div class="muted">Scegli un programma o creane uno nuovo. Struttura: programma → allenamenti (per settimana) → fasi (riscaldamento, workout, defaticamento) → blocchi (EMOM, AMRAP, AFAP, round a tempo, serie) → esercizi.</div>'}</div>
   </div>`;
 }
 
@@ -399,19 +399,19 @@ root.addEventListener('click', async (e) => {
       return softRender();
     }
     if (t.dataset.tab) { S.tab = t.dataset.tab; return render(); }
-    if (t.dataset.ex) { S.exId = t.dataset.ex; return render(); }
+    if (t.dataset.ex) { S.exId = t.dataset.ex; render(); return window.scrollTo(0, 0); }
     if (t.dataset.prog) {
       if (S.dirty && !confirm('Ci sono modifiche non salvate. Continuare?')) return;
       S.progId = t.dataset.prog; S.draft = structuredClone(S.programs.find((x) => x.id === S.progId)); S.dirty = false;
-      return render();
+      render(); return window.scrollTo(0, 0);
     }
     const act = t.dataset.act;
     const path = t.dataset.path;
     switch (act) {
-      case 'ex-new': { const x = await call('POST', '/api/admin/exercises', { name: 'Nuovo esercizio' }); S.exercises.push(x); S.exId = x.id; break; }
+      case 'ex-new': { const x = await call('POST', '/api/admin/exercises', { name: 'Nuovo esercizio' }); S.exercises.push(x); S.exId = x.id; render(); window.scrollTo(0, 0); return; }
       case 'ex-save': { const x = S.exercises.find((y) => y.id === S.exId); await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Esercizio salvato'); break; }
       case 'ex-del': if (!confirm('Eliminare questo esercizio?')) return; await call('DELETE', `/api/admin/exercises/${S.exId}`); S.exercises = await call('GET', '/api/admin/exercises'); S.exId = null; break;
-      case 'p-new': { const x = await call('POST', '/api/admin/programs', {}); S.programs.push(x); S.progId = x.id; S.draft = structuredClone(x); S.dirty = false; break; }
+      case 'p-new': { const x = await call('POST', '/api/admin/programs', {}); S.programs.push(x); S.progId = x.id; S.draft = structuredClone(x); S.dirty = false; render(); window.scrollTo(0, 0); return; }
       case 'p-save': { const x = await call('PUT', `/api/admin/programs/${S.draft.id}`, S.draft); S.programs = S.programs.map((y) => (y.id === x.id ? x : y)); S.dirty = false; toast('Programma salvato'); break; }
       case 'p-del': if (!confirm('Eliminare il programma e tutti i suoi allenamenti?')) return; await call('DELETE', `/api/admin/programs/${S.draft.id}`); S.programs = S.programs.filter((y) => y.id !== S.draft.id); S.draft = null; S.progId = null; S.dirty = false; break;
       case 'w-add': {
@@ -452,6 +452,10 @@ root.addEventListener('click', async (e) => {
       }
       case 'bd-del': if (!confirm('Eliminare?')) return; await call('DELETE', `/api/admin/${t.dataset.kind}/${t.dataset.id}`); S[t.dataset.kind] = S[t.dataset.kind].filter((y) => y.id !== t.dataset.id); break;
       case 'u-del': if (!confirm('Eliminare questo membro e tutti i suoi dati (foto comprese)?')) return; await call('DELETE', `/api/admin/users/${t.dataset.id}`); S.users = S.users.filter((y) => y.id !== t.dataset.id); break;
+      case 'ex-back': S.exId = null; render(); return window.scrollTo(0, 0);
+      case 'p-back':
+        if (S.dirty && !confirm('Ci sono modifiche non salvate. Tornare all\'elenco?')) return;
+        S.progId = null; S.draft = null; S.dirty = false; render(); return window.scrollTo(0, 0);
       case 'u-open': S.openU[t.dataset.id] = !S.openU[t.dataset.id]; break;
       case 'revoke': {
         const u = S.users.find((y) => y.id === t.dataset.id);

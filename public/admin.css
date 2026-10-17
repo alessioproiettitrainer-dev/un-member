@@ -5,7 +5,20 @@
 .tabs button { padding: 10px 16px; border-radius: 12px; font-weight: 800; color: var(--muted); background: var(--card); }
 .tabs button.on { color: var(--accent-ink); background: var(--accent); }
 .cols { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
-@media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
+.cols.two { grid-template-columns: 1fr 340px; }
+.mback { display: none; margin-bottom: 14px; }
+@media (max-width: 820px) {
+  .cols, .cols.two { grid-template-columns: 1fr; }
+  .side { position: static; max-height: none; }
+  .cols.has-sel .side { display: none; }   /* sul telefono: o l'elenco o la scheda */
+  .cols:not(.has-sel) > .panel:not(:only-child) { display: none; }
+  .cols.two > .panel { display: block !important; }
+  .mback { display: inline-block; }
+  .adm { padding: 12px 10px 80px; }
+  .panel { padding: 14px; }
+  .wk > .hd { flex-wrap: wrap; }
+  .savebar { background: var(--bg); padding: 8px 0; }
+}
 .side { background: var(--card); border-radius: 16px; padding: 10px; position: sticky; top: 12px; max-height: calc(100dvh - 24px); overflow: auto; }
 .side .it { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 8px; border-radius: 10px; }
 .side .it:hover { background: var(--card-2); }
@@ -58,3 +71,7 @@ input[type=date] { width: 100%; padding: 10px 12px; border-radius: 10px; border:
 .st.expired { background: rgba(255, 107, 107, .15); color: #ff6b6b; }
 .udetail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .danger { color: #ff6b6b; }
+.grid2 > *, .f, .irow > * { min-width: 0; }
+input[type=file] { max-width: 100%; width: 100%; font-size: 13px; }
+.chk { flex-wrap: wrap; }
+@media (max-width: 820px) { .savebar { position: static; } }

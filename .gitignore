@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 data/db.json.tmp
 data/private/
 data/uploads/

@@ -98,7 +98,8 @@ function advanceGuide() {
   const s = P.steps[P.idx], g = P.g;
   g.i++; g.t = 0; g.rep = 0;
   // EMOM: finiti gli esercizi del minuto, il tempo che resta è recupero
-  if (s.emom && g.i >= s.items.length) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); say(pick(['Fatto! Recupera fino al prossimo minuto.', 'Bravo, ora recupero.'])); return render(); }
+  if (s.emom && g.i >= s.items.length) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready), ni = nx && !nx.video && nx.items[0];
+    say(`${pick(['Fatto! Recupera.', 'Bravo, ora recupero.'])}${ni ? ` Poi: ${ni.reps || ''} ${exOf(ni.exerciseId).name}.` : ''}`); return render(); }
   if (g.i >= s.items.length) {
     g.i = 0; g.round++;
     if (s.amrap) P.amrap[s.block] = g.round;
@@ -290,11 +291,15 @@ function render() {
   if (s.video) return renderVideo(s);
   const items = s.items;
   const g = P.g;
-  const focusItem = items[Math.min(g ? g.i : P.focus, items.length - 1)];
+  const next = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready);
+  // nel recupero dell'EMOM si guarda già il prossimo esercizio
+  const emomRest = g?.finished && s.emom;
+  const upNext = emomRest && next && !next.video ? next.items[0] : null;
+  const focusItem = upNext || items[Math.min(g ? g.i : P.focus, items.length - 1)];
   const fe = exOf(focusItem.exerciseId);
+  const nextUp = (it) => `<div class="upnext"><span>Prossimo esercizio</span><b>${esc(it.reps || (it.time ? it.time + 's' : ''))} ${esc(exOf(it.exerciseId).name)}</b></div>`;
   const bs = P.steps.filter((x) => x.blockKey === s.blockKey && !x.ready && !x.rest);
   const pos = bs.indexOf(s);
-  const next = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready);
   const nextE = next && !next.video && exOf(next.items[0].exerciseId);
   const mode = s.ready ? 'ready' : s.rest ? 'rest' : '';
 
@@ -307,9 +312,8 @@ function render() {
   let now;
   if (g) {
     const pace = paceOf(focusItem);
-    now = g.finished && s.emom
-      ? `<div class="lab rest-lab">${esc(s.label)} · recupero</div><div class="reps">Recupero</div><div class="note">Riparti al prossimo minuto: tieni d'occhio il timer.</div>
-         <div class="circuit">${items.map((it) => `<button class="past"><b>${esc(it.reps || '')}</b><span>${esc(exOf(it.exerciseId).name)} ✓</span></button>`).join('')}</div>`
+    now = emomRest
+      ? `<div class="lab rest-lab">${esc(s.label)} fatto ✓</div><div class="reps">Recupero</div>${upNext ? nextUp(upNext) : '<div class="note">Ultimo minuto finito!</div>'}`
       : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
       : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
@@ -320,7 +324,9 @@ function render() {
   } else if (items.length > 1) {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === P.focus ? 'sel' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;
   } else {
-    now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.rest ? 'Recupero · prossimo' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' && !s.rest ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
+    now = s.rest && !s.ready
+      ? `<div class="lab rest-lab">Recupero</div><div class="reps">Respira</div>${nextUp(focusItem)}`
+      : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 
   P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''}">
@@ -345,7 +351,7 @@ function render() {
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
       ${P.full ? '' : `<div class="video sq">${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
-      ${next && !s.ready ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
+      ${next && !s.ready && !s.rest && !emomRest ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
         <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>
     <div class="p-ctrl">${controls()}</div>

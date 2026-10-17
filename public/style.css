@@ -336,3 +336,8 @@ a { color: inherit; }
   .player:not(.full) .tile .big { font-size: 28px; }
   .player:not(.full) .p-top { padding-top: 8px; }
 }
+/* recupero: in evidenza il prossimo esercizio */
+.upnext { margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 122, 0, .12); border-left: 3px solid var(--accent); }
+.upnext span { display: block; font-size: 10px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); }
+.upnext b { display: block; font-size: 18px; font-weight: 900; text-transform: uppercase; }
+.player.full .upnext { background: rgba(0, 0, 0, .2); }

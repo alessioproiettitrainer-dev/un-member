@@ -95,7 +95,7 @@ async function route() {
     if (parts[0] === 'p' && parts[1]) return await programView(parts[1]);
     if (parts[0] === 'w' && parts[2]) return await workoutView(parts[1], parts[2]);
     if (parts[0] === 'play' && parts[2]) return await playView(parts[1], parts[2]);
-    if (parts[0] === 'progress') return progressView();
+    if (parts[0] === 'progress') return progressView(parts[1], parts[2]);
     if (parts[0] === 'food') return foodView(parts[1]);
     if (parts[0] === 'profile') return profileView();
     return await homeView();
@@ -278,17 +278,49 @@ async function playView(pid, wid) {
     onFinish: async (res) => {
       let saved = true;
       try { ME.history.push(await api('/api/me/workouts', 'POST', res)); } catch { saved = false; }
+      const entry = ME.history.at(-1);
       $app.innerHTML = `<div class="wrap finish"><div class="big">✓</div><div class="h1">Fatto!</div><div class="muted">${esc(res.workoutTitle)}</div>
         <div style="margin:24px 0;text-align:left"><div class="stat"><span>Durata</span><b>${fmt(res.seconds)}</b></div>
-        ${Object.entries(res.results).map(([k, v]) => `<div class="stat"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+        ${(res.scores || []).map((sc) => { const c = compareScore(entry, sc); return `<div class="stat"><span>${esc(sc.block)}<small class="cmp ${c.cls}">${esc(c.text)}</small></span><b>${esc(scoreText(sc))}</b></div>`; }).join('')}</div>
         ${saved ? '' : '<div class="muted small">Non sono riuscito a salvarlo: controlla la connessione.</div>'}
         <a class="btn primary block" href="#/">Torna a oggi</a></div>`;
     },
   });
 }
 
+// ---- risultati e record ------------------------------------------------------------
+const scoreText = (sc) => (sc.type === 'amrap' ? `${sc.rounds} round${sc.reps ? ` + ${sc.reps} rip` : ''}` : sc.capped ? `Time cap (${fmt(sc.seconds)})` : fmt(sc.seconds));
+// true se a è meglio di b (AMRAP: più round/rip; AFAP: meno tempo, il time cap conta come peggiore)
+const better = (a, b) => (a.type === 'amrap' ? a.rounds * 10000 + a.reps > b.rounds * 10000 + b.reps : (a.capped ? 1e9 : a.seconds) < (b.capped ? 1e9 : b.seconds));
+const sameBlock = (h, entry, key) => h.programId === entry.programId && h.workoutId === entry.workoutId && (h.scores || []).some((x) => x.key === key);
+function compareScore(entry, sc) {
+  const prev = ME.history.filter((h) => h !== entry && h.date < (entry?.date || '9') && sameBlock(h, entry || {}, sc.key)).map((h) => h.scores.find((x) => x.key === sc.key));
+  if (!prev.length) return { cls: '', text: 'Primo risultato: da battere la prossima volta' };
+  const best = prev.reduce((a, b) => (better(b, a) ? b : a));
+  if (better(sc, best)) return { cls: 'pr', text: '🏆 Nuovo record!' };
+  const last = prev.at(-1);
+  if (sc.type === 'amrap') {
+    const d = sc.rounds * 1000 + sc.reps - (last.rounds * 1000 + last.reps);
+    const dr = sc.rounds - last.rounds;
+    return d === 0 ? { cls: '', text: 'Uguale all\'ultima volta' } : { cls: d > 0 ? 'up' : 'down', text: `${dr ? `${dr > 0 ? '+' : '−'}${Math.abs(dr)} round` : `${d > 0 ? '+' : '−'}${Math.abs(sc.reps - last.reps)} rip`} rispetto all'ultima volta` };
+  }
+  if (sc.capped || last.capped) return { cls: '', text: `Ultima volta: ${scoreText(last)}` };
+  const d = sc.seconds - last.seconds;
+  return d === 0 ? { cls: '', text: 'Stesso tempo dell\'ultima volta' } : { cls: d < 0 ? 'up' : 'down', text: `${d < 0 ? '−' : '+'}${fmt(Math.abs(d))} rispetto all'ultima volta` };
+}
+// I record: il miglior risultato per ogni blocco AMRAP/AFAP che hai fatto
+function personalRecords() {
+  const best = new Map();
+  for (const h of ME.history) for (const sc of h.scores || []) {
+    const k = `${h.programId}|${h.workoutId}|${sc.key}`;
+    const cur = best.get(k);
+    if (!cur || better(sc, cur.sc)) best.set(k, { sc, h, times: (cur?.times || 0) + 1 }); else cur.times++;
+  }
+  return [...best.values()].sort((a, b) => b.h.date.localeCompare(a.h.date));
+}
+
 // ---- progressi -----------------------------------------------------------------
-function progressView() {
+function progressView(month, day) {
   const h = ME.history;
   const mins = Math.round(h.reduce((a, x) => a + x.seconds, 0) / 60);
   const memberDays = Math.floor((Date.now() - new Date(ME.joined).getTime()) / DAY) + 1;
@@ -311,10 +343,9 @@ function progressView() {
         <label class="btn primary" style="flex:1">+ Foto<input type="file" name="file" accept="image/*" hidden></label></form>
       ${photos.length ? `<div class="pgrid">${photos.map((ph) => `<div><img src="${src(ph)}" alt=""><span>${new Date(ph.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span><button class="x" data-delph="${ph.id}">✕</button></div>`).join('')}</div>` : ''}
     </div>
-    <div class="h2">Storico allenamenti</div>
-    ${h.length ? h.slice().reverse().map((x) => `<div class="wo"><div class="num">✓</div><div><div class="t">${esc(x.workoutTitle)}</div>
-      <div class="muted small">${esc(x.programTitle)} · ${new Date(x.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} · ${fmt(x.seconds)}</div>
-      ${Object.entries(x.results || {}).map(([k, v]) => `<div class="small" style="color:var(--accent)">${esc(k)}: ${esc(v)}</div>`).join('')}</div></div>`).join('') : '<div class="empty">Ancora nessun allenamento completato.</div>'}`);
+    <div class="h2">Diario allenamenti</div>
+    ${diary(month, day)}
+    ${(() => { const pr = personalRecords(); return pr.length ? `<div class="h2">I miei record</div>${pr.map(({ sc, h: x, times }) => `<div class="rec"><div><b>${esc(sc.block)}</b><div class="muted small">${esc(x.workoutTitle)} · ${new Date(x.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}${times > 1 ? ` · fatto ${times} volte` : ''}</div></div><span class="pill accent">${esc(scoreText(sc))}</span></div>`).join('')}` : ''; })()}`);
   document.getElementById('wform').onsubmit = async (e) => {
     e.preventDefault();
     try { ME.weights = await api('/api/me/weight', 'PUT', { date: todayIso(), kg: e.target.kg.value }); progressView(); } catch (err) { toast(err.message, true); }
@@ -332,6 +363,33 @@ function progressView() {
     ME.photos = ME.photos.filter((x) => x.id !== b.dataset.delph);
     progressView();
   }));
+}
+
+// Calendario del mese con i giorni allenati; tocchi un giorno e vedi cosa hai fatto
+function diary(month, day) {
+  const now = new Date();
+  const [y, m] = (month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).split('-').map(Number);
+  const first = new Date(y, m - 1, 1, 12), days = new Date(y, m, 0).getDate(), lead = (first.getDay() + 6) % 7;
+  const ym = (yy, mm) => `${yy}-${String(mm).padStart(2, '0')}`;
+  const prev = m === 1 ? ym(y - 1, 12) : ym(y, m - 1), next = m === 12 ? ym(y + 1, 1) : ym(y, m + 1);
+  const byDay = new Map();
+  for (const h of ME.history) { const k = iso(new Date(h.date)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(h); }
+  const inMonth = ME.history.filter((h) => iso(new Date(h.date)).startsWith(ym(y, m)));
+  const t = todayIso();
+  const cells = Array.from({ length: lead }, () => '<span></span>').join('') + Array.from({ length: days }, (_, i) => {
+    const k = `${ym(y, m)}-${String(i + 1).padStart(2, '0')}`, n = byDay.get(k)?.length || 0;
+    return `<a href="#/progress/${ym(y, m)}/${k}" class="cd ${n ? 'on' : ''} ${k === t ? 'today' : ''} ${k === day ? 'sel' : ''}">${i + 1}${n > 1 ? `<i>${n}</i>` : ''}</a>`;
+  }).join('');
+  const list = (day ? byDay.get(day) || [] : inMonth).slice().reverse();
+  return `<div class="card"><div class="row between"><a class="sbtn" href="#/progress/${prev}">‹</a><b style="text-transform:capitalize">${first.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</b>
+      ${ym(y, m) < ym(now.getFullYear(), now.getMonth() + 1) ? `<a class="sbtn" href="#/progress/${next}">›</a>` : '<span class="sbtn" style="opacity:.3">›</span>'}</div>
+    <div class="cal"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span>${cells}</div>
+    <div class="muted small">${inMonth.length} ${inMonth.length === 1 ? 'allenamento' : 'allenamenti'} questo mese${day ? ` · <a href="#/progress/${ym(y, m)}">mostra tutto il mese</a>` : ''}</div></div>
+  ${list.map((x) => `<div class="wo"><div class="num">✓</div><div style="flex:1"><div class="t">${esc(x.workoutTitle)}</div>
+      <div class="muted small">${esc(x.programTitle)} · ${new Date(x.date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })} · ${fmt(x.seconds)}</div>
+      ${(x.scores || []).length ? x.scores.map((sc) => { const c = compareScore(x, sc); return `<div class="small"><span style="color:var(--accent)">${esc(sc.block)}: ${esc(scoreText(sc))}</span> <span class="cmp ${c.cls}">${c.cls === 'pr' ? '🏆' : ''}</span></div>`; }).join('')
+        : Object.entries(x.results || {}).map(([k, v]) => `<div class="small" style="color:var(--accent)">${esc(k)}: ${esc(v)}</div>`).join('')}</div></div>`).join('')
+    || `<div class="empty">${day ? 'Nessun allenamento in questo giorno.' : 'Nessun allenamento questo mese.'}</div>`}`;
 }
 
 function weightChart(ws) {

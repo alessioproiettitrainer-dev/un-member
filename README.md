@@ -64,6 +64,8 @@ Per ogni esercizio scrivi quante ripetizioni ci sono nel video demo (es. 7 swing
 
 Nell'AMRAP e nell'AFAP il player fa il **giro guidato**: mostra il numero di ripetizione che sale (1, 2, 3… 50) al ritmo dell'esercizio, il video riparte in sincrono, poi passa da solo all'esercizio dopo e conta i round. Chi va più veloce preme "Fatto ›" e passa subito al prossimo. Nell'AMRAP il risultato salvato è tipo "4 round + 12 rip", nell'AFAP il tempo.
 
+**Risultati e record**: a fine AMRAP compare "Quanti giri hai fatto?" (precompilato dal giro guidato, il membro corregge); a fine AFAP il tempo, anch'esso correggibile. A fine allenamento il membro vede "🏆 Nuovo record!" oppure il confronto con l'ultima volta (+1 round, −0:23…).
+
 Nelle ripetizioni dei blocchi puoi scrivere `20`, `8-12` (conta 8), `5 + 5` (conta 10) o un tempo come `30s` / `1 min`.
 
 ### Community
@@ -78,7 +80,7 @@ Nelle ripetizioni dei blocchi puoi scrivere `20`, `8-12` (conta 8), `5 + 5` (con
 
 - **Oggi**: giorni da membro, calendario della settimana (giorni scelti cerchiati, allenamenti fatti in arancione), prossimo allenamento, challenge con pulsanti +5/+10/+25 e giorni completati, consigli.
 - **Allenamenti**: Programmi e Tutorial (per categoria; nel player il tasto "Guarda il tutorial" mette in pausa e apre il video). Ciclo in corso (con "settimana 2 di 4"), programmi base, cicli passati. "Segui questo programma" lo imposta come proprio.
-- **Progressi**: totali, peso con grafico, foto prima/dopo (private: le vede solo il membro), storico allenamenti.
+- **Progressi**: totali, peso con grafico, foto prima/dopo (private: le vede solo il membro), **diario** (calendario del mese con i giorni allenati: tocchi un giorno e vedi allenamenti, durata e risultati) e **I miei record** (miglior risultato per ogni AMRAP/AFAP).
 - **Cibo**: calorie e macro del giorno con barre di proteine, carboidrati e grassi, pasti della giornata, "aggiungi di nuovo" per i cibi frequenti, scelta dei macro.
 - **Community**: chat di gruppo, messaggi privati, membri.
 - **Profilo** (dalla foto in alto in Oggi): community, stato dell'abbonamento con link per rinnovare, giorni di allenamento, peso, altezza e dati per le calorie.

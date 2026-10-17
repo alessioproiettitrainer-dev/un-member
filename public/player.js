@@ -40,7 +40,7 @@ export async function startPlayer(root, program, workout, opts) {
   const steps = buildSteps(workout);
   P = {
     root, p: program, w: workout, steps, opts, idx: 0, running: true, endAt: 0, swStart: 0, swAcc: 0, remaining: 0,
-    started: Date.now(), focus: 0, lastBeep: null, amrap: {}, fortime: {}, g: null, lastTick: performance.now(),
+    started: Date.now(), focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
     subs: store.get('subs', {}), voice: store.get('voice', true),
   };
   try { P.wake = await navigator.wakeLock?.request('screen'); } catch {}
@@ -91,7 +91,7 @@ function advanceGuide() {
 }
 
 function tick() {
-  if (!P) return;
+  if (!P || P.awaiting) return; // in attesa del risultato: tutto fermo
   const s = P.steps[P.idx];
   const now = performance.now(), dt = (now - P.lastTick) / 1000;
   P.lastTick = now;
@@ -100,14 +100,14 @@ function tick() {
     const whole = Math.ceil(P.remaining);
     if (P.running && whole <= 3 && whole >= 1 && P.lastBeep !== whole) { P.lastBeep = whole; beep(660, 120); }
     if (P.running && P.remaining <= 0) {
-      if (s.amrap) P.amrap[s.block] = amrapResult(s);
       beep(1046, 400);
+      if (s.amrap) return askScore(s, 'amrap', amrapCounts(s));
       return enterStep(P.idx + 1);
     }
   } else if (s.kind === 'stopwatch' && s.cap && elapsed() >= s.cap) {
-    P.fortime[s.block] = `Time cap (${fmt(s.cap)})`;
     beep(1046, 400);
-    return enterStep(P.idx + 1);
+    freezeStopwatch();
+    return askScore(s, 'fortime', { seconds: s.cap, capped: true });
   }
   if (P.g && P.running && !P.g.finished) {
     const pace = paceOf(s.items[P.g.i]);
@@ -119,11 +119,48 @@ function tick() {
   updateClock();
 }
 
-function amrapResult(s) {
+// Stima dal giro guidato: round completi + ripetizioni del giro in corso
+function amrapCounts(s) {
   const g = P.g;
-  if (!g) return `${P.amrap[s.block] || 0} round`;
-  const partial = s.items.slice(0, g.i).reduce((a, it) => a + paceOf(it).reps, 0) + Math.max(0, g.rep - 1);
-  return `${g.round} round${partial ? ` + ${partial} rip` : ''}`;
+  if (!g) return { rounds: 0, reps: 0 };
+  const reps = s.items.slice(0, g.i).reduce((a, it) => a + paceOf(it).reps, 0) + Math.max(0, g.rep - 1);
+  return { rounds: g.round, reps };
+}
+const scoreText = (sc) => (sc.type === 'amrap' ? `${sc.rounds} round${sc.reps ? ` + ${sc.reps} rip` : ''}` : sc.capped ? `Time cap (${fmt(sc.seconds)})` : fmt(sc.seconds));
+function freezeStopwatch() {
+  if (P.running) { P.swAcc += (performance.now() - P.swStart) / 1000; P.running = false; }
+}
+
+// Schermata "il tuo risultato": parte dalla stima dell'app, il membro corregge e salva.
+function askScore(s, type, pre) {
+  P.awaiting = true;
+  const m = document.createElement('div');
+  m.className = 'tutmodal scoremodal';
+  const stepper = (name, label, val) => `<div class="stepper"><span class="lbl">${label}</span><div class="row"><button data-act="sc-dec" data-f="${name}">−</button><input type="number" min="0" inputmode="numeric" name="${name}" value="${val}"><button data-act="sc-inc" data-f="${name}">+</button></div></div>`;
+  const mm = Math.floor(pre.seconds / 60) || 0, ss = Math.round(pre.seconds % 60) || 0;
+  m.innerHTML = `<div class="sc-box"><div class="lab">${esc(s.block)}</div>
+    <div class="h1" style="font-size:30px">${type === 'amrap' ? 'AMRAP finito!' : pre.capped ? 'Tempo scaduto!' : 'Finito!'}</div>
+    <div class="muted" style="margin-bottom:18px">${type === 'amrap' ? 'Quanti giri hai fatto? Ho stimato io dal ritmo: correggi se serve.' : pre.capped ? 'Hai raggiunto il time cap. Il risultato viene salvato come time cap.' : 'Il tuo tempo: correggi se serve.'}</div>
+    ${type === 'amrap' ? stepper('rounds', 'Round completi', pre.rounds) + stepper('reps', 'Ripetizioni in più', pre.reps)
+      : pre.capped ? '' : `<div class="stepper"><span class="lbl">Tempo</span><div class="row"><input type="number" min="0" name="mm" value="${mm}"><b>:</b><input type="number" min="0" max="59" name="ss" value="${String(ss).padStart(2, '0')}"></div></div>`}
+    <button class="btn primary block" data-act="sc-save" style="margin-top:18px">Salva risultato</button></div>`;
+  m.dataset.type = type;
+  m.dataset.capped = pre.capped ? '1' : '';
+  m.dataset.cap = pre.seconds || 0;
+  P.root.querySelector('.player').append(m);
+  say(type === 'amrap' ? 'Tempo! Quanti giri hai fatto?' : 'Finito! Controlla il tuo tempo.');
+}
+function saveScore(m) {
+  const s = P.steps[P.idx], v = (n) => Math.max(0, Number(m.querySelector(`[name=${n}]`)?.value) || 0);
+  const sc = m.dataset.type === 'amrap'
+    ? { key: s.blockKey, block: s.block, type: 'amrap', rounds: v('rounds'), reps: v('reps') }
+    : { key: s.blockKey, block: s.block, type: 'fortime', seconds: m.dataset.capped ? Number(m.dataset.cap) : v('mm') * 60 + Math.min(59, v('ss')), capped: !!m.dataset.capped };
+  P.scores[s.blockKey] = sc;
+  (sc.type === 'amrap' ? P.amrap : P.fortime)[s.block] = scoreText(sc);
+  m.remove();
+  P.awaiting = false;
+  P.running = true;
+  enterStep(P.idx + 1);
 }
 
 const elapsed = () => P.swAcc + (P.running ? (performance.now() - P.swStart) / 1000 : 0);
@@ -328,9 +365,11 @@ function onClick(ev) {
     }
     case 'tutclose': ev.target.closest('.tutmodal')?.remove(); break;
     case 'gnext': if (P.g && !P.g.finished) advanceGuide(); break;
-    case 'done': P.fortime[s.block] = fmt(elapsed()); enterStep(P.idx + 1); break;
+    case 'done': freezeStopwatch(); askScore(s, 'fortime', { seconds: Math.round(elapsed()) }); break;
+    case 'sc-inc': case 'sc-dec': { const i = t.closest('.stepper').querySelector('input'); i.value = Math.max(0, (Number(i.value) || 0) + (t.dataset.act === 'sc-inc' ? 1 : -1)); break; }
+    case 'sc-save': saveScore(t.closest('.scoremodal')); break;
     case 'next':
-      if (s.amrap) P.amrap[s.block] = amrapResult(s);
+      if (s.amrap && !P.awaiting) { const c = amrapCounts(s); if (c.rounds || c.reps || P.remaining < s.dur - 15) return askScore(s, 'amrap', c); }
       P.running = true; enterStep(P.idx + 1); break;
     case 'prev': P.running = true; enterStep(P.idx - 1); break;
   }
@@ -343,6 +382,7 @@ function finish() {
   for (const [k, v] of Object.entries(P.fortime)) results[k] = v;
   say('Allenamento completato. Grande!');
   const { opts, p, w } = P;
+  const scores = Object.values(P.scores);
   stopPlayer();
-  opts.onFinish?.({ programId: p.id, programTitle: p.title, workoutId: w.id, workoutTitle: w.title, seconds: secs, results });
+  opts.onFinish?.({ programId: p.id, programTitle: p.title, workoutId: w.id, workoutTitle: w.title, seconds: secs, results, scores });
 }

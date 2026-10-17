@@ -195,8 +195,11 @@ me.put('/', (req, res) => {
   res.json(publicUser(u));
 });
 me.post('/workouts', (req, res) => {
-  const { programId, programTitle, workoutId, workoutTitle, seconds, results } = req.body || {};
-  const h = { id: newId(), programId, programTitle, workoutId, workoutTitle, seconds: Number(seconds) || 0, results: results || {}, date: new Date().toISOString() };
+  const { programId, programTitle, workoutId, workoutTitle, seconds, results, scores } = req.body || {};
+  const clean = (Array.isArray(scores) ? scores : []).slice(0, 20).map((x) => (x.type === 'amrap'
+    ? { key: String(x.key), block: String(x.block || ''), type: 'amrap', rounds: Math.max(0, Math.round(+x.rounds || 0)), reps: Math.max(0, Math.round(+x.reps || 0)) }
+    : { key: String(x.key), block: String(x.block || ''), type: 'fortime', seconds: Math.max(0, Math.round(+x.seconds || 0)), capped: !!x.capped }));
+  const h = { id: newId(), programId, programTitle, workoutId, workoutTitle, seconds: Number(seconds) || 0, results: results || {}, scores: clean, date: new Date().toISOString() };
   req.user.history.push(h);
   save();
   res.json(h);

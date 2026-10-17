@@ -424,6 +424,13 @@ admin.put('/settings', (req, res) => {
 });
 
 // CRUD generico per esercizi, programmi, tips e challenge
+// cancella dal disco un file caricato quando nessun elemento lo usa più (video sostituito o elemento eliminato)
+function dropUploads(old) {
+  const used = JSON.stringify(db);
+  for (const v of Object.values(old || {})) {
+    if (typeof v === 'string' && /^\/uploads\/[\w.-]+$/.test(v) && !used.includes(`"${v}"`)) fs.rm(path.join(UPLOADS, path.basename(v)), () => {});
+  }
+}
 function crud(name, defaults, beforeDelete, afterSave) {
   admin.get(`/${name}`, (req, res) => res.json(db[name]));
   admin.post(`/${name}`, (req, res) => {
@@ -435,16 +442,20 @@ function crud(name, defaults, beforeDelete, afterSave) {
   admin.put(`/${name}/:id`, (req, res) => {
     const i = db[name].findIndex((x) => x.id === req.params.id);
     if (i < 0) return res.status(404).end();
+    const old = db[name][i];
     db[name][i] = { ...req.body, id: req.params.id };
     afterSave?.(db[name][i]);
     save();
+    dropUploads(old);
     res.json(db[name][i]);
   });
   admin.delete(`/${name}/:id`, (req, res) => {
     const err = beforeDelete?.(req.params.id);
     if (err) return res.status(409).json({ error: err });
+    const old = db[name].find((x) => x.id === req.params.id);
     db[name] = db[name].filter((x) => x.id !== req.params.id);
     save();
+    dropUploads(old);
     res.json({ ok: true });
   });
 }

@@ -17,11 +17,29 @@ function beep(freq = 880, ms = 150, vol = 0.25) {
     o.start(); o.stop(a.currentTime + ms / 1000);
   } catch {}
 }
+// Voce: sceglie la voce italiana più naturale del telefono e legge il testo come lo direbbe un coach
+// (sigle pronunciate come parole, "rip" → ripetizioni, "3/10" → 3 di 10…).
+let VOICE = null;
+function pickVoice() {
+  const rank = (v) => (/natural|neural|premium|enhanced|online/i.test(v.name) ? 4 : 0) + (/google/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+  VOICE = (window.speechSynthesis?.getVoices() || []).filter((v) => /^it/i.test(v.lang)).sort((a, b) => rank(b) - rank(a))[0] || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+export function spoken(text) {
+  return String(text).toLowerCase()
+    .replace(/\bemom\b/g, 'èmom').replace(/\bamrap\b/g, 'àmrap').replace(/\bafap\b/g, 'àfap')
+    .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 di $2').replace(/(\d+)\s*-\s*(\d+)/g, 'da $1 a $2').replace(/\+\s*(\d+)/g, 'più $1').replace(/\s\/\s/g, ', ')
+    .replace(/(\d+)\s*s\b/g, '$1 secondi').replace(/(\d+)\s*min\b/g, '$1 minuti').replace(/\brip\b/g, 'ripetizioni')
+    .replace(/\b1 (minuti|secondi|ripetizioni)\b/g, (m, w) => `1 ${{ minuti: 'minuto', secondi: 'secondo', ripetizioni: 'ripetizione' }[w]}`)
+    .replace(/→/g, ' a ').replace(/\s*[·|]\s*/g, ', ').replace(/\s*&\s*/g, ' e ').replace(/\s+([,.!?])/g, '$1').replace(/\s+/g, ' ').trim();
+}
 function say(text) {
   if (!P?.voice || !window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'it-IT'; u.rate = 1.05;
+  const u = new SpeechSynthesisUtterance(spoken(text));
+  if (VOICE) u.voice = VOICE;
+  u.lang = 'it-IT'; u.rate = 1; u.pitch = 1;
   speechSynthesis.speak(u);
 }
 
@@ -41,7 +59,7 @@ export async function startPlayer(root, program, workout, opts) {
   P = {
     root, p: program, w: workout, steps, opts, idx: 0, running: true, endAt: 0, swStart: 0, swAcc: 0, remaining: 0,
     started: Date.now(), ladderStart: {}, focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
-    subs: store.get('subs', {}), voice: store.get('voice', true),
+    subs: store.get('subs', {}), voice: store.get('voice', true), full: store.get('fullVideo', false),
   };
   try { P.wake = await navigator.wakeLock?.request('screen'); } catch {}
   root.addEventListener('click', onClick);
@@ -66,13 +84,13 @@ function enterStep(i) {
   P.g = guided(s) ? { i: 0, round: 0, t: 0, rep: 0, finished: false, rounds: Number(s.counter) || 0 } : null;
   if (s.ladder && s.firstRung && !P.ladderStart[s.blockKey]) P.ladderStart[s.blockKey] = Date.now();
   render();
-  if (s.video) return say(`Video. ${s.block}`);
-  const e = exOf(s.items[0].exerciseId);
-  if (s.ready) say(`Preparati. ${s.block}. ${s.summary || ''}`);
-  else if (s.rest) say(`Recupero. Prossimo: ${e.name}`);
-  else if (P.g) say(`${s.label}. Via! ${s.items[0].reps || ''} ${e.name}`);
-  else if (s.items.length > 1) say(`${s.label}. ${s.items.map((it) => `${it.reps || ''} ${exOf(it.exerciseId).name}`).join(', ')}`);
-  else say(`${s.items[0].reps || ''} ${e.name}`);
+  if (s.video) return say(`Ora un video: ${s.block}.`);
+  const e = exOf(s.items[0].exerciseId), first = `${s.items[0].reps || ''} ${e.name}`;
+  if (s.ready) say(`Preparati! ${s.block}. ${s.summary || ''}. Si parte con ${first}.`);
+  else if (s.rest) say(`${pick(['Recupera.', 'Bene, recupero.', 'Ottimo, respira.'])} Poi: ${first}.`);
+  else if (P.g) say(`${s.label}. ${pick(['Via!', 'Vai!', 'Forza!'])} ${first}.`);
+  else if (s.items.length > 1) say(`${s.label}. ${s.items.map((it) => `${it.reps || ''} ${exOf(it.exerciseId).name}`).join(', ')}.`);
+  else say(`${first}.`);
 }
 
 // Passa all'esercizio successivo del giro; a fine giro conta il round.
@@ -80,17 +98,17 @@ function advanceGuide() {
   const s = P.steps[P.idx], g = P.g;
   g.i++; g.t = 0; g.rep = 0;
   // EMOM: finiti gli esercizi del minuto, il tempo che resta è recupero
-  if (s.emom && g.i >= s.items.length) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); say('Recupero'); return render(); }
+  if (s.emom && g.i >= s.items.length) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); say(pick(['Fatto! Recupera fino al prossimo minuto.', 'Bravo, ora recupero.'])); return render(); }
   if (g.i >= s.items.length) {
     g.i = 0; g.round++;
     if (s.amrap) P.amrap[s.block] = g.round;
     beep(990, 120);
-    if (s.kind === 'stopwatch' && g.rounds && g.round >= g.rounds) { g.finished = true; say('Ultimo round finito! Premi fine.'); return render(); }
+    if (s.kind === 'stopwatch' && g.rounds && g.round >= g.rounds) { g.finished = true; say('Ultimo round finito! Premi fine per salvare il tempo.'); return render(); }
   }
   P.focus = g.i;
   render();
   const it = s.items[g.i];
-  say(`${it.reps || ''} ${exOf(it.exerciseId).name}`);
+  say(`${it.reps || ''} ${exOf(it.exerciseId).name}.`);
 }
 
 function tick() {
@@ -306,10 +324,12 @@ function render() {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.rest ? 'Recupero · prossimo' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' && !s.rest ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 
-  P.root.innerHTML = `<div class="player">
+  P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''}">
+    ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
       <div class="ttl"><small>${esc(s.phase)}</small>${esc(s.block)}</div>
+      <button class="icon" data-act="full" aria-label="${P.full ? 'Riduci il video' : 'Video a tutto schermo'}">${P.full ? '⤡' : '⤢'}</button>
       <button class="icon ${P.voice ? 'on' : ''}" data-act="voice" aria-label="Voce">${P.voice ? '🔊' : '🔈'}</button>
     </div>
     <div class="p-scroll">
@@ -325,7 +345,7 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      <div class="video">${videoEl(fe)}</div>
+      ${P.full ? '' : `<div class="video sq">${videoEl(fe)}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
       ${next && !s.ready ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
         <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>
@@ -355,6 +375,7 @@ function onClick(ev) {
     case 'close': if (confirm('Vuoi uscire dall\'allenamento?')) { const o = P.opts; stopPlayer(); o.onExit?.(); } break;
     case 'voice': P.voice = !P.voice; store.set('voice', P.voice); if (!P.voice) speechSynthesis?.cancel?.(); render(); break;
     case 'pause': togglePause(); break;
+    case 'full': P.full = !P.full; store.set('fullVideo', P.full); render(); break;
     case 'tut': {
       // mette in pausa e apre il tutorial sopra il player
       const t = P.p.tutorials[t_ex(ev)];
@@ -387,7 +408,7 @@ function finish() {
   const results = {};
   for (const [k, v] of Object.entries(P.amrap)) results[k] = typeof v === 'number' ? `${v} round` : v;
   for (const [k, v] of Object.entries(P.fortime)) results[k] = v;
-  say('Allenamento completato. Grande!');
+  say(pick(['Allenamento finito. Grande lavoro!', 'Finito! Ottimo lavoro oggi.', 'Fatto! Anche oggi è andata.']));
   const { opts, p, w } = P;
   const scores = Object.values(P.scores);
   stopPlayer();

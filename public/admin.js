@@ -182,6 +182,9 @@ function usersView() {
     </div>
     <div class="panel"><div class="h2" style="margin-top:0">Pre-attiva un'email</div>
       <div class="muted small" style="margin-bottom:10px">Pagamento arrivato ma la persona non si è ancora iscritta all'app? Attiva la sua email: quando si iscrive con quella email trova già l'accesso.</div>
+      <form id="bulkf" class="f"><label>Più clienti insieme</label><textarea name="emails" placeholder="Incolla qui le email (una per riga, o separate da virgola). Puoi incollare anche un elenco copiato da Stripe: le email le trovo io."></textarea>
+        <select name="months"><option value="1">1 mese</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">1 anno</option></select><button class="btn primary">Attiva tutte</button></form>
+      <div class="lbl2" style="margin:14px 0 6px">Un cliente alla volta</div>
       <form id="pendf" class="f"><input type="text" name="email" placeholder="email@cliente.it"><select name="months"><option value="1">1 mese</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">1 anno</option></select><button class="btn primary">Attiva</button></form>
       ${pend.length ? `<div class="lbl2" style="margin-top:12px">In attesa di iscrizione</div>${pend.map(([em, g]) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b class="small">${esc(em)}</b><div class="muted small">${g.months} ${g.months === 1 ? 'mese' : 'mesi'} · da ${esc(g.by)} · ${fmtDate(g.date)}</div></div><button class="sbtn ghost danger" data-act="pend-del" data-email="${esc(em)}">✕</button></div>`).join('')}` : ''}
     </div></div>`;
@@ -490,7 +493,11 @@ root.addEventListener('submit', async (e) => {
   const f = e.target;
   e.preventDefault();
   try {
-    if (f.id === 'pendf') {
+    if (f.id === 'bulkf') {
+      const r = await call('POST', '/api/admin/pending/bulk', { emails: f.emails.value, months: Number(f.months.value) });
+      toast(`${r.total} email: ${r.activated} già iscritti attivati, ${r.pending} pre-attivati`);
+      [S.users, S.pending] = await Promise.all([call('GET', '/api/admin/users'), call('GET', '/api/admin/pending')]);
+    } else if (f.id === 'pendf') {
       const r = await call('POST', '/api/admin/pending', { email: f.email.value, months: Number(f.months.value) });
       if (r.applied) { toast(`${r.user} era già iscritto: attivo fino al ${fmtDate(r.accessUntil)}`); S.users = await call('GET', '/api/admin/users'); }
       else { toast('Email pre-attivata'); S.pending = await call('GET', '/api/admin/pending'); }

@@ -361,6 +361,20 @@ admin.post('/pending', (req, res) => {
   save();
   res.json({ applied: false });
 });
+// Attivazione multipla: incolli un elenco di email (da Stripe o dal sito), tutte con la stessa durata.
+admin.post('/pending/bulk', (req, res) => {
+  const m = Number(req.body?.months);
+  if (![1, 3, 6, 12].includes(m)) return res.status(400).json({ error: 'Scegli 1, 3, 6 o 12 mesi' });
+  const emails = [...new Set(String(req.body?.emails || '').toLowerCase().match(/[^\s,;<>"']+@[^\s,;<>"']+\.[a-z]{2,}/g) || [])];
+  if (!emails.length) return res.status(400).json({ error: 'Nessuna email trovata nel testo' });
+  let activated = 0, pending = 0;
+  for (const em of emails) {
+    const u = db.users.find((x) => x.email === em);
+    if (u) { grant(u, m, req.who); activated++; } else { db.pendingGrants[em] = { months: m, by: req.who, date: today() }; pending++; }
+  }
+  save();
+  res.json({ total: emails.length, activated, pending });
+});
 admin.delete('/pending/:email', (req, res) => {
   delete db.pendingGrants[req.params.email];
   save();

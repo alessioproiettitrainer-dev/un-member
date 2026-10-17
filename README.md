@@ -31,7 +31,7 @@ Sul telefono si installa come un'app: dal browser, "Aggiungi a schermata Home".
 I pagamenti restano sul tuo sito. Nell'app ogni membro ha una **data di scadenza**:
 
 1. Arriva un pagamento su Stripe. Tu o un delegato cercate l'email del cliente in **Membri** e premete +1 mese, +3 mesi, +6 mesi o +1 anno. Se l'accesso è ancora attivo i mesi si sommano alla scadenza attuale.
-2. Il cliente non si è ancora iscritto all'app? Usate **Pre-attiva un'email**: quando si iscrive con quella email trova l'accesso già attivo.
+2. Il cliente non si è ancora iscritto all'app? Usate **Pre-attiva un'email**: quando si iscrive con quella email trova l'accesso già attivo. Per tanti clienti insieme (es. tutti gli abbonati che hai già) incollate l'elenco delle email in **Più clienti insieme**: le email vengono trovate anche in un testo copiato da Stripe.
 3. Chi non ha un abbonamento attivo vede solo una schermata con il link al tuo sito e il tasto "Ho già pagato, ricontrolla". Progressi e storico restano salvati anche quando scade.
 4. Filtri: In attesa, In scadenza (7 giorni), Scaduti, Attivi. Ogni attivazione registra chi l'ha fatta e quando.
 

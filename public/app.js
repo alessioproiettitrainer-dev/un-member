@@ -278,11 +278,11 @@ async function playView(pid, wid) {
     onFinish: async (res) => {
       let saved = true;
       try { ME.history.push(await api('/api/me/workouts', 'POST', res)); } catch { saved = false; }
-      const entry = ME.history.at(-1);
+      const entry = saved ? ME.history.at(-1) : null;
       $app.innerHTML = `<div class="wrap finish"><div class="big">✓</div><div class="h1">Fatto!</div><div class="muted">${esc(res.workoutTitle)}</div>
         <div style="margin:24px 0;text-align:left"><div class="stat"><span>Durata</span><b>${fmt(res.seconds)}</b></div>
         ${(res.scores || []).map((sc) => { const c = compareScore(entry, sc); return `<div class="stat"><span>${esc(sc.block)}<small class="cmp ${c.cls}">${esc(c.text)}</small></span><b>${esc(scoreText(sc))}</b></div>`; }).join('')}</div>
-        ${saved ? '' : '<div class="muted small">Non sono riuscito a salvarlo: controlla la connessione.</div>'}
+        ${saved ? '' : `<div class="muted small">${ME.id === 'admin-preview' ? 'Anteprima admin: il risultato non viene salvato.' : 'Non sono riuscito a salvarlo: controlla la connessione.'}</div>`}
         <a class="btn primary block" href="#/">Torna a oggi</a></div>`;
     },
   });

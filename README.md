@@ -66,6 +66,13 @@ Nell'AMRAP e nell'AFAP il player fa il **giro guidato**: mostra il numero di rip
 
 **Risultati e record**: a fine AMRAP compare "Quanti giri hai fatto?" (precompilato dal giro guidato, il membro corregge); a fine AFAP il tempo, anch'esso correggibile. A fine allenamento il membro vede "🏆 Nuovo record!" oppure il confronto con l'ultima volta (+1 round, −0:23…).
 
+### EMOM e Ladder
+
+- **EMOM con 1, 2 o 3 esercizi in minuti diversi**: ogni esercizio è un minuto, a rotazione.
+- **EMOM con più esercizi nello stesso minuto** (es. 3 clean + 3 press + 3 squat): metti gli esercizi "con sopra" quello prima. Il player li guida uno alla volta con demo e conta (1 di 3, 2 di 3…), poi per il resto del minuto mostra **RECUPERO**.
+- **EMOM ladder**: nel campo "Ladder: rip in più a ogni giro" metti es. `1` e le ripetizioni salgono a ogni giro (3, 4, 5…).
+- **Blocco Ladder** (es. trazioni + piegamenti da 1 a 10 e ritorno): imposti da/a, salto, recupero tra i gradini e "andata e ritorno". Il membro preme "Fatto" a ogni gradino; alla fine il tempo totale viene salvato come risultato con record.
+
 Nelle ripetizioni dei blocchi puoi scrivere `20`, `8-12` (conta 8), `5 + 5` (conta 10) o un tempo come `30s` / `1 min`.
 
 ### Community

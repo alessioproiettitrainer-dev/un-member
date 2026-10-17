@@ -7,6 +7,7 @@ export const BLOCK_TYPES = {
   fortime: 'AFAP / For Time',
   intervals: 'Round a tempo (lavoro/recupero)',
   sets: 'Serie e ripetizioni',
+  ladder: 'Ladder (scala di ripetizioni)',
   video: 'Video (YouTube / Drive)',
 };
 
@@ -22,10 +23,11 @@ export function fmt(sec) {
 
 export function blockSummary(b) {
   switch (b.type) {
-    case 'emom': return `EMOM ${b.minutes || 0} min${(b.every || 60) !== 60 ? ` · ogni ${b.every}s` : ''}`;
+    case 'emom': return `EMOM ${b.minutes || 0} min${(b.every || 60) !== 60 ? ` · ogni ${b.every}s` : ''}${Number(b.ladderStep) ? ` · ladder ${b.ladderStep > 0 ? '+' : ''}${b.ladderStep} rip` : ''}`;
     case 'amrap': return `AMRAP ${b.cap || 0} min`;
     case 'fortime': return `AFAP · ${b.rounds || 1} round${b.cap ? ` · cap ${b.cap} min` : ''}`;
     case 'intervals': return `${b.rounds || 1} round · ${b.work || 0}s lavoro / ${b.rest || 0}s recupero`;
+    case 'ladder': { const f = Number(b.from) || 1, t = Number(b.to) || 10; return `Ladder ${f}→${t}${b.updown ? `→${f}` : ''}${b.rest ? ` · ${b.rest}s recupero` : ''}`; }
     case 'video': return `Video${b.minutes ? ` · ${b.minutes} min` : ''}`;
     case 'sets': return `${b.rounds || 1} serie${b.rest ? ` · ${b.rest}s recupero` : ''}`;
     default: return '';
@@ -35,6 +37,12 @@ export function blockSummary(b) {
 // Durata stimata in secondi (gli step manuali contano 40s, l'AFAP il cap o 8 minuti).
 export function estimateSeconds(workout) {
   return buildSteps(workout).reduce((t, s) => t + (s.kind === 'timed' ? s.dur : s.kind === 'stopwatch' ? (s.cap || 480) : s.video ? (s.minutes || 10) * 60 : 40), 0);
+}
+
+// "3" + 2 → "5"; testi non numerici (es. "5 + 5") restano uguali
+function shiftReps(text, delta) {
+  const m = String(text || '').match(/^(\s*)(\d+)(.*)$/);
+  return m && !m[3].includes('+') ? `${m[1]}${Math.max(1, Number(m[2]) + delta)}${m[3]}` : text;
 }
 
 function emomSlots(items) {
@@ -65,9 +73,23 @@ export function buildSteps(workout) {
         const every = Number(b.every) || 60;
         const n = Math.max(1, Math.round(((Number(b.minutes) || 1) * 60) / every));
         const slots = emomSlots(items);
+        const step = Number(b.ladderStep) || 0;
         for (let k = 0; k < n; k++) {
-          blockSteps.push({ ...base, kind: 'timed', dur: every, items: slots[k % slots.length], label: every === 60 ? `MINUTO ${k + 1}` : `INTERVALLO ${k + 1}`, counter: `${k + 1}/${n}`, counterLabel: every === 60 ? 'MINUTI' : 'INTERVALLI' });
+          // EMOM ladder: a ogni giro completo le ripetizioni salgono (o scendono) di "step"
+          const giro = Math.floor(k / slots.length);
+          const its = step ? slots[k % slots.length].map((it) => ({ ...it, reps: shiftReps(it.reps, step * giro) })) : slots[k % slots.length];
+          blockSteps.push({ ...base, kind: 'timed', dur: every, items: its, emom: true, label: every === 60 ? `MINUTO ${k + 1}` : `INTERVALLO ${k + 1}`, counter: `${k + 1}/${n}`, counterLabel: every === 60 ? 'MINUTI' : 'INTERVALLI' });
         }
+      } else if (b.type === 'ladder') {
+        // Ladder: gradini da "from" a "to" (ed eventualmente ritorno), ogni gradino tutti gli esercizi con quel numero di ripetizioni
+        const f = Math.max(1, Number(b.from) || 1), t = Math.max(1, Number(b.to) || 10), st = Math.max(1, Math.abs(Number(b.step) || 1));
+        const rungs = [];
+        if (f <= t) for (let r = f; r <= t; r += st) rungs.push(r); else for (let r = f; r >= t; r -= st) rungs.push(r);
+        if (b.updown) rungs.push(...rungs.slice(0, -1).reverse());
+        rungs.forEach((r, i) => {
+          blockSteps.push({ ...base, kind: 'manual', ladder: true, firstRung: i === 0, lastRung: i === rungs.length - 1, items: items.map((it) => ({ ...it, reps: String(r) })), label: `GRADINO ${i + 1} · ${r} RIP`, counter: `${i + 1}/${rungs.length}`, counterLabel: 'GRADINI' });
+          if ((Number(b.rest) || 0) > 0 && i < rungs.length - 1) blockSteps.push({ ...base, kind: 'timed', dur: Number(b.rest), rest: true, items: [items[0]], label: 'RECUPERO', counter: `${i + 1}/${rungs.length}`, counterLabel: 'GRADINI' });
+        });
       } else if (b.type === 'amrap') {
         blockSteps.push({ ...base, kind: 'timed', dur: (Number(b.cap) || 10) * 60, items, label: 'AMRAP', amrap: true, counterLabel: 'ROUND FATTI' });
       } else if (b.type === 'fortime') {

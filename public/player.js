@@ -40,7 +40,7 @@ export async function startPlayer(root, program, workout, opts) {
   const steps = buildSteps(workout);
   P = {
     root, p: program, w: workout, steps, opts, idx: 0, running: true, endAt: 0, swStart: 0, swAcc: 0, remaining: 0,
-    started: Date.now(), focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
+    started: Date.now(), ladderStart: {}, focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
     subs: store.get('subs', {}), voice: store.get('voice', true),
   };
   try { P.wake = await navigator.wakeLock?.request('screen'); } catch {}
@@ -54,7 +54,7 @@ function exOf(id) {
   return P.p.exercises[chosen] || P.p.exercises[id] || { name: 'Esercizio', id };
 }
 const paceOf = (it) => itemPace(it, exOf(it.exerciseId));
-const guided = (s) => s.amrap || s.kind === 'stopwatch';
+const guided = (s) => s.amrap || s.kind === 'stopwatch' || s.emom;
 
 function enterStep(i) {
   if (i >= P.steps.length) return finish();
@@ -64,6 +64,7 @@ function enterStep(i) {
   if (s.kind === 'timed') { P.remaining = s.dur; P.endAt = performance.now() + s.dur * 1000; }
   if (s.kind === 'stopwatch') { P.swAcc = 0; P.swStart = performance.now(); }
   P.g = guided(s) ? { i: 0, round: 0, t: 0, rep: 0, finished: false, rounds: Number(s.counter) || 0 } : null;
+  if (s.ladder && s.firstRung && !P.ladderStart[s.blockKey]) P.ladderStart[s.blockKey] = Date.now();
   render();
   if (s.video) return say(`Video. ${s.block}`);
   const e = exOf(s.items[0].exerciseId);
@@ -78,6 +79,8 @@ function enterStep(i) {
 function advanceGuide() {
   const s = P.steps[P.idx], g = P.g;
   g.i++; g.t = 0; g.rep = 0;
+  // EMOM: finiti gli esercizi del minuto, il tempo che resta è recupero
+  if (s.emom && g.i >= s.items.length) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); say('Recupero'); return render(); }
   if (g.i >= s.items.length) {
     g.i = 0; g.round++;
     if (s.amrap) P.amrap[s.block] = g.round;
@@ -257,7 +260,7 @@ function controls() {
   const pause = (wide) => `<button class="btn ${wide ? 'primary' : 'sq'}" data-act="pause" aria-label="Pausa">${P.running ? (wide ? '❚❚ Pausa' : '❚❚') : wide ? '▶ Riprendi' : '▶'}</button>`;
   if (s.kind === 'manual') return `<button class="btn sq" data-act="prev">⏮</button><button class="btn primary" data-act="next">✓ Fatto</button><button class="btn sq" data-act="next">⏭</button>`;
   if (s.kind === 'stopwatch') return `<button class="btn sq" data-act="prev">⏮</button>${pause(false)}${P.g && !P.g.finished ? '<button class="btn" data-act="gnext">Fatto ›</button>' : ''}<button class="btn primary" data-act="done">✓ Fine</button>`;
-  if (P.g) return `<button class="btn sq" data-act="prev">⏮</button>${pause(false)}<button class="btn primary" data-act="gnext">Fatto ›</button><button class="btn sq" data-act="next">⏭</button>`;
+  if (P.g) return `<button class="btn sq" data-act="prev">⏮</button>${pause(!!P.g.finished)}${P.g.finished ? '' : '<button class="btn primary" data-act="gnext">Fatto ›</button>'}<button class="btn sq" data-act="next">⏭</button>`;
   return `<button class="btn sq" data-act="prev">⏮</button>${pause(true)}<button class="btn sq" data-act="next">⏭</button>`;
 }
 function renderControls() {
@@ -287,9 +290,12 @@ function render() {
   let now;
   if (g) {
     const pace = paceOf(focusItem);
-    now = g.finished
+    now = g.finished && s.emom
+      ? `<div class="lab rest-lab">${esc(s.label)} · recupero</div><div class="reps">Recupero</div><div class="note">Riparti al prossimo minuto: tieni d'occhio il timer.</div>
+         <div class="circuit">${items.map((it) => `<button class="past"><b>${esc(it.reps || '')}</b><span>${esc(exOf(it.exerciseId).name)} ✓</span></button>`).join('')}</div>`
+      : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
-      : `<div class="lab">${esc(s.label)} · giro ${g.round + 1}</div>
+      : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
          <div class="repline"><span class="repnow" id="rep">${pace.reps ? g.rep || 1 : fmt(Math.ceil(pace.dur - g.t))}</span>${pace.reps ? `<span class="reptot">/ ${pace.reps} rip</span>` : '<span class="reptot">tempo</span>'}</div>
          <div class="name">${esc(fe.name)}</div>
          <div class="gbar"><i></i></div>
@@ -369,6 +375,7 @@ function onClick(ev) {
     case 'sc-inc': case 'sc-dec': { const i = t.closest('.stepper').querySelector('input'); i.value = Math.max(0, (Number(i.value) || 0) + (t.dataset.act === 'sc-inc' ? 1 : -1)); break; }
     case 'sc-save': saveScore(t.closest('.scoremodal')); break;
     case 'next':
+      if (s.ladder && s.lastRung && !P.awaiting) return askScore(s, 'fortime', { seconds: Math.round((Date.now() - (P.ladderStart[s.blockKey] || P.started)) / 1000) });
       if (s.amrap && !P.awaiting) { const c = amrapCounts(s); if (c.rounds || c.reps || P.remaining < s.dur - 15) return askScore(s, 'amrap', c); }
       P.running = true; enterStep(P.idx + 1); break;
     case 'prev': P.running = true; enterStep(P.idx - 1); break;

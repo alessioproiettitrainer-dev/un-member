@@ -1,0 +1,15 @@
+# Deploy su Render (render.com): New → Blueprint → collega il repository GitHub.
+services:
+  - type: web
+    name: un-member
+    runtime: node
+    plan: starter          # serve un piano a pagamento per avere il disco persistente
+    buildCommand: npm install
+    startCommand: node seed.js && npm start   # seed.js non tocca i dati se esistono già
+    envVars:
+      - key: ADMIN_KEY
+        generateValue: true                   # la trovi in Render → Environment
+    disk:
+      name: dati
+      mountPath: /opt/render/project/src/data
+      sizeGB: 5

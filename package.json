@@ -1,0 +1,17 @@
+{
+  "name": "kettlebell-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App di allenamento con video demo, timer EMOM/AMRAP/AFAP e pannello admin",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "multer": "^1.4.4"
+  }
+}

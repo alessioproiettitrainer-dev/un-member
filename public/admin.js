@@ -30,8 +30,16 @@ function uploadFile(file, onProgress) {
     fd.append('file', file);
     x.open('POST', '/api/admin/upload');
     for (const [k, v] of Object.entries(authHeaders())) x.setRequestHeader(k, v);
-    x.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    x.onload = () => (x.status < 300 ? resolve(JSON.parse(x.responseText).url) : reject(new Error(JSON.parse(x.responseText || '{}').error || 'Upload fallito')));
+    x.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      onProgress(e.loaded / e.total);
+      if (e.loaded === e.total && /^video\//.test(file.type)) toast('Video caricato: lo sto ottimizzando, attendi qualche secondo…');
+    };
+    x.onload = () => {
+      if (x.status >= 300) return reject(new Error(JSON.parse(x.responseText || '{}').error || 'Upload fallito'));
+      const j = JSON.parse(x.responseText);
+      resolve(Object.assign(new String(j.url), j)); // si usa come stringa (url) ma porta anche le dimensioni
+    };
     x.onerror = () => reject(new Error('Upload fallito'));
     x.send(fd);
   });
@@ -419,17 +427,17 @@ root.addEventListener('change', async (e) => {
     const url = await uploadFile(t.files[0], (f) => bar && (bar.style.width = `${f * 100}%`));
     if (t.dataset.upload === 'ex-video') {
       const ex = S.exercises.find((x) => x.id === S.exId);
-      ex.video = url;
+      ex.video = url.url || url;
       await call('PUT', `/api/admin/exercises/${ex.id}`, ex);
-      toast('Video caricato');
+      toast(url.after ? `Video pronto: da ${Math.round(url.before / 1048576)} MB a ${(url.after / 1048576).toFixed(1)} MB` : 'Video caricato');
     } else if (t.dataset.upload === 'logo') {
-      S.settings.logo = url;
+      S.settings.logo = String(url);
       toast('Logo caricato · ricordati di salvare');
     } else if (t.dataset.upload.startsWith('tip:')) {
       const x = S.tips.find((y) => y.id === t.dataset.upload.slice(4));
-      x.image = url; x._dirty = true;
+      x.image = String(url); x._dirty = true;
     } else if (t.dataset.upload === 'cover') {
-      S.draft.cover = url; S.dirty = true;
+      S.draft.cover = String(url); S.dirty = true;
       toast('Copertina caricata · ricordati di salvare');
     }
     render();

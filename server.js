@@ -573,8 +573,30 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 },
   fileFilter: (req, file, cb) => cb(null, /^(video|image)\//.test(file.mimetype)),
 });
-admin.post('/upload', upload.single('file'), (req, res) => {
+// I video caricati (anche 4K dal telefono) diventano MP4 H.264 a 720p senza audio:
+// pesano 1-2 MB, partono subito sul telefono dei clienti e vanno in loop puliti.
+let FFMPEG = null;
+try { FFMPEG = require('ffmpeg-static'); } catch {}
+function compressVideo(src) {
+  return new Promise((resolve) => {
+    if (!FFMPEG) return resolve(null);
+    const out = src.replace(/\.[^.]+$/, '') + '-720.mp4';
+    const { execFile } = require('child_process');
+    execFile(FFMPEG, ['-y', '-i', src, '-vf', "scale='if(gt(iw,ih),1280,-2)':'if(gt(iw,ih),-2,1280)'", '-r', '30',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', out],
+    { timeout: 10 * 60 * 1000 }, (err) => resolve(err ? null : out));
+  });
+}
+admin.post('/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Carica un video o un\'immagine' });
+  if (/^video\//.test(req.file.mimetype)) {
+    const before = req.file.size;
+    const out = await compressVideo(req.file.path);
+    if (out) {
+      fs.rm(req.file.path, () => {});
+      return res.json({ url: '/uploads/' + path.basename(out), before, after: fs.statSync(out).size });
+    }
+  }
   res.json({ url: '/uploads/' + req.file.filename });
 });
 

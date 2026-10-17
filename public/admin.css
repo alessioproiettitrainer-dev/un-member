@@ -33,7 +33,7 @@ input[type=text], input[type=number], input[type=password], select, textarea { w
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 textarea { min-height: 70px; resize: vertical; }
 .chk { display: flex; gap: 8px; align-items: center; font-weight: 700; font-size: 14px; }
-.vid { width: 220px; aspect-ratio: 4/5; background: #000; border-radius: 12px; object-fit: cover; }
+.vid { width: 220px; aspect-ratio: 9/16; background: #000; border-radius: 12px; object-fit: contain; }
 .upl { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
 .prog-bar { height: 6px; border-radius: 3px; background: var(--card-2); overflow: hidden; width: 220px; }
 .prog-bar i { display: block; height: 100%; background: var(--accent); width: 0; }

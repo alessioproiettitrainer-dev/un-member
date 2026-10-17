@@ -421,7 +421,7 @@ admin.put('/settings', (req, res) => {
 });
 
 // CRUD generico per esercizi, programmi, tips e challenge
-function crud(name, defaults, beforeDelete) {
+function crud(name, defaults, beforeDelete, afterSave) {
   admin.get(`/${name}`, (req, res) => res.json(db[name]));
   admin.post(`/${name}`, (req, res) => {
     const x = { ...defaults(), ...req.body, id: newId() };
@@ -433,6 +433,7 @@ function crud(name, defaults, beforeDelete) {
     const i = db[name].findIndex((x) => x.id === req.params.id);
     if (i < 0) return res.status(404).end();
     db[name][i] = { ...req.body, id: req.params.id };
+    afterSave?.(db[name][i]);
     save();
     res.json(db[name][i]);
   });
@@ -451,6 +452,14 @@ crud('exercises', () => ({ name: 'Nuovo esercizio', category: '', cues: '', vide
     if (e.easierId === id) e.easierId = '';
     if (e.harderId === id) e.harderId = '';
   }
+}, (ex) => {
+  // collegamento nei due sensi: se B è la versione più facile di A, A diventa la più difficile di B (se B non ne ha già una)
+  if (ex.easierId === ex.id) ex.easierId = '';
+  if (ex.harderId === ex.id) ex.harderId = '';
+  const easier = db.exercises.find((e) => e.id === ex.easierId);
+  if (easier && !easier.harderId) easier.harderId = ex.id;
+  const harder = db.exercises.find((e) => e.id === ex.harderId);
+  if (harder && !harder.easierId) harder.easierId = ex.id;
 });
 crud('programs', () => ({ title: 'Nuovo programma', subtitle: '', kind: 'base', startDate: '', level: 'Principiante', weeks: 8, description: '', cover: '', published: false, workouts: [] }));
 crud('tips', () => ({ title: 'Nuovo consiglio', text: '', image: '', start: '', end: '', published: false }));

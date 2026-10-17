@@ -90,7 +90,24 @@ async function load(who) {
 }
 
 const exName = (id) => S.exercises.find((e) => e.id === id)?.name || '—';
-const exOptions = (sel, empty = '— scegli —') => `<option value="">${empty}</option>` + S.exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).map((e) => `<option value="${e.id}" ${e.id === sel ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
+// Esercizi raggruppati per categoria e in ordine alfabetico, per trovarli in fretta anche quando sono tanti
+const exOptions = (sel, empty = '— scegli —', skipId = '') => {
+  const groups = new Map();
+  for (const e of S.exercises.slice().sort((a, b) => a.name.localeCompare(b.name))) {
+    if (e.id === skipId) continue;
+    const c = e.category || 'Senza categoria';
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(e);
+  }
+  return `<option value="">${empty}</option>` + [...groups].sort((a, b) => a[0].localeCompare(b[0])).map(([c, xs]) => `<optgroup label="${esc(c)}">${xs.map((e) => `<option value="${e.id}" ${e.id === sel ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</optgroup>`).join('');
+};
+// La scala completa (più facili ← esercizio → più difficili), per vederla nell'admin
+function exLadder(id) {
+  const by = new Map(S.exercises.map((e) => [e.id, e])), out = [id], seen = new Set([id]);
+  for (let x = by.get(id)?.easierId; x && by.has(x) && !seen.has(x); x = by.get(x).easierId) { out.unshift(x); seen.add(x); }
+  for (let x = by.get(id)?.harderId; x && by.has(x) && !seen.has(x); x = by.get(x).harderId) { out.push(x); seen.add(x); }
+  return out.map((x) => (x === id ? `<b style="color:var(--accent)">${esc(by.get(x).name)}</b>` : esc(by.get(x).name))).join(' → ');
+}
 
 function render() {
   root.innerHTML = `<div class="adm">
@@ -125,8 +142,10 @@ function exercisesView() {
       <div class="grid2"><div class="f"><label>Ripetizioni nel video demo</label><input type="number" min="0" step="1" data-exf="repsInVideo" value="${esc(e.repsInVideo)}" placeholder="es. 7"></div>
         <div class="f"><label>Secondi per ripetizione</label><input type="number" min="0" step="0.1" data-exf="secPerRep" id="spr" value="${esc(e.secPerRep)}" placeholder="es. 1 per lo swing"></div></div>
       <div class="muted small" style="margin:-4px 0 12px">Serve al giro guidato di AMRAP e AFAP: 50 swing a 1 s = 50 s, poi passa da solo all'esercizio dopo. Se scrivi quante ripetizioni ci sono nel video, il ritmo lo calcolo io dalla durata del video.</div>
-      <div class="grid2"><div class="f"><label>Variante più facile</label><select data-exf="easierId">${exOptions(e.easierId, '— nessuna —')}</select></div>
-      <div class="f"><label>Variante più difficile</label><select data-exf="harderId">${exOptions(e.harderId, '— nessuna —')}</select></div></div>
+      <div class="grid2"><div class="f"><label>Regressione (più facile)</label><select data-exf="easierId">${exOptions(e.easierId, '— nessuna —', e.id)}</select></div>
+      <div class="f"><label>Progressione (più difficile)</label><select data-exf="harderId">${exOptions(e.harderId, '— nessuna —', e.id)}</select></div></div>
+      <div class="muted small" style="margin:-4px 0 12px">Scegli tra gli esercizi già caricati: non serve rifarli. Il collegamento vale nei due sensi (se le Ginocchia sono la regressione del Push-up, il Push-up diventa la progressione delle Ginocchia).
+        ${e.easierId || e.harderId ? `<div style="margin-top:6px">Scala: ${exLadder(e.id)}</div>` : ''}</div>
       <div class="savebar"><button class="sbtn danger" data-act="ex-del">Elimina</button><button class="btn primary" data-act="ex-save">Salva esercizio</button></div>`
       : '<div class="muted">Scegli un esercizio a sinistra o creane uno nuovo. Per ogni esercizio carichi il video demo e colleghi le varianti più facile / più difficile.</div>'}
     </div></div>`;
@@ -467,7 +486,13 @@ root.addEventListener('click', async (e) => {
     const path = t.dataset.path;
     switch (act) {
       case 'ex-new': { const x = await call('POST', '/api/admin/exercises', { name: 'Nuovo esercizio' }); S.exercises.push(x); S.exId = x.id; render(); window.scrollTo(0, 0); return; }
-      case 'ex-save': { const x = S.exercises.find((y) => y.id === S.exId); await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Esercizio salvato'); break; }
+      case 'ex-save': { const x = S.exercises.find((y) => y.id === S.exId); await call('PUT', `/api/admin/exercises/${x.id}`, x);
+        // aggiorna i collegamenti automatici senza perdere quello che stai scrivendo altrove
+        for (const f of await call('GET', '/api/admin/exercises')) {
+          const o = S.exercises.find((y) => y.id === f.id);
+          if (!o) S.exercises.push(f); else if (o.id !== S.exId) { o.easierId = f.easierId; o.harderId = f.harderId; }
+        }
+        toast('Esercizio salvato'); break; }
       case 'ex-del': if (!confirm('Eliminare questo esercizio?')) return; await call('DELETE', `/api/admin/exercises/${S.exId}`); S.exercises = await call('GET', '/api/admin/exercises'); S.exId = null; break;
       case 'p-new': { const x = await call('POST', '/api/admin/programs', {}); S.programs.push(x); S.progId = x.id; S.draft = structuredClone(x); S.dirty = false; render(); window.scrollTo(0, 0); return; }
       case 'p-save': { const x = await call('PUT', `/api/admin/programs/${S.draft.id}`, S.draft); S.programs = S.programs.map((y) => (y.id === x.id ? x : y)); S.dirty = false; toast('Programma salvato'); break; }

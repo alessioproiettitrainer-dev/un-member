@@ -164,12 +164,26 @@ function updateRep(pace) {
   el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
 }
 
+// Scala di progressione: dall'esercizio del programma si scende per le versioni più facili
+// e si sale per quelle più difficili (fino a 3 livelli per lato).
+function ladder(baseId) {
+  const ex = P.p.exercises, out = [baseId], seen = new Set([baseId]);
+  for (let id = ex[baseId]?.easierId, n = 0; id && ex[id] && !seen.has(id) && n < 3; id = ex[id].easierId, n++) { out.unshift(id); seen.add(id); }
+  for (let id = ex[baseId]?.harderId, n = 0; id && ex[id] && !seen.has(id) && n < 3; id = ex[id].harderId, n++) { out.push(id); seen.add(id); }
+  return out;
+}
 function variantButtons(item) {
   const base = P.p.exercises[item.exerciseId];
-  if (!base || (!base.easierId && !base.harderId)) return '';
+  if (!base) return '';
+  const steps = ladder(base.id);
+  if (steps.length < 2) return '';
   const cur = P.subs[item.exerciseId] || item.exerciseId;
-  const b = (id, label) => (id && P.p.exercises[id] ? `<button data-sub="${id}" class="${cur === id ? 'on' : ''}">${label}</button>` : '');
-  return `<div class="subs">${b(base.easierId, '↓ Più facile')}${b(base.id, 'Standard')}${b(base.harderId, '↑ Più difficile')}</div>`;
+  const i = Math.max(0, steps.indexOf(cur)), bi = steps.indexOf(base.id);
+  const label = i === bi ? 'Standard' : i < bi ? `Più facile${bi - i > 1 ? ` ·${bi - i}` : ''}` : `Più difficile${i - bi > 1 ? ` ·${i - bi}` : ''}`;
+  return `<div class="subs">
+    <button ${i > 0 ? `data-sub="${steps[i - 1]}"` : 'disabled'}>↓ Più facile</button>
+    <span class="lvl"><b>${esc(label)}</b><span class="dots2">${steps.map((s, k) => `<i class="${k === i ? 'on' : ''} ${k === bi ? 'std' : ''}"></i>`).join('')}</span></span>
+    <button ${i < steps.length - 1 ? `data-sub="${steps[i + 1]}"` : 'disabled'}>↑ Più difficile</button></div>`;
 }
 
 function videoEl(e) {

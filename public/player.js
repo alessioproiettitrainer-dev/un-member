@@ -356,6 +356,8 @@ function render() {
 
 const t_ex = (ev) => ev.target.closest('[data-ex]').dataset.ex;
 function onClick(ev) {
+  const note = ev.target.closest('.now .note');
+  if (note) return note.classList.toggle('open'); // descrizione: tocca per leggerla tutta
   const t = ev.target.closest('button');
   if (!t || !P) return;
   ac(); // sblocca l'audio su iOS al primo tocco

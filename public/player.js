@@ -192,8 +192,7 @@ function togglePause() {
   P.lastTick = performance.now();
   if (s.kind === 'timed' && P.running) P.endAt = performance.now() + P.remaining * 1000;
   if (s.kind === 'stopwatch') { if (P.running) P.swStart = performance.now(); else P.swAcc += (performance.now() - P.swStart) / 1000; }
-  const v = P.root.querySelector('.video video');
-  if (v) P.running ? v.play().catch(() => {}) : v.pause();
+  P.root.querySelectorAll('.video video, .bgvid video').forEach((v) => (P.running ? v.play().catch(() => {}) : v.pause()));
   renderControls();
 }
 
@@ -317,7 +316,7 @@ function render() {
          <div class="repline"><span class="repnow" id="rep">${pace.reps ? g.rep || 1 : fmt(Math.ceil(pace.dur - g.t))}</span>${pace.reps ? `<span class="reptot">/ ${pace.reps} rip</span>` : '<span class="reptot">tempo</span>'}</div>
          <div class="name">${esc(fe.name)}</div>
          <div class="gbar"><i></i></div>
-         <div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === g.i ? 'sel' : k < g.i ? 'past' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;
+         ${items.length < 2 ? '' : `<div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === g.i ? 'sel' : k < g.i ? 'past' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`}`;
   } else if (items.length > 1) {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === P.focus ? 'sel' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;
   } else {
@@ -345,7 +344,7 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq">${videoEl(fe)}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
+      ${P.full ? '' : `<div class="video sq">${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
       ${next && !s.ready ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
         <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>

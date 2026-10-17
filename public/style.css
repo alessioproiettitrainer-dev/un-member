@@ -202,3 +202,7 @@ a { color: inherit; }
 .macpct b { display: block; font-size: 24px; color: var(--text); }
 .note-coach { margin-top: 10px; padding: 12px; border-left: 3px solid var(--accent); background: var(--card-2); border-radius: 8px; font-size: 14px; }
 .sbtn.on { background: rgba(255, 122, 0, .18); color: var(--accent); }
+.video iframe { width: 100%; height: 100%; border: 0; display: block; }
+.video.wide { aspect-ratio: 16/9; max-height: none; }
+.tip .tvid { position: relative; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; margin-bottom: 10px; background: #000; }
+.tip .tvid iframe { width: 100%; height: 100%; border: 0; }

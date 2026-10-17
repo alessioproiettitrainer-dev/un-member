@@ -1,4 +1,4 @@
-import { BLOCK_TYPES, PHASE_TYPES, blockSummary, estimateSeconds } from './engine.js';
+import { BLOCK_TYPES, PHASE_TYPES, blockSummary, embedUrl, estimateSeconds } from './engine.js';
 
 const root = document.getElementById('admin');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -109,7 +109,11 @@ function exercisesView() {
       <div class="f"><label>Video demo (in loop nel player)</label>
         <div class="upl">${e.video ? `<video class="vid" id="exvid" src="${esc(e.video)}" autoplay muted loop playsinline></video>` : '<div class="vid" style="display:grid;place-items:center;color:var(--muted)">Nessun video</div>'}
           <div style="display:grid;gap:8px"><input type="file" accept="video/*" data-upload="ex-video"><div class="prog-bar"><i id="upbar"></i></div>
-          <div class="muted small">Consigliato: verticale 4:5 o 9:16, 5–10 s, MP4 (H.264), senza audio.</div></div></div></div>
+          <div class="muted small">Consigliato: verticale 4:5 o 9:16, 5–10 s, MP4 (H.264), senza audio.</div>
+          ${e.video ? '<button class="sbtn ghost danger" data-act="ex-unvideo">Togli il video caricato</button>' : ''}</div></div></div>
+      <div class="f"><label>Oppure link YouTube / Google Drive / Vimeo</label><input type="text" data-exf="videoUrl" value="${esc(e.videoUrl)}" placeholder="https://youtu.be/… oppure https://drive.google.com/file/d/…">
+        <div class="muted small">Usato solo se non c'è un video caricato. YouTube e Vimeo girano in loop senza audio; Drive si avvia con un tocco. Su Drive il file va condiviso con "Chiunque abbia il link".</div>
+        ${!e.video && embedUrl(e.videoUrl) ? `<iframe class="vid" style="border:0" src="${esc(embedUrl(e.videoUrl, { loop: true }))}" allow="autoplay; encrypted-media"></iframe>` : e.videoUrl && !embedUrl(e.videoUrl) ? '<div class="small danger">Link non riconosciuto: usa un link di YouTube, Google Drive o Vimeo.</div>' : ''}</div>
       <div class="grid2"><div class="f"><label>Ripetizioni nel video demo</label><input type="number" min="0" step="1" data-exf="repsInVideo" value="${esc(e.repsInVideo)}" placeholder="es. 7"></div>
         <div class="f"><label>Secondi per ripetizione</label><input type="number" min="0" step="0.1" data-exf="secPerRep" id="spr" value="${esc(e.secPerRep)}" placeholder="es. 1 per lo swing"></div></div>
       <div class="muted small" style="margin:-4px 0 12px">Serve al giro guidato di AMRAP e AFAP: 50 swing a 1 s = 50 s, poi passa da solo all'esercizio dopo. Se scrivi quante ripetizioni ci sono nel video, il ritmo lo calcolo io dalla durata del video.</div>
@@ -139,6 +143,7 @@ function boardView() {
       ${S.tips.map((x) => `<div class="block">
         <div class="f"><label>Titolo</label><input type="text" data-bd="tips.${x.id}.title" value="${esc(x.title)}"></div>
         <div class="f"><label>Testo</label><textarea data-bd="tips.${x.id}.text">${esc(x.text)}</textarea></div>
+        <div class="f"><label>Video (opzionale): link YouTube, Google Drive o Vimeo</label><input type="text" data-bd="tips.${x.id}.videoUrl" value="${esc(x.videoUrl)}" placeholder="https://youtu.be/…"></div>
         <div class="f"><label>Immagine (opzionale)</label><input type="file" accept="image/*" data-upload="tip:${x.id}">${x.image ? `<img src="${esc(x.image)}" style="width:160px;border-radius:10px;margin-top:6px">` : ''}</div>
         <div class="grid2">${dates('tips', x)}</div>${foot('tips', x)}</div>`).join('') || '<div class="muted">Nessun consiglio.</div>'}</div>
   </div>`;
@@ -291,11 +296,15 @@ function blockEditor(b, P) {
     fortime: num(P, 'rounds', b.rounds, 'Round') + num(P, 'cap', b.cap, 'Time cap (min, opz.)'),
     intervals: num(P, 'rounds', b.rounds, 'Round') + num(P, 'work', b.work, 'Lavoro (s)') + num(P, 'rest', b.rest, 'Recupero (s)') + num(P, 'restRounds', b.restRounds, 'Recupero tra round (s)'),
     sets: num(P, 'rounds', b.rounds, 'Serie') + num(P, 'rest', b.rest, 'Recupero (s)'),
+    video: num(P, 'minutes', b.minutes, 'Durata (minuti, circa)'),
   }[b.type];
   const thirdCol = b.type === 'intervals' ? 'Lavoro (s) opz.' : b.type === 'emom' ? 'Stesso minuto' : '';
   return `<div class="block"><div class="bhd"><b>${esc(BLOCK_TYPES[b.type])}</b><span class="muted small">${esc(blockSummary(b))}</span><span style="flex:1"></span>${mover(P)}</div>
     <div class="grid2"><div class="f"><label>Titolo blocco</label><input type="text" data-b="${P}.title" value="${esc(b.title)}"></div>${params}</div>
     <div class="f"><label>Note</label><input type="text" data-b="${P}.notes" value="${esc(b.notes)}" placeholder="es. Usa un peso che ti permetta tecnica perfetta"></div>
+    ${b.type === 'video' ? `<div class="f"><label>Link del video (YouTube, Google Drive o Vimeo)</label><input type="text" data-b="${P}.url" value="${esc(b.url)}" placeholder="https://youtu.be/…">
+      ${b.url ? (embedUrl(b.url) ? `<iframe style="width:100%;max-width:420px;aspect-ratio:16/9;border:0;border-radius:10px" src="${esc(embedUrl(b.url))}" allowfullscreen></iframe>` : '<div class="small danger">Link non riconosciuto: usa un link di YouTube, Google Drive o Vimeo.</div>') : ''}
+      <div class="muted small">Su Drive il file va condiviso con "Chiunque abbia il link". Su YouTube puoi usare video "Non in elenco": li vede solo chi ha il link.</div></div></div>` : `
     <div class="items"><div class="irow ihdr"><span>Esercizio</span><span>Reps / tempo</span><span>${thirdCol}</span><span>Note</span><span></span></div>
       ${(b.items || []).map((it, ii) => `<div class="irow">
         <select data-b="${P}.items.${ii}.exerciseId">${exOptions(it.exerciseId)}</select>
@@ -305,7 +314,7 @@ function blockEditor(b, P) {
         <input type="text" data-b="${P}.items.${ii}.notes" value="${esc(it.notes)}" placeholder="opzionale">
         <span class="acts">${mover(`${P}.items.${ii}`)}</span></div>`).join('')}
     </div>
-    <button class="sbtn" style="margin-top:8px" data-act="i-add" data-path="${P}">+ Esercizio</button></div>`;
+    <button class="sbtn" style="margin-top:8px" data-act="i-add" data-path="${P}">+ Esercizio</button></div>`}`;
 }
 
 const mover = (P) => `<button class="sbtn ghost" data-act="mv-up" data-path="${P}">↑</button><button class="sbtn ghost" data-act="mv-down" data-path="${P}">↓</button><button class="sbtn ghost danger" data-act="rm" data-path="${P}">✕</button>`;
@@ -331,7 +340,7 @@ root.addEventListener('input', (e) => {
     const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : Number(t.value)) : t.value;
     setPath(S.draft, t.dataset.b, v);
     S.dirty = true;
-    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /\.(minutes|every|cap|rounds|work|rest|restRounds|week)$/.test(t.dataset.b)) softRender();
+    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url)$/.test(t.dataset.b)) softRender();
   }
   if (t.dataset.exf) {
     const ex = S.exercises.find((x) => x.id === S.exId);
@@ -433,7 +442,7 @@ root.addEventListener('click', async (e) => {
       }
       case 'ph-add': getPath(S.draft, path).phases.push({ id: uid(), type: t.dataset.type, title: PHASE_TYPES[t.dataset.type], blocks: [] }); S.dirty = true; break;
       case 'b-add': {
-        const defaults = { emom: { minutes: 10, every: 60 }, amrap: { cap: 12 }, fortime: { rounds: 3, cap: 0 }, intervals: { rounds: 3, work: 40, rest: 20, restRounds: 60 }, sets: { rounds: 3, rest: 60 } }[t.dataset.type];
+        const defaults = { emom: { minutes: 10, every: 60 }, amrap: { cap: 12 }, fortime: { rounds: 3, cap: 0 }, intervals: { rounds: 3, work: 40, rest: 20, restRounds: 60 }, sets: { rounds: 3, rest: 60 }, video: { minutes: 20, url: '' } }[t.dataset.type];
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
       }
       case 'i-add': getPath(S.draft, path).items.push({ exerciseId: '', reps: '', notes: '' }); S.dirty = true; break;
@@ -452,6 +461,7 @@ root.addEventListener('click', async (e) => {
       }
       case 'bd-del': if (!confirm('Eliminare?')) return; await call('DELETE', `/api/admin/${t.dataset.kind}/${t.dataset.id}`); S[t.dataset.kind] = S[t.dataset.kind].filter((y) => y.id !== t.dataset.id); break;
       case 'u-del': if (!confirm('Eliminare questo membro e tutti i suoi dati (foto comprese)?')) return; await call('DELETE', `/api/admin/users/${t.dataset.id}`); S.users = S.users.filter((y) => y.id !== t.dataset.id); break;
+      case 'ex-unvideo': { const x = S.exercises.find((y) => y.id === S.exId); x.video = ''; await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Video tolto'); break; }
       case 'ex-back': S.exId = null; render(); return window.scrollTo(0, 0);
       case 'p-back':
         if (S.dirty && !confirm('Ci sono modifiche non salvate. Tornare all\'elenco?')) return;

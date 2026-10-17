@@ -20,7 +20,7 @@ Sul telefono si installa come un'app: dal browser, "Aggiungi a schermata Home".
 | Sezione | Cosa fai |
 |---|---|
 | Programmi | Programmi **base** (sempre disponibili) e **cicli** (partono da una data e durano N settimane: 4–6). I cicli futuri restano nascosti finché non partono, quelli finiti vanno in "Cicli passati" |
-| Esercizi & video | Video demo, indicazioni tecniche, varianti più facile/difficile, **ritmo per ripetizione** |
+| Esercizi & video | Video demo (file o link YouTube/Drive/Vimeo), indicazioni tecniche, varianti più facile/difficile, **ritmo per ripetizione** |
 | Bacheca | **Challenge** (es. 100 push-up al giorno, 8.000 passi) e **consigli lifestyle**, con date di inizio e fine |
 | Membri | Abbonamenti (+1/+3/+6 mesi, +1 anno, revoca), pre-attivazione per email, calorie e macro impostati dal coach |
 | Staff | Account dei delegati (email + password) |
@@ -46,6 +46,15 @@ I macro sono in percentuale e diventano grammi (4 kcal/g per proteine e carboidr
 - **Il coach imposta**: dall'admin (Membri → Nutrizione) scegli kcal fisse o calcolo automatico, le percentuali e una nota. Il membro le vede bloccate con scritto "Impostati dal tuo coach". "Lascia scegliere al membro" gli restituisce la scelta.
 
 Nel diario del cibo si scrivono le kcal oppure solo i grammi dei macro (le kcal le calcola l'app).
+
+### Video lunghi da YouTube, Google Drive o Vimeo
+
+I video lunghi non serve caricarli sull'app: basta il link.
+- **Blocco "Video"** in un allenamento (es. una lezione da seguire o una spiegazione): incolli il link e scrivi la durata indicativa. Nel player il video si guarda dentro l'app, c'è il tasto "Apri a schermo intero", e con "Fatto" si passa al blocco dopo.
+- **Esercizi**: al posto del file caricato puoi mettere un link. YouTube e Vimeo girano in loop senza audio come i video caricati, Drive si avvia con un tocco. Se ci sono sia il file sia il link, vince il file.
+- **Consigli in bacheca**: campo video opzionale.
+
+Su Google Drive il file va condiviso con "Chiunque abbia il link". Su YouTube puoi pubblicare i video come "Non in elenco": non compaiono nelle ricerche e li vede solo chi ha il link.
 
 ### Il ritmo per ripetizione (AMRAP e AFAP)
 

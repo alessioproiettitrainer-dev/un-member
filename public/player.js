@@ -1,4 +1,4 @@
-import { buildSteps, fmt, itemPace } from './engine.js';
+import { buildSteps, embedUrl, fmt, itemPace } from './engine.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = {
@@ -65,6 +65,7 @@ function enterStep(i) {
   if (s.kind === 'stopwatch') { P.swAcc = 0; P.swStart = performance.now(); }
   P.g = guided(s) ? { i: 0, round: 0, t: 0, rep: 0, finished: false, rounds: Number(s.counter) || 0 } : null;
   render();
+  if (s.video) return say(`Video. ${s.block}`);
   const e = exOf(s.items[0].exerciseId);
   if (s.ready) say(`Preparati. ${s.block}. ${s.summary || ''}`);
   else if (s.rest) say(`Recupero. Prossimo: ${e.name}`);
@@ -172,9 +173,32 @@ function variantButtons(item) {
 }
 
 function videoEl(e) {
-  return e.video
-    ? `<video src="${esc(e.video)}" autoplay muted loop playsinline preload="auto"></video>`
-    : `<div class="novid">${esc(e.name)}<br><span class="muted">video demo non caricato</span></div>`;
+  if (e.video) return `<video src="${esc(e.video)}" autoplay muted loop playsinline preload="auto"></video>`;
+  const emb = embedUrl(e.videoUrl, { loop: true });
+  if (emb) return `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="${esc(e.name)}"></iframe>`;
+  return `<div class="novid">${esc(e.name)}<br><span class="muted">video demo non caricato</span></div>`;
+}
+const nextLabel = (n) => (n.video ? `▶ Video · ${n.block}` : `${n.items[0].reps || ''} ${exOf(n.items[0].exerciseId).name}`);
+
+// Blocco video lungo (YouTube / Drive / Vimeo): si guarda e si segue, poi "Fatto".
+function renderVideo(s) {
+  const emb = embedUrl(s.video);
+  const next = P.steps[P.idx + 1];
+  P.root.innerHTML = `<div class="player">
+    <div class="p-top">
+      <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
+      <div class="ttl"><small>${esc(s.phase)}</small>${esc(s.block)}</div>
+      <span class="icon" style="visibility:hidden"></span>
+    </div>
+    <div class="p-scroll">
+      <div class="now"><div class="lab">Video${s.minutes ? ` · circa ${s.minutes} min` : ''}</div>${s.notes ? `<div class="note">${esc(s.notes)}</div>` : ''}</div>
+      ${emb ? `<div class="video wide"><iframe src="${esc(emb)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="${esc(s.block)}"></iframe></div>`
+        : `<div class="now" style="margin-top:12px">Questo link non si può mostrare dentro l'app.</div>`}
+      <a class="btn block" style="margin-top:12px" href="${esc(s.video)}" target="_blank" rel="noopener">Apri il video a schermo intero ↗</a>
+      ${next ? `<div class="next"><div class="ph"></div><div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
+    </div>
+    <div class="p-ctrl">${controls()}</div>
+  </div>`;
 }
 
 function controls() {
@@ -192,6 +216,7 @@ function renderControls() {
 
 function render() {
   const s = P.steps[P.idx];
+  if (s.video) return renderVideo(s);
   const items = s.items;
   const g = P.g;
   const focusItem = items[Math.min(g ? g.i : P.focus, items.length - 1)];
@@ -199,7 +224,7 @@ function render() {
   const bs = P.steps.filter((x) => x.blockKey === s.blockKey && !x.ready && !x.rest);
   const pos = bs.indexOf(s);
   const next = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready);
-  const nextE = next && exOf(next.items[0].exerciseId);
+  const nextE = next && !next.video && exOf(next.items[0].exerciseId);
   const mode = s.ready ? 'ready' : s.rest ? 'rest' : '';
 
   let right;
@@ -243,8 +268,8 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
       </div>
       <div class="video">${videoEl(fe)}</div>
-      ${next && !s.ready ? `<div class="next">${nextE.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
-        <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(next.items[0].reps || '')} ${esc(nextE.name)}</div></div></div>` : ''}
+      ${next && !s.ready ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
+        <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>
     <div class="p-ctrl">${controls()}</div>
   </div>`;

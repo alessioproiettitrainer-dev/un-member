@@ -7,6 +7,7 @@ export const BLOCK_TYPES = {
   fortime: 'AFAP / For Time',
   intervals: 'Round a tempo (lavoro/recupero)',
   sets: 'Serie e ripetizioni',
+  video: 'Video (YouTube / Drive)',
 };
 
 export const PHASE_TYPES = { warmup: 'Riscaldamento', workout: 'Workout', cooldown: 'Defaticamento' };
@@ -25,6 +26,7 @@ export function blockSummary(b) {
     case 'amrap': return `AMRAP ${b.cap || 0} min`;
     case 'fortime': return `AFAP · ${b.rounds || 1} round${b.cap ? ` · cap ${b.cap} min` : ''}`;
     case 'intervals': return `${b.rounds || 1} round · ${b.work || 0}s lavoro / ${b.rest || 0}s recupero`;
+    case 'video': return `Video${b.minutes ? ` · ${b.minutes} min` : ''}`;
     case 'sets': return `${b.rounds || 1} serie${b.rest ? ` · ${b.rest}s recupero` : ''}`;
     default: return '';
   }
@@ -32,7 +34,7 @@ export function blockSummary(b) {
 
 // Durata stimata in secondi (gli step manuali contano 40s, l'AFAP il cap o 8 minuti).
 export function estimateSeconds(workout) {
-  return buildSteps(workout).reduce((t, s) => t + (s.kind === 'timed' ? s.dur : s.kind === 'stopwatch' ? (s.cap || 480) : 40), 0);
+  return buildSteps(workout).reduce((t, s) => t + (s.kind === 'timed' ? s.dur : s.kind === 'stopwatch' ? (s.cap || 480) : s.video ? (s.minutes || 10) * 60 : 40), 0);
 }
 
 function emomSlots(items) {
@@ -46,13 +48,19 @@ function emomSlots(items) {
 
 export function buildSteps(workout) {
   const steps = [];
-  const phases = (workout.phases || []).filter((p) => (p.blocks || []).some((b) => (b.items || []).length));
+  const hasContent = (b) => (b.type === 'video' ? !!b.url : (b.items || []).length);
+  const phases = (workout.phases || []).filter((p) => (p.blocks || []).some(hasContent));
   phases.forEach((ph, pi) => {
-    const blocks = ph.blocks.filter((b) => (b.items || []).length);
+    const blocks = ph.blocks.filter(hasContent);
     blocks.forEach((b, bi) => {
-      const base = { phase: ph.title || PHASE_TYPES[ph.type] || 'Workout', phaseType: ph.type, block: b.title || BLOCK_TYPES[b.type], blockType: b.type, blockKey: `${pi}.${bi}`, notes: b.notes || '' };
+      const base = { phase: ph.title || PHASE_TYPES[ph.type] || 'Workout', phaseType: ph.type, block: b.title || (b.type === 'video' ? 'Video' : BLOCK_TYPES[b.type]), blockType: b.type, blockKey: `${pi}.${bi}`, notes: b.notes || '' };
       const items = b.items;
       const blockSteps = [];
+      if (b.type === 'video') {
+        // Video lungo da seguire: niente "preparati", si va avanti con "Fatto"
+        steps.push({ ...base, kind: 'manual', video: b.url, minutes: Number(b.minutes) || 0, items: [], label: 'VIDEO' });
+        return;
+      }
       if (b.type === 'emom') {
         const every = Number(b.every) || 60;
         const n = Math.max(1, Math.round(((Number(b.minutes) || 1) * 60) / every));
@@ -117,4 +125,22 @@ export function itemPace(item, ex) {
   if (!reps) return { reps: 0, spr: 0, dur: 30 };
   const spr = secPerRep(ex);
   return { reps, spr, dur: reps * spr };
+}
+
+// ---- video esterni (YouTube, Google Drive, Vimeo) -----------------------------
+// Restituisce l'indirizzo da mettere in un <iframe>, oppure '' se il link non è riconosciuto.
+export function embedUrl(url, { loop = false } = {}) {
+  const u = String(url || '').trim();
+  let m = u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/);
+  if (m) {
+    const id = m[1];
+    return loop
+      ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&rel=0&modestbranding=1`
+      : `https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0&modestbranding=1`;
+  }
+  m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([\w-]{20,})/);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (m) return `https://player.vimeo.com/video/${m[1]}${loop ? '?autoplay=1&muted=1&loop=1&background=1' : ''}`;
+  return '';
 }

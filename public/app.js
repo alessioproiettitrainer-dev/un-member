@@ -1,4 +1,4 @@
-import { blockSummary, estimateSeconds, fmt, PHASE_TYPES } from './engine.js';
+import { blockSummary, embedUrl, estimateSeconds, fmt, PHASE_TYPES } from './engine.js';
 import { startPlayer, stopPlayer } from './player.js';
 
 const $app = document.getElementById('app');
@@ -164,7 +164,7 @@ async function homeView() {
       <a class="btn primary block" style="margin-top:12px" href="#/w/${prog.id}/${nw.id}">▶ Vai all'allenamento</a></div>`
       : '<div class="card muted">Nessun programma disponibile per ora.</div>'}
     ${board.challenges.length ? `<div class="h2">Challenge</div>${board.challenges.map(challengeCard).join('')}` : ''}
-    ${board.tips.length ? `<div class="h2">Consigli</div>${board.tips.map((tp) => `<div class="card tip">${tp.image ? `<img src="${esc(tp.image)}" alt="">` : ''}<b>${esc(tp.title)}</b><div class="muted">${esc(tp.text).replace(/\n/g, '<br>')}</div></div>`).join('')}` : ''}
+    ${board.tips.length ? `<div class="h2">Consigli</div>${board.tips.map((tp) => `<div class="card tip">${embedUrl(tp.videoUrl) ? `<div class="tvid"><iframe src="${esc(embedUrl(tp.videoUrl))}" allow="encrypted-media; fullscreen" allowfullscreen loading="lazy" title="${esc(tp.title)}"></iframe></div>` : tp.image ? `<img src="${esc(tp.image)}" alt="">` : ''}<b>${esc(tp.title)}</b><div class="muted">${esc(tp.text).replace(/\n/g, '<br>')}</div></div>`).join('')}` : ''}
   `);
   $app.querySelectorAll('[data-ch]').forEach((el) => el.addEventListener('click', onChallenge));
 }
@@ -238,6 +238,7 @@ async function workoutView(pid, wid) {
     <div class="row" style="margin:12px 0 18px"><span class="pill accent">~${Math.round(estimateSeconds(w) / 60)} min</span></div>
     <div class="blocklist">${(w.phases || []).map((ph) => `<div class="ph">${esc(ph.title || PHASE_TYPES[ph.type])}</div>` + (ph.blocks || []).map((b) => `
       <div class="bl"><div style="font-weight:800">${esc(b.title || '')} <span class="muted small">${esc(blockSummary(b))}</span></div>
+      ${b.type === 'video' ? '<div class="ex"><div class="thumb" style="display:grid;place-items:center">▶</div><div>Video da seguire</div></div>' : ''}
       ${(b.items || []).map((it) => `<div class="ex">${thumb(ex(it.exerciseId))}<div><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b> ${esc(ex(it.exerciseId).name)}</div></div>`).join('')}</div>`).join('')).join('')}</div>
     <div style="height:16px"></div><a class="btn primary block" href="#/play/${pid}/${wid}">▶ Inizia allenamento</a>`);
 }

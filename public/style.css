@@ -341,3 +341,9 @@ a { color: inherit; }
 .upnext span { display: block; font-size: 10px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); }
 .upnext b { display: block; font-size: 18px; font-weight: 900; text-transform: uppercase; }
 .player.full .upnext { background: rgba(0, 0, 0, .2); }
+/* recupero: il colore cambia (timer, bordo del video, etichetta), il video resta nitido per studiare il prossimo esercizio */
+.vbadge { position: absolute; left: 10px; top: 10px; z-index: 2; padding: 6px 10px; border-radius: 99px; background: var(--rest); color: #04121f; font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+.player.resting .video.sq { box-shadow: 0 0 0 3px var(--rest); }
+.player.resting .upnext { border-left-color: var(--rest); background: rgba(80, 170, 255, .12); }
+.player.resting .upnext span { color: var(--rest); }
+.player.resting.full .tile .big { color: var(--rest); }

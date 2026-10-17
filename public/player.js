@@ -301,7 +301,8 @@ function render() {
   const bs = P.steps.filter((x) => x.blockKey === s.blockKey && !x.ready && !x.rest);
   const pos = bs.indexOf(s);
   const nextE = next && !next.video && exOf(next.items[0].exerciseId);
-  const mode = s.ready ? 'ready' : s.rest ? 'rest' : '';
+  const mode = s.ready ? 'ready' : s.rest || emomRest ? 'rest' : '';
+  const badge = mode === 'rest' ? '<span class="vbadge">Recupero · prossimo esercizio</span>' : '';
 
   let right;
   if (s.amrap) right = `<div class="tile"><div class="big">${g ? g.round : P.amrap[s.block] || 0}</div><div class="lbl">Round fatti</div></div>`;
@@ -329,7 +330,7 @@ function render() {
       : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 
-  P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''}">
+  P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : ''}">
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
@@ -350,7 +351,7 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq">${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
+      ${P.full ? '' : `<div class="video sq">${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
       ${next && !s.ready && !s.rest && !emomRest ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
         <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>

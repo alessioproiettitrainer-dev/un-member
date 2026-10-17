@@ -174,7 +174,10 @@ const me = express.Router();
 const previewUser = () => ({ id: 'admin-preview', name: 'Admin', email: '', joined: today(), profile: { trainingDays: [1, 3, 5], activity: 1.375, goal: 'maintain' }, history: [], challengeLogs: {}, weights: [], food: [], photos: [], activeProgramId: '', accessUntil: '2999-12-31', nutrition: { ...DEFAULT_NUTRITION } });
 me.use((req, res, next) => {
   req.user = currentUser(req) || (isAdmin(req) ? previewUser() : null);
-  return req.user ? next() : res.status(401).json({ error: 'Accedi per continuare' });
+  if (!req.user) return res.status(401).json({ error: 'Accedi per continuare' });
+  // l'anteprima admin serve solo a guardare: niente viene salvato
+  if (req.user.id === 'admin-preview' && req.method !== 'GET') return res.status(403).json({ error: 'Sei in anteprima admin: per salvare iscriviti come membro (anche tu, con la tua email).' });
+  next();
 });
 me.get('/', (req, res) => res.json(publicUser(req.user)));
 me.put('/', (req, res) => {

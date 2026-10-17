@@ -251,3 +251,6 @@ a { color: inherit; }
 .chat-in { display: flex; gap: 8px; align-items: flex-end; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--bg); }
 .chat-in textarea { flex: 1; }
 .chat-in .btn { min-height: 46px; padding: 0 16px; }
+
+.pvbar { position: sticky; top: 0; z-index: 8; background: #3a2a00; color: #ffd27a; font-size: 13px; font-weight: 700; padding: 10px 16px; text-align: center; }
+.pvbar a { color: #fff; }

@@ -61,7 +61,8 @@ function tabbar(on) {
   const t = (h, k, label, ico) => `<a href="${h}" class="${on === k ? 'on' : ''}"><span>${ico}</span>${label}</a>`;
   return `<nav class="tabbar">${t('#/', 'home', 'Oggi', ICONS.home)}${t('#/train', 'train', 'Allenamenti', ICONS.train)}${t('#/community', 'community', 'Community<i class="badge" id="cbadge" hidden></i>', ICONS.community)}${t('#/progress', 'progress', 'Progressi', ICONS.progress)}${t('#/food', 'food', 'Cibo', ICONS.food)}</nav>`;
 }
-function page(tab, html) { $app.innerHTML = `<div class="wrap">${html}</div>${tabbar(tab)}`; refreshBadge(); }
+const previewBar = () => (ME?.id === 'admin-preview' ? `<div class="pvbar">Anteprima admin: qui le modifiche non vengono salvate. <a href="#/register">Iscriviti come membro</a> o <a href="#/login">accedi</a> per usare l'app come i tuoi clienti.</div>` : '');
+function page(tab, html) { $app.innerHTML = `${previewBar()}<div class="wrap">${html}</div>${tabbar(tab)}`; refreshBadge(); }
 // Pallino con i messaggi privati non letti sull'icona Community
 async function refreshBadge() {
   if (!ME?.active || !ME.community?.joined) return;

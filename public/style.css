@@ -129,6 +129,7 @@ a { color: inherit; }
 .wrap input:not([type=checkbox]):not([type=file]), .wrap select { width: 100%; min-width: 0; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; outline: none; text-transform: none; letter-spacing: 0; font-weight: 600; }
 .wrap input:focus, .wrap select:focus { border-color: var(--accent); }
 .form .row > * { flex: 1; }
+.form .row > .av { flex: none; }
 
 /* settimana */
 .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 12px 0 10px; }
@@ -280,3 +281,9 @@ a { color: inherit; }
 .cd i { position: absolute; top: 1px; right: 4px; font-size: 9px; font-style: normal; }
 .rec { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--card); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
 .now .lab.rest-lab { color: var(--rest); }
+.cropmodal { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .92); display: grid; place-items: center; padding: 16px; }
+.crop-box { width: 100%; max-width: 380px; display: grid; gap: 14px; text-align: center; }
+.crop-stage { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 16px; background: #000; touch-action: none; cursor: grab; }
+.crop-stage img { position: absolute; left: 50%; top: 50%; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.crop-ring { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 999px rgba(0, 0, 0, .55); outline: 2px solid rgba(255, 255, 255, .8); outline-offset: -2px; pointer-events: none; }
+.crop-zoom { width: 100%; accent-color: var(--accent); }

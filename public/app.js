@@ -592,6 +592,58 @@ async function communityView(tab, arg) {
     <div class="mgrid">${ms.map((m) => `<a href="#/community/u/${m.id}" class="mcard">${avatar(m.avatar, m.name, 64)}<b>${esc(m.name)}</b><span class="muted small ell2">${esc(m.bio || '')}</span></a>`).join('')}</div>`);
 }
 
+// Ritaglio della foto profilo: il membro trascina e fa zoom finché il viso sta nel cerchio.
+function cropPhoto(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onload = () => {
+      const m = document.createElement('div');
+      m.className = 'cropmodal';
+      m.innerHTML = `<div class="crop-box"><div class="h1" style="font-size:22px;margin:0">Sistema la foto</div>
+        <div class="muted small">Trascina per spostarla, pizzica o usa la barra per ingrandire.</div>
+        <div class="crop-stage"><img src="${url}" alt="" draggable="false"><div class="crop-ring"></div></div>
+        <input type="range" class="crop-zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom">
+        <div class="row" style="gap:10px;flex-wrap:nowrap"><button class="btn" data-c="no" style="flex:1">Annulla</button><button class="btn primary" data-c="ok" style="flex:1.4">Usa questa foto</button></div></div>`;
+      document.body.append(m);
+      const stage = m.querySelector('.crop-stage'), im = stage.querySelector('img'), zr = m.querySelector('.crop-zoom');
+      const W = img.naturalWidth, H = img.naturalHeight;
+      let S = stage.clientWidth, base = S / Math.min(W, H), z = 1, x = 0, y = 0;
+      const draw = () => {
+        const mx = (W * base * z - S) / 2, my = (H * base * z - S) / 2;
+        x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+        im.style.width = `${W * base * z}px`;
+        im.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+      };
+      const zoomTo = (nz) => { const r = Math.max(1, Math.min(4, nz)) / z; x *= r; y *= r; z *= r; zr.value = z; draw(); };
+      draw();
+      const pts = new Map(); let pinch = 0;
+      const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+      stage.onpointerdown = (e) => { stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2) pinch = dist(); };
+      stage.onpointermove = (e) => {
+        const p = pts.get(e.pointerId); if (!p) return;
+        if (pts.size === 1) { x += e.clientX - p.x; y += e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; draw(); return; }
+        p.x = e.clientX; p.y = e.clientY;
+        const d = dist(); if (pinch) zoomTo(z * d / pinch); pinch = d;
+      };
+      stage.onpointerup = stage.onpointercancel = (e) => { pts.delete(e.pointerId); pinch = pts.size === 2 ? dist() : 0; };
+      stage.onwheel = (e) => { e.preventDefault(); zoomTo(z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)); };
+      zr.oninput = () => zoomTo(Number(zr.value));
+      const close = (val) => { m.remove(); URL.revokeObjectURL(url); resolve(val); };
+      m.querySelector('[data-c=no]').onclick = () => close(null);
+      m.querySelector('[data-c=ok]').onclick = () => {
+        const out = 600, k = out / S, c = document.createElement('canvas');
+        c.width = c.height = out;
+        const ctx = c.getContext('2d'), w = W * base * z * k, h = H * base * z * k;
+        ctx.drawImage(img, out / 2 + x * k - w / 2, out / 2 + y * k - h / 2, w, h);
+        c.toBlob((b) => close(b ? new File([b], 'avatar.jpg', { type: 'image/jpeg' }) : file), 'image/jpeg', 0.88);
+      };
+    };
+    img.src = url;
+  });
+}
+
 function joinView() {
   const c = ME.community;
   page('community', `${c.joined ? '<a class="back" href="#/community">‹ Community</a>' : ''}<div class="h1">${c.joined ? 'Il tuo profilo' : 'Entra nella <em>community</em>'}</div>
@@ -603,7 +655,11 @@ function joinView() {
       <button class="btn primary block" id="joinbtn">${c.joined ? 'Salva' : 'Entra nella community'}</button>
     </div>`);
   document.getElementById('avf').onchange = async (e) => {
-    const fd = new FormData(); fd.append('file', e.target.files[0]);
+    const picked = e.target.files[0]; e.target.value = '';
+    if (!picked) return;
+    const file = await cropPhoto(picked);
+    if (!file) return;
+    const fd = new FormData(); fd.append('file', file);
     try { ME = await api('/api/me/avatar', 'POST', fd); joinView(); toast('Foto aggiornata'); } catch (err) { toast(err.message, true); }
   };
   document.getElementById('joinbtn').onclick = async () => {

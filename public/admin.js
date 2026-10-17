@@ -8,7 +8,7 @@ let KEY = lsGet('adminKey');      // proprietario
 let TOKEN = lsGet('staffToken');  // delegato
 const authHeaders = () => (KEY ? { 'x-admin-key': KEY } : TOKEN ? { 'x-staff-token': TOKEN } : {});
 
-const S = { role: 'owner', me: '', staff: [], pending: {}, uq: '', uf: 'all', openU: {}, tab: 'programs', exercises: [], programs: [], tips: [], challenges: [], users: [], settings: {}, exId: null, progId: null, draft: null, openWk: {}, dirty: false };
+const S = { tutorials: [], mod: { reports: [], general: [], banned: [] }, role: 'owner', me: '', staff: [], pending: {}, uq: '', uf: 'all', openU: {}, tab: 'programs', exercises: [], programs: [], tips: [], challenges: [], users: [], settings: {}, exId: null, progId: null, draft: null, openWk: {}, dirty: false };
 
 async function call(method, url, body) {
   const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: body ? JSON.stringify(body) : undefined });
@@ -73,9 +73,9 @@ async function load(who) {
   S.role = who.role; S.me = who.name;
   const settings = fetch('/api/settings').then((r) => r.json());
   if (S.role === 'owner') {
-    [S.exercises, S.programs, S.tips, S.challenges, S.users, S.pending, S.staff, S.settings] = await Promise.all(['exercises', 'programs', 'tips', 'challenges', 'users', 'pending', 'staff'].map((x) => call('GET', `/api/admin/${x}`)).concat(settings));
+    [S.exercises, S.programs, S.tips, S.challenges, S.users, S.pending, S.staff, S.tutorials, S.mod, S.settings] = await Promise.all(['exercises', 'programs', 'tips', 'challenges', 'users', 'pending', 'staff', 'tutorials', 'moderation'].map((x) => call('GET', `/api/admin/${x}`)).concat(settings));
   } else {
-    [S.users, S.pending, S.settings] = await Promise.all([call('GET', '/api/admin/users'), call('GET', '/api/admin/pending'), settings]);
+    [S.users, S.pending, S.mod, S.settings] = await Promise.all([call('GET', '/api/admin/users'), call('GET', '/api/admin/pending'), call('GET', '/api/admin/moderation'), settings]);
     S.tab = 'users';
   }
   render();
@@ -87,9 +87,9 @@ const exOptions = (sel, empty = '— scegli —') => `<option value="">${empty}<
 function render() {
   root.innerHTML = `<div class="adm">
     <header><div class="h1">${esc(S.settings.appName || 'Admin')} <em style="color:var(--accent);font-style:normal">admin</em></div>
-      <div class="tabs">${(S.role === 'owner' ? [['programs', 'Programmi'], ['exercises', 'Esercizi & video'], ['board', 'Bacheca'], ['users', 'Membri'], ['staff', 'Staff'], ['settings', 'Impostazioni']] : [['users', 'Membri']]).map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="tabs">${(S.role === 'owner' ? [['programs', 'Programmi'], ['exercises', 'Esercizi & video'], ['tutorials', 'Tutorial'], ['board', 'Bacheca'], ['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`], ['staff', 'Staff'], ['settings', 'Impostazioni']] : [['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`]]).map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       <span class="muted small">${esc(S.me)}</span><button class="sbtn" data-act="logout">Esci</button>${S.role === 'owner' ? '<a class="sbtn" href="/" target="_blank">Apri app ↗</a>' : ''}</header>
-    ${({ exercises: exercisesView, board: boardView, users: usersView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
+    ${({ exercises: exercisesView, tutorials: tutorialsView, board: boardView, users: usersView, moderation: moderationView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
   </div>`;
 }
 
@@ -209,6 +209,43 @@ function userDetail(u) {
   </div>`;
 }
 
+function tutorialsView() {
+  return `<div class="panel"><div class="row" style="justify-content:space-between"><div class="h2" style="margin:0">Tutorial</div><button class="sbtn acc" data-act="bd-new" data-kind="tutorials">+ Nuovo tutorial</button></div>
+    <div class="muted small" style="margin:6px 0 12px">Video lunghi di tecnica, linkati da YouTube, Google Drive o Vimeo. I membri li trovano in Allenamenti → Tutorial; se colleghi un esercizio, nel player compare il tasto "Guarda il tutorial".</div>
+    ${S.tutorials.map((x) => `<div class="block">
+      <div class="grid2"><div class="f"><label>Titolo</label><input type="text" data-bd="tutorials.${x.id}.title" value="${esc(x.title)}"></div>
+        <div class="f"><label>Categoria</label><input type="text" data-bd="tutorials.${x.id}.category" value="${esc(x.category)}" placeholder="Swing, Squat, Mobilità…" list="tcats"></div>
+        <div class="f"><label>Livello</label><select data-bd="tutorials.${x.id}.level">${['Tutti', 'Principiante', 'Intermedio', 'Avanzato'].map((l) => `<option ${x.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="f"><label>Durata (min)</label><input type="number" min="0" data-bd="tutorials.${x.id}.minutes" value="${esc(x.minutes)}"></div></div>
+      <div class="f"><label>Link del video (YouTube, Google Drive o Vimeo)</label><input type="text" data-bd="tutorials.${x.id}.videoUrl" value="${esc(x.videoUrl)}" placeholder="https://youtu.be/…">
+        ${x.videoUrl && !embedUrl(x.videoUrl) ? '<div class="small danger">Link non riconosciuto</div>' : ''}</div>
+      <div class="f"><label>Descrizione: punti chiave ed errori comuni</label><textarea data-bd="tutorials.${x.id}.description" rows="4">${esc(x.description)}</textarea></div>
+      <div class="f"><label>Esercizio collegato (opzionale)</label><select data-bd="tutorials.${x.id}.exerciseId">${exOptions(x.exerciseId, '— nessuno —')}</select></div>
+      <div class="row" style="justify-content:space-between;margin-top:6px"><label class="chk"><input type="checkbox" data-bd="tutorials.${x.id}.published" ${x.published ? 'checked' : ''}> Pubblicato</label>
+        <span><button class="sbtn danger" data-act="bd-del" data-kind="tutorials" data-id="${x.id}">Elimina</button> <button class="sbtn acc" data-act="bd-save" data-kind="tutorials" data-id="${x.id}">Salva</button></span></div>
+    </div>`).join('') || '<div class="muted">Nessun tutorial ancora.</div>'}
+    <datalist id="tcats">${[...new Set(S.tutorials.map((t) => t.category).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>`;
+}
+
+function moderationView() {
+  const { reports, general, banned } = S.mod;
+  const t = (ts) => new Date(ts).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `<div class="cols two">
+    <div class="panel"><div class="h2" style="margin-top:0">Segnalazioni (${reports.length})</div>
+      ${reports.map((r) => `<div class="urow"><div class="muted small">${t(r.ts)} · segnalato da ${esc(r.byName)} · ${esc(r.message.where)}</div>
+        <div style="margin:8px 0"><b>${esc(r.message.name)}:</b> ${esc(r.message.text) || '<i class="muted">già eliminato</i>'}</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="sbtn danger" data-act="mod-del" data-id="${r.message.id}">Elimina messaggio</button>
+          <button class="sbtn" data-act="mod-ignore" data-id="${r.id}">Ignora</button><button class="sbtn ghost danger" data-act="mod-ban" data-id="${r.message.from}" data-ban="1">Escludi ${esc(r.message.name)}</button></div></div>`).join('') || '<div class="muted">Nessuna segnalazione. 👍</div>'}
+      <div class="h2">Ultimi messaggi nella chat di gruppo</div>
+      ${general.map((m) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div style="min-width:0"><span class="muted small">${t(m.ts)}</span> <b>${esc(m.name)}:</b> ${m.deleted ? '<i class="muted">eliminato</i>' : esc(m.text)}</div>
+        ${m.deleted ? '' : `<button class="sbtn ghost danger" data-act="mod-del" data-id="${m.id}">✕</button>`}</div>`).join('') || '<div class="muted">Ancora nessun messaggio.</div>'}
+    </div>
+    <div class="panel"><div class="h2" style="margin-top:0">Esclusi dalla community</div>
+      <div class="muted small" style="margin-bottom:10px">Chi è escluso continua ad allenarsi con l'app, ma non vede la community e non può scrivere. I messaggi privati non sono visibili ai moderatori, se non quando vengono segnalati.</div>
+      ${banned.map((u) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)}</div></div><button class="sbtn" data-act="mod-ban" data-id="${u.id}" data-ban="0">Riammetti</button></div>`).join('') || '<div class="muted">Nessuno.</div>'}
+    </div></div>`;
+}
+
 function staffView() {
   return `<div class="cols two">
     <div class="panel"><div class="h2" style="margin-top:0">Staff</div>
@@ -229,6 +266,7 @@ function settingsView() {
     <div class="f"><label>Frase sotto il logo</label><input type="text" data-set="tagline" value="${esc(st.tagline)}"></div>
     <div class="f"><label>Link al sito per comprare l'abbonamento</label><input type="text" data-set="shopUrl" value="${esc(st.shopUrl)}" placeholder="https://tuosito.it/abbonamento"></div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
+    <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
     <div class="f"><label>Logo (PNG trasparente, versione bianca per sfondo scuro)</label><input type="file" accept="image/*" data-upload="logo">
       ${st.logo ? `<div style="background:#0c0c0e;padding:16px;border-radius:12px;margin-top:8px"><img src="${esc(st.logo)}" style="height:48px"></div>` : ''}</div>
     <div class="savebar"><button class="btn primary" data-act="set-save">Salva impostazioni</button></div></div>`;
@@ -481,6 +519,14 @@ root.addEventListener('click', async (e) => {
       }
       case 'pend-del': await call('DELETE', `/api/admin/pending/${encodeURIComponent(t.dataset.email)}`); delete S.pending[t.dataset.email]; break;
       case 'staff-del': if (!confirm('Rimuovere questo delegato?')) return; await call('DELETE', `/api/admin/staff/${t.dataset.id}`); S.staff = S.staff.filter((y) => y.id !== t.dataset.id); break;
+      case 'mod-del': if (!confirm('Eliminare il messaggio per tutti?')) return; await call('DELETE', `/api/admin/moderation/messages/${t.dataset.id}`); S.mod = await call('GET', '/api/admin/moderation'); toast('Messaggio eliminato'); break;
+      case 'mod-ignore': await call('DELETE', `/api/admin/moderation/reports/${t.dataset.id}`); S.mod = await call('GET', '/api/admin/moderation'); break;
+      case 'mod-ban': {
+        const ban = t.dataset.ban === '1';
+        if (ban && !confirm('Escludere questo membro dalla community?')) return;
+        await call('POST', `/api/admin/moderation/ban/${t.dataset.id}`, { banned: ban }); S.mod = await call('GET', '/api/admin/moderation');
+        toast(ban ? 'Escluso dalla community' : 'Riammesso'); break;
+      }
       case 'logout': localStorage.removeItem('adminKey'); localStorage.removeItem('staffToken'); KEY = ''; TOKEN = ''; return start();
       case 'set-save': S.settings = await call('PUT', '/api/admin/settings', S.settings); toast('Impostazioni salvate'); break;
       default: return;

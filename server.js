@@ -17,8 +17,9 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '' },
-  exercises: [], programs: [], tips: [], challenges: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {},
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
+  exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {},
+  messages: [], reports: [],
 };
 function load() {
   const d = fs.existsSync(DATA_FILE) ? JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) : {};
@@ -78,7 +79,9 @@ function member(req, res, next) {
 }
 const publicUser = (u) => {
   const { password, accessLog, ...rest } = u;
-  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: hasAccess(u) };
+  const c = u.community || {};
+  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: hasAccess(u),
+    community: { joined: !!c.joined, bio: c.bio || '', avatar: c.avatar ? `/api/avatars/${c.avatar}` : '', blocked: c.blocked || [], banned: !!c.banned } };
 };
 // Contenuti riservati a chi ha l'abbonamento attivo (l'admin passa sempre).
 function active(req, res, next) {
@@ -148,7 +151,15 @@ app.get('/api/programs/:id', member, active, (req, res) => {
     add(e.harderId);
   };
   for (const w of p.workouts || []) for (const ph of w.phases || []) for (const b of ph.blocks || []) for (const it of b.items || []) add(it.exerciseId);
-  res.json({ ...summary(p), ...p, exercises: Object.fromEntries(used) });
+  // tutorial collegati agli esercizi del programma, per il tasto "Tutorial" nel player
+  const tutorials = {};
+  for (const t of db.tutorials) if (t.published && t.exerciseId && used.has(t.exerciseId)) tutorials[t.exerciseId] = { id: t.id, title: t.title, videoUrl: t.videoUrl };
+  res.json({ ...summary(p), ...p, exercises: Object.fromEntries(used), tutorials });
+});
+
+app.get('/api/tutorials', member, active, (req, res) => {
+  const ex = new Map(db.exercises.map((e) => [e.id, e.name]));
+  res.json(db.tutorials.filter((t) => t.published).map((t) => ({ ...t, exerciseName: ex.get(t.exerciseId) || '' })));
 });
 
 app.get('/api/board', member, active, (req, res) => {
@@ -250,6 +261,130 @@ me.delete('/photos/:id', (req, res) => {
   save();
   res.json({ ok: true });
 });
+// ---- community: profilo, chat di gruppo, messaggi privati ------------------------
+const avatarUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => { const d = path.join(DATA_DIR, 'avatars'); fs.mkdirSync(d, { recursive: true }); cb(null, d); },
+    filename: (req, file, cb) => cb(null, newId() + (path.extname(file.originalname).toLowerCase() || '.jpg')),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+me.put('/community', (req, res) => {
+  const u = req.user, c = (u.community ||= { joined: false, bio: '', avatar: '', blocked: [] });
+  if (typeof req.body.bio === 'string') c.bio = req.body.bio.trim().slice(0, 200);
+  if (typeof req.body.joined === 'boolean') c.joined = req.body.joined;
+  save();
+  res.json(publicUser(u));
+});
+me.post('/avatar', avatarUpload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Carica una foto' });
+  const c = (req.user.community ||= { joined: false, bio: '', avatar: '', blocked: [] });
+  if (c.avatar) fs.rm(path.join(DATA_DIR, 'avatars', c.avatar), () => {});
+  c.avatar = req.file.filename;
+  save();
+  res.json(publicUser(req.user));
+});
+me.post('/block/:id', (req, res) => {
+  const c = (req.user.community ||= { joined: false, bio: '', avatar: '', blocked: [] });
+  const b = new Set(c.blocked || []);
+  b.has(req.params.id) ? b.delete(req.params.id) : b.add(req.params.id);
+  c.blocked = [...b];
+  save();
+  res.json({ blocked: c.blocked });
+});
+
+const inCommunity = (u) => u && u.community?.joined && !u.community?.banned;
+const card = (u) => ({ id: u.id, name: u.name, bio: u.community?.bio || '', avatar: u.community?.avatar ? `/api/avatars/${u.community.avatar}` : '', since: u.joined, workouts: u.history.length });
+const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`;
+const blockedBy = (u, otherId) => (u.community?.blocked || []).includes(otherId);
+function community(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Accedi per continuare' });
+  if (!hasAccess(req.user)) return res.status(402).json({ error: 'Abbonamento non attivo', inactive: true });
+  if (req.user.community?.banned) return res.status(403).json({ error: 'Sei stato escluso dalla community' });
+  if (!inCommunity(req.user)) return res.status(409).json({ error: 'Entra prima nella community', notJoined: true });
+  next();
+}
+const cm = express.Router();
+cm.use((req, res, next) => { req.user = currentUser(req); next(); }, community);
+app.get('/api/avatars/:file', (req, res) => {
+  if (!currentUser(req) && !isAdmin(req) && !staffOf(req)) return res.status(401).end();
+  res.sendFile(path.join(DATA_DIR, 'avatars', path.basename(req.params.file)));
+});
+cm.get('/members', (req, res) => res.json(db.users.filter((u) => inCommunity(u) && hasAccess(u)).map(card)));
+cm.get('/members/:id', (req, res) => {
+  const u = db.users.find((x) => x.id === req.params.id && inCommunity(x));
+  if (!u) return res.status(404).json({ error: 'Membro non trovato' });
+  res.json({ ...card(u), blocked: blockedBy(req.user, u.id) });
+});
+// room: "general" oppure "dm-<idAltro>"
+function resolveRoom(req, res) {
+  const r = req.params.room;
+  if (r === 'general') return { key: 'general' };
+  const other = r.startsWith('dm-') && db.users.find((x) => x.id === r.slice(3));
+  if (!other || other.id === req.user.id || !inCommunity(other)) { res.status(404).json({ error: 'Chat non trovata' }); return null; }
+  return { key: dmKey(req.user.id, other.id), other };
+}
+const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from); return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '' }; };
+cm.get('/rooms', (req, res) => {
+  const me_ = req.user.id, lr = req.user.lastRead || {};
+  const rooms = new Map([['general', { room: 'general', title: 'Chat di gruppo', last: null, unread: 0 }]]);
+  for (const m of db.messages) {
+    let key;
+    if (m.room === 'general') key = 'general';
+    else if (m.room.startsWith('dm:') && m.room.split(':').includes(me_)) {
+      const otherId = m.room.split(':').slice(1).find((x) => x !== me_);
+      if (blockedBy(req.user, otherId)) continue;
+      key = `dm-${otherId}`;
+      if (!rooms.has(key)) { const o = db.users.find((x) => x.id === otherId); rooms.set(key, { room: key, title: o?.name || 'Ex membro', avatar: o?.community?.avatar ? `/api/avatars/${o.community.avatar}` : '', last: null, unread: 0 }); }
+    } else continue;
+    const r = rooms.get(key);
+    r.last = { text: m.deleted ? 'Messaggio eliminato' : m.text.slice(0, 80), ts: m.ts, mine: m.from === me_ };
+    if (m.from !== me_ && m.ts > (lr[key] || 0) && !(key === 'general' && blockedBy(req.user, m.from))) r.unread++;
+  }
+  res.json([...rooms.values()].sort((a, b) => (a.room === 'general' ? -1 : b.room === 'general' ? 1 : (b.last?.ts || 0) - (a.last?.ts || 0))));
+});
+cm.get('/chat/:room', (req, res) => {
+  const r = resolveRoom(req, res);
+  if (!r) return;
+  const after = Number(req.query.after) || 0;
+  const list = db.messages.filter((m) => m.room === r.key && m.ts > after && !blockedBy(req.user, m.from)).slice(-200).map(msgOut);
+  (req.user.lastRead ||= {})[req.params.room] = Date.now();
+  res.json({ messages: list, other: r.other ? card(r.other) : null, blocked: r.other ? blockedBy(req.user, r.other.id) : false });
+});
+cm.post('/chat/:room', (req, res) => {
+  const r = resolveRoom(req, res);
+  if (!r) return;
+  const text = String(req.body?.text || '').trim().slice(0, 1000);
+  if (!text) return res.status(400).json({ error: 'Scrivi un messaggio' });
+  if (r.other && (blockedBy(r.other, req.user.id) || blockedBy(req.user, r.other.id))) return res.status(403).json({ error: 'Non puoi scrivere a questo membro' });
+  const last = db.messages.findLast?.((m) => m.from === req.user.id);
+  if (last && Date.now() - last.ts < 1000) return res.status(429).json({ error: 'Piano, un messaggio alla volta' });
+  const m = { id: newId(), room: r.key, from: req.user.id, text, ts: Date.now() };
+  db.messages.push(m);
+  if (db.messages.length > 20000) db.messages.splice(0, db.messages.length - 20000);
+  (req.user.lastRead ||= {})[req.params.room] = m.ts;
+  save();
+  res.json(msgOut(m));
+});
+cm.post('/report/:id', (req, res) => {
+  const m = db.messages.find((x) => x.id === req.params.id);
+  if (!m) return res.status(404).end();
+  if (!db.reports.some((x) => x.messageId === m.id && x.by === req.user.id)) db.reports.push({ id: newId(), messageId: m.id, by: req.user.id, reason: String(req.body?.reason || '').slice(0, 200), ts: Date.now() });
+  save();
+  res.json({ ok: true });
+});
+cm.get('/unread', (req, res) => {
+  const lr = req.user.lastRead || {}, me_ = req.user.id;
+  let n = 0;
+  for (const m of db.messages) {
+    if (m.from === me_ || blockedBy(req.user, m.from)) continue;
+    if (m.room.startsWith('dm:') && m.room.split(':').includes(me_) && m.ts > (lr[`dm-${m.from}`] || 0)) n++;
+  }
+  res.json({ dm: n });
+});
+app.use('/api/community', cm);
+
 app.use('/api/me', me);
 
 // ---- API admin -------------------------------------------------------------
@@ -265,7 +400,7 @@ app.post('/api/admin/login', (req, res) => {
 
 const admin = express.Router();
 // Proprietario (ADMIN_KEY): tutto. Staff: solo membri, accessi, pre-attivazioni e nutrizione.
-const STAFF_PATHS = /^\/(ping|users|pending|settings-public)(\/|$)/;
+const STAFF_PATHS = /^\/(ping|users|pending|moderation)(\/|$)/;
 admin.use((req, res, next) => {
   if (isAdmin(req)) { req.who = 'Admin'; req.role = 'owner'; return next(); }
   const st = staffOf(req);
@@ -316,6 +451,29 @@ crud('exercises', () => ({ name: 'Nuovo esercizio', category: '', cues: '', vide
 });
 crud('programs', () => ({ title: 'Nuovo programma', subtitle: '', kind: 'base', startDate: '', level: 'Principiante', weeks: 8, description: '', cover: '', published: false, workouts: [] }));
 crud('tips', () => ({ title: 'Nuovo consiglio', text: '', image: '', start: '', end: '', published: false }));
+crud('tutorials', () => ({ title: 'Nuovo tutorial', category: 'Swing', level: 'Tutti', minutes: '', videoUrl: '', description: '', exerciseId: '', published: false }));
+admin.get('/moderation', (req, res) => {
+  const name = (id) => db.users.find((u) => u.id === id)?.name || 'Ex membro';
+  const reports = db.reports.map((r) => { const m = db.messages.find((x) => x.id === r.messageId); return m && { ...r, byName: name(r.by), message: { ...m, name: name(m.from), where: m.room === 'general' ? 'Chat di gruppo' : 'Messaggio privato' } }; }).filter(Boolean).reverse();
+  const general = db.messages.filter((m) => m.room === 'general').slice(-100).reverse().map((m) => ({ ...m, name: name(m.from) }));
+  const banned = db.users.filter((u) => u.community?.banned).map((u) => ({ id: u.id, name: u.name, email: u.email }));
+  res.json({ reports, general, banned });
+});
+admin.delete('/moderation/messages/:id', (req, res) => {
+  const m = db.messages.find((x) => x.id === req.params.id);
+  if (m) { m.deleted = true; m.text = ''; }
+  db.reports = db.reports.filter((r) => r.messageId !== req.params.id);
+  save();
+  res.json({ ok: true });
+});
+admin.delete('/moderation/reports/:id', (req, res) => { db.reports = db.reports.filter((r) => r.id !== req.params.id); save(); res.json({ ok: true }); });
+admin.post('/moderation/ban/:userId', (req, res) => {
+  const u = db.users.find((x) => x.id === req.params.userId);
+  if (!u) return res.status(404).end();
+  u.community = { ...(u.community || {}), banned: !!req.body?.banned };
+  save();
+  res.json({ ok: true, banned: u.community.banned });
+});
 crud('challenges', () => ({ title: 'Nuova challenge', description: '', unit: 'ripetizioni', dailyTarget: 100, start: today(), end: '', published: false }));
 
 admin.get('/users', (req, res) => res.json(db.users.map((u) => ({

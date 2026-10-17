@@ -21,8 +21,10 @@ Sul telefono si installa come un'app: dal browser, "Aggiungi a schermata Home".
 |---|---|
 | Programmi | Programmi **base** (sempre disponibili) e **cicli** (partono da una data e durano N settimane: 4–6). I cicli futuri restano nascosti finché non partono, quelli finiti vanno in "Cicli passati" |
 | Esercizi & video | Video demo (file o link YouTube/Drive/Vimeo), indicazioni tecniche, varianti più facile/difficile, **ritmo per ripetizione** |
+| Tutorial | Video lunghi di tecnica (link YouTube/Drive/Vimeo) per categoria, collegabili a un esercizio |
 | Bacheca | **Challenge** (es. 100 push-up al giorno, 8.000 passi) e **consigli lifestyle**, con date di inizio e fine |
 | Membri | Abbonamenti (+1/+3/+6 mesi, +1 anno, revoca), pre-attivazione per email, calorie e macro impostati dal coach |
+| Moderazione | Segnalazioni della community, ultimi messaggi della chat di gruppo, cancellazione messaggi, esclusione dalla community |
 | Staff | Account dei delegati (email + password) |
 | Impostazioni | Nome dell'app, frase, **logo**, link al sito per l'abbonamento, email di assistenza |
 
@@ -64,13 +66,22 @@ Nell'AMRAP e nell'AFAP il player fa il **giro guidato**: mostra il numero di rip
 
 Nelle ripetizioni dei blocchi puoi scrivere `20`, `8-12` (conta 8), `5 + 5` (conta 10) o un tempo come `30s` / `1 min`.
 
+### Community
+
+- Si entra solo se si vuole: foto profilo, bio e accettazione delle regole (le scrivi in Impostazioni). Si può uscire dal profilo.
+- **Chat di gruppo** per tutti i membri, **messaggi privati** tra membri, elenco **Membri** con foto e bio.
+- Ogni messaggio si può **segnalare** e ogni persona si può **bloccare**: chi è bloccato non può più scriverti e non vedi i suoi messaggi.
+- In **Moderazione** (proprietario e delegati) vedete le segnalazioni, cancellate i messaggi ed escludete chi non rispetta le regole: continua ad allenarsi ma non vede la community. I messaggi privati restano privati, a meno che vengano segnalati.
+- I nuovi messaggi arrivano mentre l'app è aperta (controllo ogni 4 secondi) e c'è un pallino sui messaggi privati non letti. Le notifiche push sul telefono non ci sono ancora.
+
 ## App membri
 
 - **Oggi**: giorni da membro, calendario della settimana (giorni scelti cerchiati, allenamenti fatti in arancione), prossimo allenamento, challenge con pulsanti +5/+10/+25 e giorni completati, consigli.
-- **Allenamenti**: ciclo in corso (con "settimana 2 di 4"), programmi base, cicli passati. "Segui questo programma" lo imposta come proprio.
+- **Allenamenti**: Programmi e Tutorial (per categoria; nel player il tasto "Guarda il tutorial" mette in pausa e apre il video). Ciclo in corso (con "settimana 2 di 4"), programmi base, cicli passati. "Segui questo programma" lo imposta come proprio.
 - **Progressi**: totali, peso con grafico, foto prima/dopo (private: le vede solo il membro), storico allenamenti.
 - **Cibo**: calorie e macro del giorno con barre di proteine, carboidrati e grassi, pasti della giornata, "aggiungi di nuovo" per i cibi frequenti, scelta dei macro.
-- **Profilo**: stato dell'abbonamento con link per rinnovare, giorni di allenamento, peso, altezza e dati per le calorie.
+- **Community**: chat di gruppo, messaggi privati, membri.
+- **Profilo** (dalla foto in alto in Oggi): community, stato dell'abbonamento con link per rinnovare, giorni di allenamento, peso, altezza e dati per le calorie.
 
 ## File
 

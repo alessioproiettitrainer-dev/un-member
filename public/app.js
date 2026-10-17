@@ -47,18 +47,38 @@ const ICONS = {
   progress: svg('<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
   food: svg('<path d="M12 21c-4 0-7-3.5-7-8 0-3 2-5 4.5-5 1.2 0 2 .5 2.5.5s1.3-.5 2.5-.5C17 8 19 10 19 13c0 4.5-3 8-7 8z"/><path d="M12 8c0-2 1-4 3-5"/>'),
   profile: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'),
+  community: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.8"/><path d="M16 14.6c2.8.2 4.8 2 5.5 5"/>'),
 };
+// Foto profilo (o iniziali) in un cerchio
+function avatar(src, name, size = 40) {
+  const ini = esc(String(name || '?').split(/\s+/).map((x) => x[0]).join('').slice(0, 2).toUpperCase());
+  return src ? `<img class="av" src="${esc(src)}" alt="" style="width:${size}px;height:${size}px">` : `<span class="av" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.38)}px">${ini}</span>`;
+}
+const meAvatar = () => `<a href="#/profile" class="meav" aria-label="Profilo">${avatar(ME.community?.avatar, ME.name, 38)}</a>`;
+let POLL = null;
+const stopPoll = () => { clearInterval(POLL); POLL = null; };
 function tabbar(on) {
   const t = (h, k, label, ico) => `<a href="${h}" class="${on === k ? 'on' : ''}"><span>${ico}</span>${label}</a>`;
-  return `<nav class="tabbar">${t('#/', 'home', 'Oggi', ICONS.home)}${t('#/train', 'train', 'Allenamenti', ICONS.train)}${t('#/progress', 'progress', 'Progressi', ICONS.progress)}${t('#/food', 'food', 'Cibo', ICONS.food)}${t('#/profile', 'profile', 'Profilo', ICONS.profile)}</nav>`;
+  return `<nav class="tabbar">${t('#/', 'home', 'Oggi', ICONS.home)}${t('#/train', 'train', 'Allenamenti', ICONS.train)}${t('#/community', 'community', 'Community<i class="badge" id="cbadge" hidden></i>', ICONS.community)}${t('#/progress', 'progress', 'Progressi', ICONS.progress)}${t('#/food', 'food', 'Cibo', ICONS.food)}</nav>`;
 }
-function page(tab, html) { $app.innerHTML = `<div class="wrap">${html}</div>${tabbar(tab)}`; }
+function page(tab, html) { $app.innerHTML = `<div class="wrap">${html}</div>${tabbar(tab)}`; refreshBadge(); }
+// Pallino con i messaggi privati non letti sull'icona Community
+async function refreshBadge() {
+  if (!ME?.active || !ME.community?.joined) return;
+  try {
+    const { dm } = await (await fetch('/api/community/unread')).json();
+    const b = document.getElementById('cbadge');
+    if (b) { b.hidden = !dm; b.textContent = dm > 9 ? '9+' : dm; }
+  } catch {}
+}
+setInterval(() => document.visibilityState === 'visible' && refreshBadge(), 30000);
 function fail(e) { page('', `<a class="back" href="#/">‹ Indietro</a><div class="empty">${esc(e.message)}</div>`); }
 
 // ---- router ------------------------------------------------------------------
 window.addEventListener('hashchange', route);
 async function route() {
   stopPlayer();
+  stopPoll();
   const parts = (location.hash.slice(1) || '/').split('/').filter(Boolean);
   if (parts[0] === 'login' || parts[0] === 'register') return authView(parts[0]);
   if (!ME) {
@@ -67,6 +87,10 @@ async function route() {
   if (!ME.active && parts[0] !== 'profile') return paywallView();
   try {
     if (parts[0] === 'train') return await trainView();
+    if (parts[0] === 'tutorials') return await tutorialsView(decodeURIComponent(parts[1] || ''));
+    if (parts[0] === 'tutorial' && parts[1]) return await tutorialView(parts[1]);
+    if (parts[0] === 'community') return await communityView(parts[1] || 'chat', parts[2]);
+    if (parts[0] === 'chat' && parts[1]) return await chatView(parts[1]);
     if (parts[0] === 'p' && parts[1]) return await programView(parts[1]);
     if (parts[0] === 'w' && parts[2]) return await workoutView(parts[1], parts[2]);
     if (parts[0] === 'play' && parts[2]) return await playView(parts[1], parts[2]);
@@ -148,7 +172,7 @@ async function homeView() {
   const memberDays = Math.floor((Date.now() - new Date(ME.joined).getTime()) / DAY) + 1;
 
   page('home', `
-    <div class="topbar">${brand(24)}<span class="pill">Membro da ${memberDays} ${memberDays === 1 ? 'giorno' : 'giorni'}</span></div>
+    <div class="topbar">${brand(24)}<span class="row" style="gap:8px"><span class="pill">Membro da ${memberDays} ${memberDays === 1 ? 'giorno' : 'giorni'}</span>${meAvatar()}</span></div>
     <div class="h1">Ciao <em>${esc(ME.name.split(' ')[0])}</em></div>
     <div class="card">
       <div class="row between"><b>La tua settimana</b><span class="muted small">${doneThisWeek}/${plan.length || '–'} allenamenti</span></div>
@@ -199,7 +223,7 @@ async function trainView() {
   const list = await api('/api/programs');
   const { current, past, base } = sortPrograms(list);
   const mine = (p) => (p.id === (ME.activeProgramId || (current[0] || base[0])?.id) ? '<span class="pill ok">Il tuo programma</span>' : '');
-  page('train', `<div class="h1">Allena<em>menti</em></div>
+  page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('programs')}
     ${current.length ? `<div class="h2">Ciclo in corso</div>${current.map((p) => programCard(p, `<span class="pill">Settimana ${cycleWeek(p)} di ${p.weeks}</span>${mine(p)}`)).join('')}` : ''}
     ${base.length ? `<div class="h2">Programmi base</div>${base.map((p) => programCard(p, mine(p))).join('')}` : ''}
     ${past.length ? `<div class="h2">Cicli passati</div>${past.map((p) => programCard(p, mine(p))).join('')}` : ''}
@@ -408,7 +432,10 @@ function profileView() {
   const pr = ME.profile;
   const days = [1, 2, 3, 4, 5, 6, 0];
   const kg = ME.weights.at(-1)?.kg || '';
-  page('profile', `<div class="h1">Profilo</div>
+  const c = ME.community;
+  page('profile', `<a class="back" href="#/">‹ Oggi</a><div class="h1">Profilo</div>
+    <div class="card"><div class="row" style="gap:14px">${avatar(c.avatar, ME.name, 64)}<div style="flex:1"><b>Community</b><div class="muted small">${c.joined ? 'Sei nella community. La tua foto e la bio le vedono gli altri membri.' : 'Non sei ancora nella community.'}</div></div></div>
+      <div class="row" style="margin-top:12px"><a class="btn ${c.joined ? '' : 'primary'}" href="#/community/edit" style="flex:1">${c.joined ? 'Modifica foto e bio' : 'Entra nella community'}</a>${c.joined ? '<button class="btn" id="leave">Esci</button>' : ''}</div></div>
     <div class="card"><div class="row between"><b>Abbonamento</b>${accessInfo()}</div>
       ${SETTINGS.shopUrl ? `<a class="btn block" style="margin-top:12px" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${ME.active ? 'Rinnova sul sito' : 'Attiva sul sito'}</a>` : ''}</div>
     <form class="card form" id="prof">
@@ -438,6 +465,8 @@ function profileView() {
       toast('Profilo salvato');
     } catch (err) { toast(err.message, true); }
   };
+  const lv = document.getElementById('leave');
+  if (lv) lv.onclick = async () => { if (!confirm('Uscire dalla community? Non comparirai più tra i membri e non potrai scrivere in chat.')) return; ME = await api('/api/me/community', 'PUT', { joined: false }); profileView(); };
   document.getElementById('logout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };
 }
 
@@ -456,6 +485,156 @@ function paywallView() {
     </div>
     <a class="sbtn" href="#/profile">Vai al profilo</a>`);
   document.getElementById('recheck').onclick = async () => { ME = await api('/api/me'); if (ME.active) { toast('Accesso attivo!'); route(); } else toast('Non ancora attivo: riprova più tardi', true); };
+}
+
+// ---- tutorial --------------------------------------------------------------------
+const trainTabs = (on) => `<div class="seg"><a href="#/train" class="${on === 'programs' ? 'on' : ''}">Programmi</a><a href="#/tutorials" class="${on === 'tutorials' ? 'on' : ''}">Tutorial</a></div>`;
+async function tutorialsView(cat) {
+  const list = await api('/api/tutorials');
+  const cats = [...new Set(list.map((t) => t.category).filter(Boolean))];
+  const shown = list.filter((t) => !cat || t.category === cat);
+  page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('tutorials')}
+    ${cats.length > 1 ? `<div class="chips"><a href="#/tutorials" class="${!cat ? 'on' : ''}">Tutti</a>${cats.map((c) => `<a href="#/tutorials/${encodeURIComponent(c)}" class="${c === cat ? 'on' : ''}">${esc(c)}</a>`).join('')}</div>` : ''}
+    ${shown.map((t) => `<a class="tut" href="#/tutorial/${t.id}"><div class="play">▶</div><div><div class="t">${esc(t.title)}</div>
+      <div class="muted small">${[t.category, t.level, t.minutes && `${t.minutes} min`].filter(Boolean).map(esc).join(' · ')}</div></div></a>`).join('') || '<div class="empty">Nessun tutorial per ora.</div>'}`);
+}
+async function tutorialView(id) {
+  const t = (await api('/api/tutorials')).find((x) => x.id === id);
+  if (!t) throw new Error('Tutorial non trovato');
+  const emb = embedUrl(t.videoUrl);
+  page('train', `<a class="back" href="#/tutorials">‹ Tutorial</a>
+    <div class="row"><span class="pill accent">${esc(t.category)}</span>${t.level ? `<span class="pill">${esc(t.level)}</span>` : ''}${t.minutes ? `<span class="pill">${esc(t.minutes)} min</span>` : ''}</div>
+    <div class="h1" style="font-size:28px">${esc(t.title)}</div>
+    ${emb ? `<div class="video wide" style="margin:12px 0"><iframe src="${esc(emb)}" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="${esc(t.title)}"></iframe></div>` : ''}
+    <a class="btn block" href="${esc(t.videoUrl)}" target="_blank" rel="noopener">Apri il video a schermo intero ↗</a>
+    ${t.description ? `<div class="card" style="margin-top:12px;white-space:pre-line">${esc(t.description)}</div>` : ''}
+    ${t.exerciseName ? `<div class="muted small">Esercizio: <b>${esc(t.exerciseName)}</b></div>` : ''}`);
+}
+
+// ---- community ---------------------------------------------------------------
+const ctabs = (on) => `<div class="seg"><a href="#/community/chat" class="${on === 'chat' ? 'on' : ''}">Chat di gruppo</a><a href="#/community/messages" class="${on === 'messages' ? 'on' : ''}">Messaggi</a><a href="#/community/members" class="${on === 'members' ? 'on' : ''}">Membri</a></div>`;
+const when = (ts) => { const d = new Date(ts); return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }); };
+
+async function communityView(tab, arg) {
+  const c = ME.community;
+  if (c.banned) return page('community', '<div class="h1">Community</div><div class="card">Sei stato escluso dalla community. Per chiarimenti scrivi all\'assistenza.</div>');
+  if (tab === 'edit' || !c.joined) return joinView();
+  if (tab === 'u' && arg) return memberView(arg);
+  if (tab === 'chat') return chatView('general');
+  if (tab === 'messages') {
+    const rooms = (await api('/api/community/rooms')).filter((r) => r.room !== 'general');
+    return page('community', `<div class="topbar"><div class="h1" style="margin:0">Community</div>${meAvatar()}</div>${ctabs('messages')}
+      ${rooms.map((r) => `<a class="room" href="#/chat/${r.room}">${avatar(r.avatar, r.title, 46)}<div style="flex:1;min-width:0"><div class="row between"><b>${esc(r.title)}</b><span class="muted small">${r.last ? when(r.last.ts) : ''}</span></div>
+        <div class="muted small ell">${r.last ? (r.last.mine ? 'Tu: ' : '') + esc(r.last.text) : ''}</div></div>${r.unread ? `<i class="badge">${r.unread}</i>` : ''}</a>`).join('') || '<div class="empty">Nessun messaggio privato. Vai su <a href="#/community/members">Membri</a> e scrivi a qualcuno.</div>'}`);
+  }
+  const ms = await api('/api/community/members');
+  page('community', `<div class="topbar"><div class="h1" style="margin:0">Community</div>${meAvatar()}</div>${ctabs('members')}
+    <div class="muted small" style="margin-bottom:10px">${ms.length} ${ms.length === 1 ? 'membro' : 'membri'} nella community</div>
+    <div class="mgrid">${ms.map((m) => `<a href="#/community/u/${m.id}" class="mcard">${avatar(m.avatar, m.name, 64)}<b>${esc(m.name)}</b><span class="muted small ell2">${esc(m.bio || '')}</span></a>`).join('')}</div>`);
+}
+
+function joinView() {
+  const c = ME.community;
+  page('community', `${c.joined ? '<a class="back" href="#/community">‹ Community</a>' : ''}<div class="h1">${c.joined ? 'Il tuo profilo' : 'Entra nella <em>community</em>'}</div>
+    <div class="card form">
+      <div class="row" style="gap:16px">${avatar(c.avatar, ME.name, 84)}<label class="btn" style="flex:1">${c.avatar ? 'Cambia foto' : 'Aggiungi una foto'}<input type="file" accept="image/*" id="avf" hidden></label></div>
+      <label>Bio (max 200 caratteri)<textarea id="bio" maxlength="200" rows="3" placeholder="es. Papà di due bimbi, mi alleno 3 volte a settimana in garage. Obiettivo: 100 swing di fila!">${esc(c.bio)}</textarea></label>
+      ${!c.joined ? `<div class="rules"><b>Regole della community</b><div class="muted small" style="white-space:pre-line">${esc(SETTINGS.communityRules || '')}</div></div>
+        <label class="chk2"><input type="checkbox" id="okrules"> Accetto le regole. Gli altri membri vedranno il mio nome, la foto e la bio.</label>` : ''}
+      <button class="btn primary block" id="joinbtn">${c.joined ? 'Salva' : 'Entra nella community'}</button>
+    </div>`);
+  document.getElementById('avf').onchange = async (e) => {
+    const fd = new FormData(); fd.append('file', e.target.files[0]);
+    try { ME = await api('/api/me/avatar', 'POST', fd); joinView(); toast('Foto aggiornata'); } catch (err) { toast(err.message, true); }
+  };
+  document.getElementById('joinbtn').onclick = async () => {
+    if (!c.joined && !document.getElementById('okrules').checked) return toast('Accetta le regole per entrare', true);
+    try { ME = await api('/api/me/community', 'PUT', { bio: document.getElementById('bio').value, joined: true }); toast(c.joined ? 'Profilo salvato' : 'Benvenuto nella community!'); location.hash = '#/community/chat'; } catch (err) { toast(err.message, true); }
+  };
+}
+
+async function memberView(id) {
+  if (id === ME.id) return joinView();
+  const m = await api(`/api/community/members/${id}`);
+  page('community', `<a class="back" href="#/community/members">‹ Membri</a>
+    <div class="profile-head">${avatar(m.avatar, m.name, 110)}<div class="h1" style="font-size:28px;margin-top:12px">${esc(m.name)}</div>
+      <div class="muted small">Membro dal ${new Date(m.since).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} · ${m.workouts} allenamenti</div>
+      ${m.bio ? `<div class="card" style="margin-top:14px;text-align:left">${esc(m.bio)}</div>` : ''}</div>
+    ${m.blocked ? '' : `<a class="btn primary block" href="#/chat/dm-${m.id}">Scrivi un messaggio</a>`}
+    <button class="btn block" style="margin-top:10px" id="blk">${m.blocked ? 'Sblocca' : 'Blocca'}</button>`);
+  document.getElementById('blk').onclick = async () => {
+    if (!m.blocked && !confirm(`Bloccare ${m.name}? Non vedrai più i suoi messaggi e non potrà scriverti.`)) return;
+    const r = await api(`/api/me/block/${m.id}`, 'POST'); ME.community.blocked = r.blocked; memberView(id);
+  };
+}
+
+async function chatView(room) {
+  const general = room === 'general';
+  let last = 0;
+  const first = await api(`/api/community/chat/${room}`);
+  const other = first.other;
+  $app.innerHTML = `<div class="chat">
+    <div class="chat-top">${general ? '' : '<a class="icon" href="#/community/messages" aria-label="Indietro">‹</a>'}
+      ${general ? `<div style="flex:1"><div class="h1" style="margin:0;font-size:24px">Community</div></div>${meAvatar()}` : `<a href="#/community/u/${other.id}" class="row" style="gap:10px;flex:1;text-decoration:none">${avatar(other.avatar, other.name, 36)}<b>${esc(other.name)}</b></a>`}</div>
+    ${general ? `<div style="padding:0 16px">${ctabs('chat')}</div>` : ''}
+    <div class="msgs" id="msgs"></div>
+    ${first.blocked ? '<div class="chat-in muted small" style="justify-content:center">Hai bloccato questo membro.</div>'
+      : `<form class="chat-in" id="cform"><textarea id="ctext" rows="1" maxlength="1000" placeholder="${general ? 'Scrivi a tutta la community…' : 'Scrivi un messaggio…'}"></textarea><button class="btn primary" aria-label="Invia">➤</button></form>`}
+  </div>${tabbar('community')}`;
+  refreshBadge();
+  const box = document.getElementById('msgs');
+  const add = (msgs) => {
+    if (!msgs.length) return;
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    for (const m of msgs) {
+      last = Math.max(last, m.ts);
+      const mine = m.from === ME.id;
+      const el = document.createElement('div');
+      el.className = `msg ${mine ? 'mine' : ''}`;
+      el.innerHTML = `${mine || !general ? '' : `<a href="#/community/u/${m.from}">${avatar(m.avatar, m.name, 30)}</a>`}<div class="bub">${!mine && general ? `<b class="who">${esc(m.name)}</b>` : ''}
+        <div class="txt">${m.deleted ? '<i class="muted">Messaggio eliminato</i>' : esc(m.text)}</div><span class="tm">${when(m.ts)}${!mine && !m.deleted ? ` · <button data-rep="${m.id}">Segnala</button>` : ''}</span></div>`;
+      box.append(el);
+    }
+    if (atBottom || msgs.some((m) => m.from === ME.id)) box.scrollTop = box.scrollHeight;
+  };
+  add(first.messages);
+  box.scrollTop = box.scrollHeight;
+  if (!first.messages.length) box.innerHTML = `<div class="empty">${general ? 'Nessun messaggio ancora: rompi il ghiaccio! 👋' : `Scrivi il primo messaggio a ${esc(other.name)}.`}</div>`;
+  box.onclick = async (e) => {
+    const b = e.target.closest('[data-rep]');
+    if (!b || !confirm('Segnalare questo messaggio ai moderatori?')) return;
+    await api(`/api/community/report/${b.dataset.rep}`, 'POST', {}); toast('Grazie, lo controlliamo');
+  };
+  const form = document.getElementById('cform');
+  if (form) {
+    const ta = document.getElementById('ctext');
+    ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; };
+    ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer:fine)').matches) { e.preventDefault(); form.requestSubmit(); } };
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const text = ta.value.trim();
+      if (!text) return;
+      try {
+        const m = await api(`/api/community/chat/${room}`, 'POST', { text });
+        if (box.querySelector('.empty')) box.innerHTML = '';
+        ta.value = ''; ta.style.height = 'auto';
+        add([m]);
+      } catch (err) { toast(err.message, true); }
+    };
+  }
+  // un solo controllo per volta, e si ferma da solo se hai cambiato schermata
+  stopPoll();
+  const view = location.hash;
+  const id = setInterval(async () => {
+    if (location.hash !== view) return clearInterval(id);
+    if (document.visibilityState !== 'visible') return;
+    try {
+      const r = await api(`/api/community/chat/${room}?after=${last}`);
+      if (r.messages.length && box.querySelector('.empty')) box.innerHTML = '';
+      add(r.messages.filter((m) => m.ts > last));
+    } catch {}
+  }, 4000);
+  POLL = id;
 }
 
 // ---- avvio -------------------------------------------------------------------

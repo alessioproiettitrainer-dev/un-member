@@ -266,6 +266,7 @@ function render() {
         ${!g?.finished && (focusItem.notes || fe.cues) ? `<div class="note">${esc(focusItem.notes || fe.cues)}</div>` : ''}
         ${s.notes && !s.rest && !g ? `<div class="note">${esc(s.notes)}</div>` : ''}
         ${g?.finished ? '' : variantButtons(focusItem)}
+        ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
       <div class="video">${videoEl(fe)}</div>
       ${next && !s.ready ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
@@ -276,6 +277,7 @@ function render() {
   updateClock();
 }
 
+const t_ex = (ev) => ev.target.closest('[data-ex]').dataset.ex;
 function onClick(ev) {
   const t = ev.target.closest('button');
   if (!t || !P) return;
@@ -296,6 +298,21 @@ function onClick(ev) {
     case 'close': if (confirm('Vuoi uscire dall\'allenamento?')) { const o = P.opts; stopPlayer(); o.onExit?.(); } break;
     case 'voice': P.voice = !P.voice; store.set('voice', P.voice); if (!P.voice) speechSynthesis?.cancel?.(); render(); break;
     case 'pause': togglePause(); break;
+    case 'tut': {
+      // mette in pausa e apre il tutorial sopra il player
+      const t = P.p.tutorials[t_ex(ev)];
+      if (P.running && s.kind !== 'manual') togglePause();
+      const emb = embedUrl(t.videoUrl);
+      const m = document.createElement('div');
+      m.className = 'tutmodal';
+      m.innerHTML = `<div class="tm-top"><b>${esc(t.title)}</b><button class="icon" data-act="tutclose" aria-label="Chiudi">✕</button></div>
+        ${emb ? `<div class="video wide"><iframe src="${esc(emb)}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe></div>` : ''}
+        <a class="btn block" href="${esc(t.videoUrl)}" target="_blank" rel="noopener" style="margin-top:12px">Apri a schermo intero ↗</a>
+        <div class="muted small" style="margin-top:10px;text-align:center">L'allenamento è in pausa: chiudi e premi ▶ per riprendere.</div>`;
+      P.root.querySelector('.player').append(m);
+      break;
+    }
+    case 'tutclose': ev.target.closest('.tutmodal')?.remove(); break;
     case 'gnext': if (P.g && !P.g.finished) advanceGuide(); break;
     case 'done': P.fortime[s.block] = fmt(elapsed()); enterStep(P.idx + 1); break;
     case 'next':

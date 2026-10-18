@@ -354,3 +354,7 @@ a { color: inherit; }
 .wo.locked { opacity: .55; }
 .locksheet { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, .7); display: flex; align-items: flex-end; padding: 16px; }
 .locksheet .card { width: 100%; max-width: 520px; margin: 0 auto; }
+/* varianti scelte dal membro */
+.subnote { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 122, 0, .12); font-size: 13px; }
+.subnote button { display: block; margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: var(--card-2); font-weight: 800; font-size: 12px; }
+.subcard { outline: 1px solid var(--accent); margin-bottom: 16px; }

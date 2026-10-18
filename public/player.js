@@ -348,6 +348,7 @@ function render() {
         ${now}
         ${!g?.finished && (focusItem.notes || fe.cues) ? `<div class="note">${esc(focusItem.notes || fe.cues)}</div>` : ''}
         ${s.notes && !s.rest && !g ? `<div class="note">${esc(s.notes)}</div>` : ''}
+        ${!g?.finished && P.subs[focusItem.exerciseId] && P.p.exercises[focusItem.exerciseId] ? `<div class="subnote">Stai facendo una variante al posto di <b>${esc(P.p.exercises[focusItem.exerciseId].name)}</b> <button data-sub="${esc(focusItem.exerciseId)}">↺ Torna all'originale</button></div>` : ''}
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>

@@ -276,14 +276,23 @@ async function workoutView(pid, wid) {
   if (!w) throw new Error('Allenamento non trovato');
   if (w.locked) { location.replace(`#/p/${pid}`); return lockedSheet(); }
   const ex = (id) => p.exercises[id] || { name: '?' };
+  // varianti più facili/difficili scelte nel player e ricordate sul telefono: qui si vedono e si possono annullare
+  let subs = {}; try { subs = JSON.parse(localStorage.getItem('subs')) || {}; } catch {}
+  const used = new Set((w.phases || []).flatMap((ph) => (ph.blocks || []).flatMap((b) => (b.items || []).map((it) => it.exerciseId))));
+  const mySubs = [...used].filter((id) => subs[id] && p.exercises[subs[id]]);
   page('train', `<a class="back" href="#/p/${pid}">‹ ${esc(p.title)}</a>
     <div class="h1">${esc(w.title)}</div><div class="muted">${esc(w.description || '')}</div>
     <div class="row" style="margin:12px 0 18px"><span class="pill accent">~${Math.round(estimateSeconds(w) / 60)} min</span></div>
+    ${mySubs.length ? `<div class="card subcard"><b>Le tue varianti</b><div class="muted small">Le hai scelte tu nel player con "più facile / più difficile":</div>
+      ${mySubs.map((id) => `<div class="small" style="margin-top:6px">${esc(ex(subs[id]).name)} <span class="muted">al posto di</span> ${esc(ex(id).name)}</div>`).join('')}
+      <button class="btn block" style="margin-top:10px" id="resetsubs">↺ Torna agli esercizi originali</button></div>` : ''}
     <div class="blocklist">${(w.phases || []).map((ph) => `<div class="ph">${esc(ph.title || PHASE_TYPES[ph.type])}</div>` + (ph.blocks || []).map((b) => `
       <div class="bl"><div style="font-weight:800">${esc(b.title || '')} <span class="muted small">${esc(blockSummary(b))}</span></div>
       ${b.type === 'video' ? '<div class="ex"><div class="thumb" style="display:grid;place-items:center">▶</div><div>Video da seguire</div></div>' : ''}
       ${(b.items || []).map((it) => `<div class="ex">${thumb(ex(it.exerciseId))}<div><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b> ${esc(ex(it.exerciseId).name)}</div></div>`).join('')}</div>`).join('')).join('')}</div>
     <div style="height:16px"></div><a class="btn primary block" href="#/play/${pid}/${wid}">▶ Inizia allenamento</a>`);
+  const rs = document.getElementById('resetsubs');
+  if (rs) rs.onclick = () => { for (const id of mySubs) delete subs[id]; try { localStorage.setItem('subs', JSON.stringify(subs)); } catch {} toast('Esercizi originali ripristinati'); workoutView(pid, wid); };
 }
 const thumb = (e) => (e.video ? `<video class="thumb" src="${esc(e.video)}#t=0.5" muted playsinline preload="metadata"></video>` : '<div class="thumb"></div>');
 

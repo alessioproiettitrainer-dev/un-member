@@ -121,6 +121,7 @@ function render() {
       <span class="muted small">${esc(S.me)}</span><button class="sbtn" data-act="logout">Esci</button>${S.role === 'owner' ? '<a class="sbtn" href="/" target="_blank">Apri app ↗</a>' : ''}</header>
     ${({ exercises: exercisesView, tutorials: tutorialsView, board: boardView, users: usersView, moderation: moderationView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
   </div>`;
+  if (S.tab === 'moderation') loadModPhotos();
 }
 
 // ---- esercizi ---------------------------------------------------------------
@@ -261,17 +262,24 @@ function tutorialsView() {
     <datalist id="tcats">${[...new Set(S.tutorials.map((t) => t.category).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>`;
 }
 
+// le foto della chat chiedono l'accesso: si caricano con la chiave admin/staff e si mostrano in piccolo
+const modPhoto = (file) => `<img class="modphoto" data-modphoto="/api/chatphotos/${esc(file)}" alt="foto">`;
+function loadModPhotos() {
+  root.querySelectorAll('img[data-modphoto]:not([src])').forEach(async (img) => {
+    try { const r = await fetch(img.dataset.modphoto, { headers: authHeaders() }); img.src = URL.createObjectURL(await r.blob()); } catch {}
+  });
+}
 function moderationView() {
   const { reports, general, banned } = S.mod;
   const t = (ts) => new Date(ts).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   return `<div class="cols two">
     <div class="panel"><div class="h2" style="margin-top:0">Segnalazioni (${reports.length})</div>
       ${reports.map((r) => `<div class="urow"><div class="muted small">${t(r.ts)} · segnalato da ${esc(r.byName)} · ${esc(r.message.where)}</div>
-        <div style="margin:8px 0"><b>${esc(r.message.name)}:</b> ${esc(r.message.text) || '<i class="muted">già eliminato</i>'}</div>
+        <div style="margin:8px 0"><b>${esc(r.message.name)}:</b> ${r.message.photo ? modPhoto(r.message.photo) : ''}${esc(r.message.text) || (r.message.photo ? '' : '<i class="muted">già eliminato</i>')}</div>
         <div class="row" style="gap:6px;flex-wrap:wrap"><button class="sbtn danger" data-act="mod-del" data-id="${r.message.id}">Elimina messaggio</button>
           <button class="sbtn" data-act="mod-ignore" data-id="${r.id}">Ignora</button><button class="sbtn ghost danger" data-act="mod-ban" data-id="${r.message.from}" data-ban="1">Escludi ${esc(r.message.name)}</button></div></div>`).join('') || '<div class="muted">Nessuna segnalazione. 👍</div>'}
       <div class="h2">Ultimi messaggi nella chat di gruppo</div>
-      ${general.map((m) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div style="min-width:0"><span class="muted small">${t(m.ts)}</span> <b>${esc(m.name)}:</b> ${m.deleted ? '<i class="muted">eliminato</i>' : esc(m.text)}</div>
+      ${general.map((m) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div style="min-width:0"><span class="muted small">${t(m.ts)}</span> <b>${esc(m.name)}:</b> ${m.deleted ? '<i class="muted">eliminato</i>' : `${m.photo ? modPhoto(m.photo) : ''}${esc(m.text)}`}</div>
         ${m.deleted ? '' : `<button class="sbtn ghost danger" data-act="mod-del" data-id="${m.id}">✕</button>`}</div>`).join('') || '<div class="muted">Ancora nessun messaggio.</div>'}
     </div>
     <div class="panel"><div class="h2" style="margin-top:0">Esclusi dalla community</div>

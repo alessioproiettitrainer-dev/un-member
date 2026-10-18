@@ -354,7 +354,7 @@ app.get('/api/avatars/:file', (req, res) => {
   if (!currentUser(req) && !isAdmin(req) && !staffOf(req)) return res.status(401).end();
   res.sendFile(path.join(DATA_DIR, 'avatars', path.basename(req.params.file)));
 });
-cm.get('/members', (req, res) => res.json(db.users.filter((u) => inCommunity(u) && hasAccess(u)).map(card)));
+cm.get('/members', (req, res) => res.json(db.users.filter((u) => inCommunity(u) && canUse(u)).map(card)));
 cm.get('/members/:id', (req, res) => {
   const u = db.users.find((x) => x.id === req.params.id && inCommunity(x));
   if (!u) return res.status(404).json({ error: 'Membro non trovato' });
@@ -368,7 +368,7 @@ function resolveRoom(req, res) {
   if (!other || other.id === req.user.id || !inCommunity(other)) { res.status(404).json({ error: 'Chat non trovata' }); return null; }
   return { key: dmKey(req.user.id, other.id), other };
 }
-const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from); return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '' }; };
+const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from); return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, photo: m.photo && !m.deleted ? `/api/chatphotos/${m.photo}` : '', from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '' }; };
 cm.get('/rooms', (req, res) => {
   const me_ = req.user.id, lr = req.user.lastRead || {};
   const rooms = new Map([['general', { room: 'general', title: 'Chat di gruppo', last: null, unread: 0 }]]);
@@ -382,7 +382,7 @@ cm.get('/rooms', (req, res) => {
       if (!rooms.has(key)) { const o = db.users.find((x) => x.id === otherId); rooms.set(key, { room: key, title: o?.name || 'Ex membro', avatar: o?.community?.avatar ? `/api/avatars/${o.community.avatar}` : '', last: null, unread: 0 }); }
     } else continue;
     const r = rooms.get(key);
-    r.last = { text: m.deleted ? 'Messaggio eliminato' : m.text.slice(0, 80), ts: m.ts, mine: m.from === me_ };
+    r.last = { text: m.deleted ? 'Messaggio eliminato' : (m.photo ? `📷 ${m.text || 'Foto'}` : m.text).slice(0, 80), ts: m.ts, mine: m.from === me_ };
     if (m.from !== me_ && m.ts > (lr[key] || 0) && !(key === 'general' && blockedBy(req.user, m.from))) r.unread++;
   }
   res.json([...rooms.values()].sort((a, b) => (a.room === 'general' ? -1 : b.room === 'general' ? 1 : (b.last?.ts || 0) - (a.last?.ts || 0))));
@@ -405,10 +405,41 @@ cm.post('/chat/:room', (req, res) => {
   if (last && Date.now() - last.ts < 1000) return res.status(429).json({ error: 'Piano, un messaggio alla volta' });
   const m = { id: newId(), room: r.key, from: req.user.id, text, ts: Date.now() };
   db.messages.push(m);
-  if (db.messages.length > 20000) db.messages.splice(0, db.messages.length - 20000);
+  if (db.messages.length > 20000) for (const old of db.messages.splice(0, db.messages.length - 20000)) if (old.photo) fs.rm(path.join(DATA_DIR, 'chatphotos', old.photo), () => {});
   (req.user.lastRead ||= {})[req.params.room] = m.ts;
   save();
   res.json(msgOut(m));
+});
+// ---- foto in chat: il telefono le riduce prima (≈1280 px), qui un tetto di 3 MB e 10 foto al giorno a testa
+const PHOTO_DIR = path.join(DATA_DIR, 'chatphotos');
+const PHOTOS_PER_DAY = 10;
+const chatPhotoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => { fs.mkdirSync(PHOTO_DIR, { recursive: true }); cb(null, PHOTO_DIR); },
+    filename: (req, file, cb) => cb(null, crypto.randomBytes(12).toString('hex') + '.jpg'),
+  }),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /^image\/(jpeg|png|webp)$/.test(file.mimetype)),
+});
+cm.post('/chat/:room/photo', chatPhotoUpload.single('file'), (req, res) => {
+  const drop = () => req.file && fs.rm(req.file.path, () => {});
+  const r = resolveRoom(req, res);
+  if (!r) return drop();
+  if (!req.file) return res.status(400).json({ error: 'Scegli una foto (JPG o PNG, max 3 MB)' });
+  if (r.other && (blockedBy(r.other, req.user.id) || blockedBy(req.user, r.other.id))) { drop(); return res.status(403).json({ error: 'Non puoi scrivere a questo membro' }); }
+  const today_ = db.messages.filter((m) => m.from === req.user.id && (m.photo || m.hadPhoto) && Date.now() - m.ts < 864e5).length;
+  if (today_ >= PHOTOS_PER_DAY) { drop(); return res.status(429).json({ error: `Puoi mandare al massimo ${PHOTOS_PER_DAY} foto al giorno` }); }
+  const m = { id: newId(), room: r.key, from: req.user.id, text: String(req.body?.text || '').trim().slice(0, 1000), photo: req.file.filename, ts: Date.now() };
+  db.messages.push(m);
+  (req.user.lastRead ||= {})[req.params.room] = m.ts;
+  save();
+  res.json(msgOut(m));
+});
+// nomi casuali e lunghi: si vedono solo dall'app (membro, admin o staff)
+app.get('/api/chatphotos/:file', (req, res) => {
+  if (!currentUser(req) && !isAdmin(req) && !staffOf(req)) return res.status(401).end();
+  res.set('Cache-Control', 'private, max-age=604800');
+  res.sendFile(path.join(PHOTO_DIR, path.basename(req.params.file)), (err) => err && res.status(404).end());
 });
 cm.post('/report/:id', (req, res) => {
   const m = db.messages.find((x) => x.id === req.params.id);
@@ -524,7 +555,7 @@ admin.get('/moderation', (req, res) => {
 });
 admin.delete('/moderation/messages/:id', (req, res) => {
   const m = db.messages.find((x) => x.id === req.params.id);
-  if (m) { m.deleted = true; m.text = ''; }
+  if (m) { m.deleted = true; m.text = ''; if (m.photo) { fs.rm(path.join(PHOTO_DIR, m.photo), () => {}); m.photo = ''; m.hadPhoto = true; } }
   db.reports = db.reports.filter((r) => r.messageId !== req.params.id);
   save();
   res.json({ ok: true });

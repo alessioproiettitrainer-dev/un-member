@@ -88,3 +88,4 @@ input[type=search]:focus { border-color: var(--accent); }
 .st.trial { background: rgba(58, 160, 255, .15); color: #3aa0ff; }
 .block.pauseblock { border-left-color: #3aa0ff; }
 [hidden] { display: none !important; }
+.modphoto { display: block; max-width: 180px; max-height: 180px; border-radius: 10px; margin: 6px 0; background: var(--card-2); }

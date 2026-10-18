@@ -757,6 +757,30 @@ async function memberView(id) {
   };
 }
 
+// Foto per la chat: ridotte sul telefono (lato lungo 1280 px, JPEG ~80%) prima di caricarle
+function shrinkPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Foto non leggibile: prova con un\'altra')); };
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error('Foto non leggibile'))), 'image/jpeg', 0.8);
+    };
+    img.src = url;
+  });
+}
+function photoViewer(src) {
+  const m = document.createElement('div');
+  m.className = 'photoview';
+  m.innerHTML = `<img src="${esc(src)}" alt=""><button class="icon" aria-label="Chiudi">✕</button>`;
+  m.onclick = () => m.remove();
+  document.body.append(m);
+}
+
 async function chatView(room) {
   const general = room === 'general';
   let last = 0;
@@ -768,7 +792,7 @@ async function chatView(room) {
     ${general ? `<div style="padding:0 16px">${ctabs('chat')}</div>` : ''}
     <div class="msgs" id="msgs"></div>
     ${first.blocked ? '<div class="chat-in muted small" style="justify-content:center">Hai bloccato questo membro.</div>'
-      : `<form class="chat-in" id="cform"><textarea id="ctext" rows="1" maxlength="1000" placeholder="${general ? 'Scrivi a tutta la community…' : 'Scrivi un messaggio…'}"></textarea><button class="btn primary" aria-label="Invia">➤</button></form>`}
+      : `<form class="chat-in" id="cform"><label class="btn photobtn" aria-label="Manda una foto">📷<input type="file" accept="image/*" id="cphoto" hidden></label><textarea id="ctext" rows="1" maxlength="1000" placeholder="${general ? 'Scrivi a tutta la community…' : 'Scrivi un messaggio…'}"></textarea><button class="btn primary" aria-label="Invia">➤</button></form>`}
   </div>${tabbar('community')}`;
   refreshBadge();
   const box = document.getElementById('msgs');
@@ -781,7 +805,8 @@ async function chatView(room) {
       const el = document.createElement('div');
       el.className = `msg ${mine ? 'mine' : ''}`;
       el.innerHTML = `${mine || !general ? '' : `<a href="#/community/u/${m.from}">${avatar(m.avatar, m.name, 30)}</a>`}<div class="bub">${!mine && general ? `<b class="who">${esc(m.name)}</b>` : ''}
-        <div class="txt">${m.deleted ? '<i class="muted">Messaggio eliminato</i>' : esc(m.text)}</div><span class="tm">${when(m.ts)}${!mine && !m.deleted ? ` · <button data-rep="${m.id}">Segnala</button>` : ''}</span></div>`;
+        ${m.photo ? `<img class="cphoto" src="${esc(m.photo)}" alt="Foto" loading="lazy" data-photo="${esc(m.photo)}">` : ''}
+        ${m.deleted ? '<div class="txt"><i class="muted">Messaggio eliminato</i></div>' : m.text ? `<div class="txt">${esc(m.text)}</div>` : ''}<span class="tm">${when(m.ts)}${!mine && !m.deleted ? ` · <button data-rep="${m.id}">Segnala</button>` : ''}</span></div>`;
       box.append(el);
     }
     if (atBottom || msgs.some((m) => m.from === ME.id)) box.scrollTop = box.scrollHeight;
@@ -790,6 +815,8 @@ async function chatView(room) {
   box.scrollTop = box.scrollHeight;
   if (!first.messages.length) box.innerHTML = `<div class="empty">${general ? 'Nessun messaggio ancora: rompi il ghiaccio! 👋' : `Scrivi il primo messaggio a ${esc(other.name)}.`}</div>`;
   box.onclick = async (e) => {
+    const ph = e.target.closest('[data-photo]');
+    if (ph) return photoViewer(ph.dataset.photo);
     const b = e.target.closest('[data-rep]');
     if (!b || !confirm('Segnalare questo messaggio ai moderatori?')) return;
     await api(`/api/community/report/${b.dataset.rep}`, 'POST', {}); toast('Grazie, lo controlliamo');
@@ -799,6 +826,22 @@ async function chatView(room) {
     const ta = document.getElementById('ctext');
     ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; };
     ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer:fine)').matches) { e.preventDefault(); form.requestSubmit(); } };
+    document.getElementById('cphoto').onchange = async (e) => {
+      const file = e.target.files[0]; e.target.value = '';
+      if (!file) return;
+      const btn = form.querySelector('.photobtn');
+      btn.classList.add('busy');
+      try {
+        const fd = new FormData();
+        fd.append('file', await shrinkPhoto(file), 'foto.jpg');
+        fd.append('text', ta.value.trim()); // il testo scritto diventa la didascalia
+        const m = await api(`/api/community/chat/${room}/photo`, 'POST', fd);
+        if (box.querySelector('.empty')) box.innerHTML = '';
+        ta.value = ''; ta.style.height = 'auto';
+        add([m]);
+      } catch (err) { toast(err.message, true); }
+      btn.classList.remove('busy');
+    };
     form.onsubmit = async (e) => {
       e.preventDefault();
       const text = ta.value.trim();

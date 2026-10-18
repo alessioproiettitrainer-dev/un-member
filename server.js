@@ -24,7 +24,7 @@ const EMPTY = {
       { title: 'Solo allenamenti · annuale', price: '', period: "all'anno", note: '', url: '', best: false },
       { title: 'Allenamenti + alimentazione · annuale', price: '', period: "all'anno", note: 'Con il piano alimentare del nutrizionista', url: '', best: false },
     ], extraAppUrl: '', extraAppLabel: '',
-    trialEndText: 'La tua settimana di prova è finita. Abbonati sul nostro sito: entro 24 ore dal pagamento attiviamo il tuo accesso all\'app con la stessa email. Progressi e storico restano salvati.', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
+    trialEndText: 'La tua settimana di prova è finita. Scegli il tuo piano qui sotto: entro 24 ore dal pagamento attiviamo il tuo accesso con la stessa email. Progressi e storico restano salvati.', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
   exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {}, trialEmails: [],
   messages: [], reports: [],
 };

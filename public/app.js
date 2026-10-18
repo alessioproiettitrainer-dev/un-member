@@ -608,7 +608,7 @@ function paywallView() {
         : trialOver ? `<span style="white-space:pre-line">${esc(SETTINGS.trialEndText || 'La tua settimana di prova è finita. Abbonati per sbloccare tutti i programmi e continuare da dove sei arrivato: progressi e storico restano salvati.')}</span>`
         : ME.trialAvailable ? 'Vuoi già tutto? Con l\'abbonamento sblocchi subito tutti i programmi e tutte le settimane.'
         : 'Il tuo account è creato. Per sbloccare programmi, challenge e allenamenti serve un abbonamento attivo.'}</p>
-      <p class="muted small">Hai già pagato sul sito? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>
+      <p class="muted small">Hai già pagato? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>
       ${plansHtml()}
       ${SETTINGS.extraAppUrl ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
       ${SETTINGS.supportEmail ? `<a class="btn block" style="margin-top:8px" href="mailto:${esc(SETTINGS.supportEmail)}">Scrivici</a>` : ''}

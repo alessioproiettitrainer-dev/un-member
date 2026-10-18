@@ -86,3 +86,4 @@ input[type=search]:focus { border-color: var(--accent); }
 .exhit small { color: var(--muted); font-size: 11px; white-space: nowrap; }
 @media (max-width: 700px) { .irow > .exsel { grid-column: 1 / -1; } }
 .st.trial { background: rgba(58, 160, 255, .15); color: #3aa0ff; }
+.block.pauseblock { border-left-color: #3aa0ff; }

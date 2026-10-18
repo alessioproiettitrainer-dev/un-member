@@ -124,3 +124,9 @@ Impostazioni → "Settimana di prova gratuita": la attivi quando vuoi e scegli i
 - Una sola prova per email (anche con varianti tipo `nome+1@gmail.com` o i punti nelle gmail).
 - A fine prova compare "Prova finita" con il tasto che porta al link del sito per abbonarsi.
 - Nella lista Membri il filtro "In prova" mostra chi la sta usando.
+
+### Pausa tra i blocchi
+
+- Blocco **"Pausa"**: lo metti tra due blocchi e scegli i secondi.
+- Oppure, su ogni blocco, **"Recupero dopo il blocco (s)"**: comodo con **⧉ Duplica** (es. 6 tabata uguali con 1 minuto di recupero tra uno e l'altro).
+- Durante la pausa il membro vede il conto alla rovescia, il prossimo esercizio con il suo video e il blocco che arriva.

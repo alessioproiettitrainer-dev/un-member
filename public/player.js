@@ -87,6 +87,7 @@ function enterStep(i) {
   if (s.video) return say(`Ora un video: ${s.block}.`);
   const e = exOf(s.items[0].exerciseId), first = `${s.items[0].reps || ''} ${e.name}`;
   if (s.ready) say(`Preparati! ${s.block}. ${s.summary || ''}. Si parte con ${first}.`);
+  else if (s.pause) say(`Pausa. ${Math.round(s.dur)} secondi di recupero. Poi ${s.nextBlock || ''}: ${first}.`);
   else if (s.rest) say(`${pick(['Recupera.', 'Bene, recupero.', 'Ottimo, respira.'])} Poi: ${first}.`);
   else if (P.g) say(`${s.label}. ${pick(['Via!', 'Vai!', 'Forza!'])} ${first}.`);
   else if (s.items.length > 1) say(`${s.label}. ${s.items.map((it) => `${it.reps || ''} ${exOf(it.exerciseId).name}`).join(', ')}.`);
@@ -326,7 +327,7 @@ function render() {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === P.focus ? 'sel' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;
   } else {
     now = s.rest && !s.ready
-      ? `<div class="lab rest-lab">Recupero</div><div class="reps">Respira</div>${nextUp(focusItem)}`
+      ? `<div class="lab rest-lab">${s.pause ? 'Pausa tra i blocchi' : 'Recupero'}</div><div class="reps">Respira</div>${nextUp(focusItem)}${s.pause && s.nextBlock ? `<div class="note">Poi: ${esc(s.nextBlock)}${s.summary ? ` · ${esc(s.summary)}` : ''}</div>` : ''}`
       : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 

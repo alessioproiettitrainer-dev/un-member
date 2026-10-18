@@ -380,10 +380,15 @@ function blockEditor(b, P) {
     intervals: num(P, 'rounds', b.rounds, 'Round') + num(P, 'work', b.work, 'Lavoro (s)') + num(P, 'rest', b.rest, 'Recupero (s)') + num(P, 'restRounds', b.restRounds, 'Recupero tra round (s)'),
     sets: num(P, 'rounds', b.rounds, 'Serie') + num(P, 'rest', b.rest, 'Recupero (s)'),
     video: num(P, 'minutes', b.minutes, 'Durata (minuti, circa)'),
+    rest: num(P, 'seconds', b.seconds, 'Pausa (secondi)', '60'),
   }[b.type];
+  // recupero automatico dopo il blocco (comodo con i blocchi duplicati, es. 6 tabata di fila)
+  const after = b.type === 'rest' || b.type === 'video' ? '' : num(P, 'restAfter', b.restAfter, 'Recupero dopo il blocco (s)', '0 = nessuno');
+  if (b.type === 'rest') return `<div class="block pauseblock"><div class="bhd"><b>⏸ Pausa</b><span class="muted small">${esc(blockSummary(b))}</span><span style="flex:1"></span><button class="sbtn ghost" data-act="b-dup" data-path="${P}">⧉ Duplica</button>${mover(P)}</div>
+    <div class="grid2">${params}</div><div class="muted small">Recupero tra il blocco sopra e quello sotto: il membro vede il conto alla rovescia e il primo esercizio del blocco che arriva.</div></div>`;
   const thirdCol = b.type === 'intervals' ? 'Lavoro (s) opz.' : b.type === 'emom' ? 'Stesso minuto' : '';
-  return `<div class="block"><div class="bhd"><b>${esc(BLOCK_TYPES[b.type])}</b><span class="muted small">${esc(blockSummary(b))}</span><span style="flex:1"></span>${mover(P)}</div>
-    <div class="grid2"><div class="f"><label>Titolo blocco</label><input type="text" data-b="${P}.title" value="${esc(b.title)}"></div>${params}</div>
+  return `<div class="block"><div class="bhd"><b>${esc(BLOCK_TYPES[b.type])}</b><span class="muted small">${esc(blockSummary(b))}</span><span style="flex:1"></span><button class="sbtn ghost" data-act="b-dup" data-path="${P}" title="Duplica blocco">⧉ Duplica</button>${mover(P)}</div>
+    <div class="grid2"><div class="f"><label>Titolo blocco</label><input type="text" data-b="${P}.title" value="${esc(b.title)}"></div>${params}${after}</div>
     <div class="f"><label>Note</label><input type="text" data-b="${P}.notes" value="${esc(b.notes)}" placeholder="es. Usa un peso che ti permetta tecnica perfetta"></div>
     ${b.type === 'emom' ? '<div class="muted small" style="margin:-4px 0 8px">Un esercizio per riga = minuti diversi (minuto 1, minuto 2…). Spunta "con sopra" per farli nello stesso minuto: il player li guida uno dopo l\'altro e il tempo che avanza è recupero.</div>' : ''}
     ${b.type === 'ladder' ? '<div class="muted small" style="margin:-4px 0 8px">Ogni gradino fa tutti gli esercizi con lo stesso numero di ripetizioni (es. 1 pull-up + 1 push-up, poi 2 + 2…). Il tempo totale diventa il risultato del membro.</div>' : ''}
@@ -425,7 +430,7 @@ root.addEventListener('input', (e) => {
     const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : Number(t.value)) : t.value;
     setPath(S.draft, t.dataset.b, v);
     S.dirty = true;
-    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url|ladderStep|from|to|step|updown)$/.test(t.dataset.b)) softRender();
+    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url|ladderStep|from|to|step|updown|seconds|restAfter)$/.test(t.dataset.b)) softRender();
   }
   if (t.dataset.exf) {
     const ex = S.exercises.find((x) => x.id === S.exId);
@@ -568,8 +573,12 @@ root.addEventListener('click', async (e) => {
       }
       case 'ph-add': getPath(S.draft, path).phases.push({ id: uid(), type: t.dataset.type, title: PHASE_TYPES[t.dataset.type], blocks: [] }); S.dirty = true; break;
       case 'b-add': {
-        const defaults = { emom: { minutes: 10, every: 60 }, amrap: { cap: 12 }, fortime: { rounds: 3, cap: 0 }, intervals: { rounds: 3, work: 40, rest: 20, restRounds: 60 }, sets: { rounds: 3, rest: 60 }, ladder: { from: 1, to: 10, step: 1, rest: 0, updown: false }, video: { minutes: 20, url: '' } }[t.dataset.type];
+        const defaults = { emom: { minutes: 10, every: 60 }, amrap: { cap: 12 }, fortime: { rounds: 3, cap: 0 }, intervals: { rounds: 3, work: 40, rest: 20, restRounds: 60 }, sets: { rounds: 3, rest: 60 }, ladder: { from: 1, to: 10, step: 1, rest: 0, updown: false }, video: { minutes: 20, url: '' }, rest: { seconds: 60 } }[t.dataset.type];
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
+      }
+      case 'b-dup': {
+        const { arr, i } = parentOf(path);
+        arr.splice(i + 1, 0, JSON.parse(JSON.stringify(arr[i]), (k, v) => (k === 'id' ? uid() : v))); S.dirty = true; break;
       }
       case 'i-add': getPath(S.draft, path).items.push({ exerciseId: '', reps: '', notes: '' }); S.dirty = true; break;
       case 'mv-up': case 'mv-down': case 'rm': {

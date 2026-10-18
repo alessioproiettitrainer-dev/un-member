@@ -9,6 +9,7 @@ export const BLOCK_TYPES = {
   sets: 'Serie e ripetizioni',
   ladder: 'Ladder (scala di ripetizioni)',
   video: 'Video (YouTube / Drive)',
+  rest: 'Pausa (recupero tra blocchi)',
 };
 
 export const PHASE_TYPES = { warmup: 'Riscaldamento', workout: 'Workout', cooldown: 'Defaticamento' };
@@ -29,6 +30,7 @@ export function blockSummary(b) {
     case 'intervals': return `${b.rounds || 1} round · ${b.work || 0}s lavoro / ${b.rest || 0}s recupero`;
     case 'ladder': { const f = Number(b.from) || 1, t = Number(b.to) || 10; return `Ladder ${f}→${t}${b.updown ? `→${f}` : ''}${b.rest ? ` · ${b.rest}s recupero` : ''}`; }
     case 'video': return `Video${b.minutes ? ` · ${b.minutes} min` : ''}`;
+    case 'rest': return `Pausa ${Number(b.seconds) || 0}s`;
     case 'sets': return `${b.rounds || 1} serie${b.rest ? ` · ${b.rest}s recupero` : ''}`;
     default: return '';
   }
@@ -56,14 +58,17 @@ function emomSlots(items) {
 
 export function buildSteps(workout) {
   const steps = [];
-  const hasContent = (b) => (b.type === 'video' ? !!b.url : (b.items || []).length);
+  const hasContent = (b) => (b.type === 'video' ? !!b.url : b.type === 'rest' ? Number(b.seconds) > 0 : (b.items || []).length);
+  // pausa tra blocchi: il "prossimo esercizio" si riempie alla fine, quando si sa cosa viene dopo
+  const pause = (base, dur) => steps.push({ ...base, kind: 'timed', dur, rest: true, pause: true, items: [], label: 'RECUPERO' });
   const phases = (workout.phases || []).filter((p) => (p.blocks || []).some(hasContent));
   phases.forEach((ph, pi) => {
     const blocks = ph.blocks.filter(hasContent);
     blocks.forEach((b, bi) => {
-      const base = { phase: ph.title || PHASE_TYPES[ph.type] || 'Workout', phaseType: ph.type, block: b.title || (b.type === 'video' ? 'Video' : BLOCK_TYPES[b.type]), blockType: b.type, blockKey: `${pi}.${bi}`, notes: b.notes || '' };
+      const base = { phase: ph.title || PHASE_TYPES[ph.type] || 'Workout', phaseType: ph.type, block: b.title || (b.type === 'video' ? 'Video' : b.type === 'rest' ? 'Pausa' : BLOCK_TYPES[b.type]), blockType: b.type, blockKey: `${pi}.${bi}`, notes: b.notes || '' };
       const items = b.items;
       const blockSteps = [];
+      if (b.type === 'rest') return pause(base, Number(b.seconds));
       if (b.type === 'video') {
         // Video lungo da seguire: niente "preparati", si va avanti con "Fatto"
         steps.push({ ...base, kind: 'manual', video: b.url, minutes: Number(b.minutes) || 0, items: [], label: 'VIDEO' });
@@ -116,12 +121,20 @@ export function buildSteps(workout) {
         }
       }
       if (!blockSteps.length) return;
-      steps.push({ ...base, kind: 'timed', dur: GET_READY, items: blockSteps[0].items, label: 'PREPARATI', rest: true, ready: true, summary: blockSummary(b) });
+      // dopo una pausa non serve anche il "preparati": la pausa annuncia già il blocco che arriva
+      const prev = steps.at(-1);
+      if (prev?.pause) Object.assign(prev, { summary: blockSummary(b), nextBlock: base.block });
+      else steps.push({ ...base, kind: 'timed', dur: GET_READY, items: blockSteps[0].items, label: 'PREPARATI', rest: true, ready: true, summary: blockSummary(b) });
       steps.push(...blockSteps);
+      if (Number(b.restAfter) > 0) pause(base, Number(b.restAfter));
     });
   });
-  steps.forEach((s, i) => { s.index = i; });
-  return steps;
+  while (steps.at(-1)?.pause) steps.pop(); // niente pausa a fine allenamento
+  steps.forEach((s, i) => {
+    s.index = i;
+    if (s.pause) { const nx = steps.slice(i + 1).find((x) => !x.pause && x.items.length); s.items = nx ? nx.items : []; if (!s.nextBlock && nx) { s.nextBlock = nx.block; s.summary = nx.summary || ''; } }
+  });
+  return steps.filter((s) => !s.pause || s.items.length);
 }
 
 // ---- ritmo guidato (AMRAP / AFAP) ----------------------------------------------

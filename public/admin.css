@@ -50,7 +50,7 @@ textarea { min-height: 70px; resize: vertical; }
 .block { background: var(--card); border-radius: 12px; padding: 12px; margin-top: 10px; border-left: 3px solid var(--accent); }
 .block .bhd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .items { display: grid; gap: 6px; margin-top: 8px; }
-.irow { display: grid; grid-template-columns: 1.6fr .7fr .6fr 1.2fr auto; gap: 6px; align-items: center; }
+.irow { display: grid; grid-template-columns: 1.6fr .7fr minmax(150px, .8fr) 1fr auto; gap: 6px; align-items: center; }
 @media (max-width: 700px) { .irow { grid-template-columns: 1fr 1fr; } }
 .irow .acts { display: flex; gap: 2px; }
 .ihdr { font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }

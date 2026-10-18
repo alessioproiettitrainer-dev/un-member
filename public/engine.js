@@ -24,7 +24,11 @@ export function fmt(sec) {
 
 export function blockSummary(b) {
   switch (b.type) {
-    case 'emom': return `EMOM ${b.minutes || 0} min${(b.every || 60) !== 60 ? ` · ogni ${b.every}s` : ''}${Number(b.ladderStep) ? ` · ladder ${b.ladderStep > 0 ? '+' : ''}${b.ladderStep} rip` : ''}`;
+    case 'emom': {
+      const ev = Number(b.every) || 60, n = emomRounds(b), tot = Math.round((n * ev) / 60 * 10) / 10;
+      const lad = Number(b.ladderStep) || (b.items || []).some((it) => Number(it.ladderStep));
+      return `EMOM ${ev === 60 ? `${n} min` : `${n} round × ${ev}s (${tot} min)`}${lad ? ` · ladder${b.ladderUpDown ? ' su e giù' : ''}` : ''}`;
+    }
     case 'amrap': return `AMRAP ${b.cap || 0} min`;
     case 'fortime': return `AFAP · ${b.rounds || 1} round${b.cap ? ` · cap ${b.cap} min` : ''}`;
     case 'intervals': return `${b.rounds || 1} round · ${b.work || 0}s lavoro / ${b.rest || 0}s recupero`;
@@ -47,6 +51,8 @@ function shiftReps(text, delta) {
   return m && !m[3].includes('+') ? `${m[1]}${Math.max(1, Number(m[2]) + delta)}${m[3]}` : text;
 }
 
+// round dell'EMOM: quelli impostati, oppure (blocchi vecchi) i minuti totali divisi per l'intervallo
+export const emomRounds = (b) => Math.max(1, Number(b.rounds) || Math.round(((Number(b.minutes) || 1) * 60) / (Number(b.every) || 60)));
 function emomSlots(items) {
   const slots = [];
   for (const it of items) {
@@ -76,13 +82,15 @@ export function buildSteps(workout) {
       }
       if (b.type === 'emom') {
         const every = Number(b.every) || 60;
-        const n = Math.max(1, Math.round(((Number(b.minutes) || 1) * 60) / every));
+        const n = emomRounds(b);
         const slots = emomSlots(items);
-        const step = Number(b.ladderStep) || 0;
+        const giri = Math.ceil(n / slots.length);
         for (let k = 0; k < n; k++) {
-          // EMOM ladder: a ogni giro completo le ripetizioni salgono (o scendono) di "step"
+          // EMOM ladder: a ogni giro completo le ripetizioni salgono del passo dell'esercizio (o di quello del blocco);
+          // "su e giù": salgono fino a metà e poi tornano indietro (es. 10 min: 1-2-3-4-5-5-4-3-2-1)
           const giro = Math.floor(k / slots.length);
-          const its = step ? slots[k % slots.length].map((it) => ({ ...it, reps: shiftReps(it.reps, step * giro) })) : slots[k % slots.length];
+          const lvl = b.ladderUpDown ? (giro < Math.ceil(giri / 2) ? giro : giri - 1 - giro) : giro;
+          const its = slots[k % slots.length].map((it) => { const st = it.ladderStep !== undefined && it.ladderStep !== '' ? Number(it.ladderStep) : Number(b.ladderStep) || 0; return st ? { ...it, reps: shiftReps(it.reps, st * lvl) } : it; });
           blockSteps.push({ ...base, kind: 'timed', dur: every, items: its, emom: true, label: every === 60 ? `MINUTO ${k + 1}` : `INTERVALLO ${k + 1}`, counter: `${k + 1}/${n}`, counterLabel: every === 60 ? 'MINUTI' : 'INTERVALLI' });
         }
       } else if (b.type === 'ladder') {

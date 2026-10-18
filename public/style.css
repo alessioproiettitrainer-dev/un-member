@@ -347,3 +347,10 @@ a { color: inherit; }
 .player.resting .upnext { border-left-color: var(--rest); background: rgba(80, 170, 255, .12); }
 .player.resting .upnext span { color: var(--rest); }
 .player.resting.full .tile .big { color: var(--rest); }
+/* prova gratuita */
+.trialbar { position: sticky; top: 0; z-index: 8; background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 800; padding: 9px 16px; text-align: center; }
+.trialbar a { color: var(--accent-ink); text-decoration: underline; }
+.trialcard { outline: 2px solid var(--accent); }
+.wo.locked { opacity: .55; }
+.locksheet { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, .7); display: flex; align-items: flex-end; padding: 16px; }
+.locksheet .card { width: 100%; max-width: 520px; margin: 0 auto; }

@@ -115,3 +115,12 @@ Server sempre acceso con Node 18+ e spazio per i video (una VPS da pochi euro al
 - Ricerca alimenti con banca dati e codice a barre per il conta calorie
 - Notifiche push nei giorni di allenamento
 - Pubblicazione su App Store / Google Play (Capacitor)
+
+### Settimana di prova gratuita
+
+Impostazioni → "Settimana di prova gratuita": la attivi quando vuoi e scegli i giorni (7 di base).
+- Chi si registra e non ha l'abbonamento vede "Inizia la prova gratuita".
+- In prova si vede una settimana per programma (la 1 nei programmi base, quella in corso nei cicli); le altre hanno il lucchetto.
+- Una sola prova per email (anche con varianti tipo `nome+1@gmail.com` o i punti nelle gmail).
+- A fine prova compare "Prova finita" con il tasto che porta al link del sito per abbonarsi.
+- Nella lista Membri il filtro "In prova" mostra chi la sta usando.

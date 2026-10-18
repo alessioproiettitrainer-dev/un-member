@@ -62,7 +62,22 @@ function tabbar(on) {
   return `<nav class="tabbar">${t('#/', 'home', 'Oggi', ICONS.home)}${t('#/train', 'train', 'Allenamenti', ICONS.train)}${t('#/community', 'community', 'Community<i class="badge" id="cbadge" hidden></i>', ICONS.community)}${t('#/progress', 'progress', 'Progressi', ICONS.progress)}${t('#/food', 'food', 'Cibo', ICONS.food)}</nav>`;
 }
 const previewBar = () => (ME?.id === 'admin-preview' ? `<div class="pvbar">Anteprima admin: qui le modifiche non vengono salvate. <a href="#/register">Iscriviti come membro</a> o <a href="#/login">accedi</a> per usare l'app come i tuoi clienti.</div>` : '');
-function page(tab, html) { $app.innerHTML = `${previewBar()}<div class="wrap">${html}</div>${tabbar(tab)}`; refreshBadge(); }
+// Durante la prova gratuita: giorni rimasti e link per abbonarsi, in cima a ogni pagina
+const trialLeft = () => Math.max(0, Math.ceil((new Date(ME.trialUntil + 'T23:59').getTime() - Date.now()) / 864e5));
+const trialBar = () => (ME?.trial ? `<div class="trialbar">Prova gratuita · ${trialLeft() === 1 ? 'ultimo giorno' : `ancora ${trialLeft()} giorni`}${SETTINGS.shopUrl ? ` · <a href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">Abbonati ›</a>` : ''}</div>` : '');
+// Contenuto bloccato in prova: spiega e porta al sito per l'abbonamento
+function lockedSheet() {
+  document.querySelector('.locksheet')?.remove();
+  const m = document.createElement('div');
+  m.className = 'locksheet';
+  m.innerHTML = `<div class="card"><div class="h1" style="font-size:24px;margin-top:0">🔒 Sblocca <em>tutto</em></div>
+    <p class="muted" style="margin-top:0">Nella settimana di prova puoi fare gli allenamenti di una settimana. Con l'abbonamento sblocchi tutti i programmi, tutte le settimane e i nuovi cicli.</p>
+    ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">Abbonati ora</a>` : ''}
+    <button class="btn block" style="margin-top:8px" data-close>Continua la prova</button></div>`;
+  m.onclick = (e) => { if (e.target === m || e.target.closest('[data-close]')) m.remove(); };
+  document.body.append(m);
+}
+function page(tab, html) { $app.innerHTML = `${previewBar()}${trialBar()}<div class="wrap">${html}</div>${tabbar(tab)}`; refreshBadge(); }
 // Pallino con i messaggi privati non letti sull'icona Community
 async function refreshBadge() {
   if (!ME?.active || !ME.community?.joined) return;
@@ -145,7 +160,7 @@ async function activeProgram(list) {
 function nextWorkout(p) {
   const counts = new Map();
   for (const h of ME.history) if (h.programId === p.id) counts.set(h.workoutId, (counts.get(h.workoutId) || 0) + 1);
-  let pool = p.workouts;
+  let pool = p.workouts.filter((w) => !w.locked);
   const wk = cycleWeek(p);
   if (wk) {
     const thisWeek = p.workouts.filter((w) => Number(w.week) === wk);
@@ -247,9 +262,11 @@ async function programView(pid) {
     <div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}${wk ? `<span class="pill">Settimana ${wk}</span>` : ''}</div>
     <div class="h1">${esc(p.title)}</div><div class="muted">${esc(p.description)}</div>
     <button class="btn ${isMine ? '' : 'primary'} block" style="margin-top:14px" id="setmine" ${isMine ? 'disabled' : ''}>${isMine ? '✓ È il tuo programma' : 'Segui questo programma'}</button>
-    ${[...byWeek].sort((a, b) => a[0] - b[0]).map(([k, ws]) => `<div class="h2">${k ? `Settimana ${k}${k === wk ? ' · <em>questa settimana</em>' : ''}` : 'Allenamenti'}</div>` + ws.map((w, i) => `
+    ${[...byWeek].sort((a, b) => a[0] - b[0]).map(([k, ws]) => `<div class="h2">${k ? `Settimana ${k}${k === wk ? ' · <em>questa settimana</em>' : ''}` : 'Allenamenti'}</div>` + ws.map((w, i) => (w.locked ? `
+      <a class="wo locked" href="#/w/${pid}/${w.id}"><div class="num">🔒</div>
+        <div><div class="t">${esc(w.title)}</div><div class="muted small">Con l'abbonamento</div></div><div class="go">›</div></a>` : `
       <a class="wo ${done.has(w.id) ? 'done' : ''}" href="#/w/${pid}/${w.id}"><div class="num">${done.has(w.id) ? '✓' : i + 1}</div>
-        <div><div class="t">${esc(w.title)}</div><div class="muted small">~${Math.round(estimateSeconds(w) / 60)} min${w.description ? ` · ${esc(w.description)}` : ''}</div></div><div class="go">›</div></a>`).join('')).join('')}`);
+        <div><div class="t">${esc(w.title)}</div><div class="muted small">~${Math.round(estimateSeconds(w) / 60)} min${w.description ? ` · ${esc(w.description)}` : ''}</div></div><div class="go">›</div></a>`)).join('')).join('')}`);
   document.getElementById('setmine').onclick = async () => { ME = await api('/api/me', 'PUT', { activeProgramId: pid }); toast('Programma impostato'); programView(pid); };
 }
 
@@ -257,6 +274,7 @@ async function workoutView(pid, wid) {
   const p = await getProgram(pid);
   const w = p.workouts.find((x) => x.id === wid);
   if (!w) throw new Error('Allenamento non trovato');
+  if (w.locked) { location.replace(`#/p/${pid}`); return lockedSheet(); }
   const ex = (id) => p.exercises[id] || { name: '?' };
   page('train', `<a class="back" href="#/p/${pid}">‹ ${esc(p.title)}</a>
     <div class="h1">${esc(w.title)}</div><div class="muted">${esc(w.description || '')}</div>
@@ -273,6 +291,7 @@ async function playView(pid, wid) {
   const p = await getProgram(pid);
   const w = p.workouts.find((x) => x.id === wid);
   if (!w) throw new Error('Allenamento non trovato');
+  if (w.locked) { location.replace(`#/p/${pid}`); return lockedSheet(); }
   startPlayer($app, p, w, {
     onExit: () => { location.hash = `#/w/${pid}/${wid}`; },
     onFinish: async (res) => {
@@ -482,10 +501,11 @@ function foodView(day) {
 
 // ---- profilo -------------------------------------------------------------------
 function accessInfo() {
+  if (ME.trial) return `<span class="pill accent">Prova gratuita · ${trialLeft() === 1 ? 'ultimo giorno' : `${trialLeft()} giorni rimasti`}</span>`;
   if (!ME.accessUntil) return '<span class="pill">Abbonamento non attivo</span>';
   const left = Math.ceil((new Date(ME.accessUntil + 'T23:59').getTime() - Date.now()) / DAY);
   const date = new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-  return ME.active ? `<span class="pill ${left <= 7 ? 'accent' : 'ok'}">Attivo fino al ${date}${left <= 7 ? ` · ${left} ${left === 1 ? 'giorno' : 'giorni'}` : ''}</span>` : `<span class="pill">Scaduto il ${date}</span>`;
+  return ME.paid ? `<span class="pill ${left <= 7 ? 'accent' : 'ok'}">Attivo fino al ${date}${left <= 7 ? ` · ${left} ${left === 1 ? 'giorno' : 'giorni'}` : ''}</span>` : `<span class="pill">Scaduto il ${date}</span>`;
 }
 function profileView() {
   const pr = ME.profile;
@@ -496,7 +516,7 @@ function profileView() {
     <div class="card"><div class="row" style="gap:14px">${avatar(c.avatar, ME.name, 64)}<div style="flex:1"><b>Community</b><div class="muted small">${c.joined ? 'Sei nella community. La tua foto e la bio le vedono gli altri membri.' : 'Non sei ancora nella community.'}</div></div></div>
       <div class="row" style="margin-top:12px"><a class="btn ${c.joined ? '' : 'primary'}" href="#/community/edit" style="flex:1">${c.joined ? 'Modifica foto e bio' : 'Entra nella community'}</a>${c.joined ? '<button class="btn" id="leave">Esci</button>' : ''}</div></div>
     <div class="card"><div class="row between"><b>Abbonamento</b>${accessInfo()}</div>
-      ${SETTINGS.shopUrl ? `<a class="btn block" style="margin-top:12px" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${ME.active ? 'Rinnova sul sito' : 'Attiva sul sito'}</a>` : ''}</div>
+      ${SETTINGS.shopUrl ? `<a class="btn block" style="margin-top:12px" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${ME.paid ? 'Rinnova sul sito' : 'Abbonati sul sito'}</a>` : ''}</div>
     <form class="card form" id="prof">
       <label>Nome<input name="name" value="${esc(ME.name)}"></label>
       <div class="muted small">${esc(ME.email)} · iscritto dal ${new Date(ME.joined).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
@@ -531,11 +551,18 @@ function profileView() {
 
 // ---- abbonamento non attivo -----------------------------------------------------
 function paywallView() {
-  const expired = !!ME.accessUntil;
+  const expired = !!ME.accessUntil, trialOver = !expired && !!ME.trialUntil;
+  const days = Number(SETTINGS.trialDays) || 7;
   page('', `<div class="topbar">${brand(24)}</div>
-    <div class="h1">${expired ? 'Abbonamento <em>scaduto</em>' : 'Quasi <em>dentro</em>'}</div>
+    <div class="h1">${expired ? 'Abbonamento <em>scaduto</em>' : trialOver ? 'Prova <em>finita</em>' : ME.trialAvailable ? `Prova gratis <em>${days} giorni</em>` : 'Quasi <em>dentro</em>'}</div>
+    ${ME.trialAvailable ? `<div class="card trialcard">
+      <p style="margin-top:0"><b>Allenati con noi gratis per ${days} giorni.</b> Hai accesso a una settimana di allenamenti con video, timer e voce guida, alla community e ai tuoi progressi.</p>
+      <p class="muted small">Nessun pagamento e nessun rinnovo automatico: alla fine decidi tu se abbonarti.</p>
+      <button class="btn primary block" id="starttrial">Inizia la prova gratuita</button></div>` : ''}
     <div class="card">
       <p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Rinnova per tornare ai tuoi allenamenti: progressi e storico restano salvati.`
+        : trialOver ? `La tua settimana di prova è finita il ${new Date(ME.trialUntil + 'T12:00').toLocaleDateString('it-IT')}. Abbonati per sbloccare tutti i programmi e continuare da dove sei arrivato: progressi e storico restano salvati.`
+        : ME.trialAvailable ? 'Vuoi già tutto? Con l\'abbonamento sblocchi subito tutti i programmi e tutte le settimane.'
         : 'Il tuo account è creato. Per sbloccare programmi, challenge e allenamenti serve un abbonamento attivo.'}</p>
       <p class="muted small">Hai già pagato sul sito? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>
       ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">Scegli il tuo abbonamento</a>` : ''}
@@ -543,6 +570,8 @@ function paywallView() {
       <button class="btn block" style="margin-top:8px" id="recheck">Ho già pagato, ricontrolla</button>
     </div>
     <a class="sbtn" href="#/profile">Vai al profilo</a>`);
+  const st = document.getElementById('starttrial');
+  if (st) st.onclick = async () => { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast('Prova attivata: buon allenamento!'); location.hash = '#/'; route(); } catch (err) { toast(err.message, true); } };
   document.getElementById('recheck').onclick = async () => { ME = await api('/api/me'); if (ME.active) { toast('Accesso attivo!'); route(); } else toast('Non ancora attivo: riprova più tardi', true); };
 }
 

@@ -17,8 +17,8 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
-  exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {},
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
+  exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {}, trialEmails: [],
   messages: [], reports: [],
 };
 function load() {
@@ -35,6 +35,23 @@ const newId = () => crypto.randomBytes(6).toString('hex');
 const today = () => new Date().toISOString().slice(0, 10);
 const addMonths = (iso, m) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + m); return d.toISOString().slice(0, 10); };
 const hasAccess = (u) => !!u.accessUntil && u.accessUntil >= today();
+// ---- settimana di prova gratuita -------------------------------------------------
+// Una sola volta per email: "mario.rossi+1@gmail.com" e "mariorossi@gmail.com" contano come la stessa persona.
+function trialKey(email) {
+  let [user = '', domain = ''] = String(email).toLowerCase().trim().split('@');
+  user = user.split('+')[0];
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') user = user.replace(/\./g, '');
+  return `${user}@${domain}`;
+}
+const inTrial = (u) => !hasAccess(u) && !!u.trialUntil && u.trialUntil >= today();
+const canUse = (u) => hasAccess(u) || inTrial(u);
+const trialAvailable = (u) => !!db.settings.trialEnabled && !hasAccess(u) && !u.trialUntil && !db.trialEmails.includes(trialKey(u.email));
+// In prova si vede una sola settimana: la settimana 1 dei programmi base, la settimana in corso dei cicli.
+function trialWeek(p) {
+  if (p.kind === 'cycle' && p.startDate) return Math.max(1, Math.floor((Date.now() - new Date(p.startDate).getTime()) / (7 * 864e5)) + 1);
+  return 1;
+}
 // L'accesso si somma: se è ancora attivo, i mesi partono dalla scadenza attuale.
 function grant(u, months, by) {
   const from = hasAccess(u) ? u.accessUntil : today();
@@ -80,12 +97,12 @@ function member(req, res, next) {
 const publicUser = (u) => {
   const { password, accessLog, ...rest } = u;
   const c = u.community || {};
-  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: hasAccess(u),
+  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u),
     community: { joined: !!c.joined, bio: c.bio || '', avatar: c.avatar ? `/api/avatars/${c.avatar}` : '', blocked: c.blocked || [], banned: !!c.banned } };
 };
 // Contenuti riservati a chi ha l'abbonamento attivo (l'admin passa sempre).
 function active(req, res, next) {
-  if (isAdmin(req) || (req.user && hasAccess(req.user))) return next();
+  if (isAdmin(req) || (req.user && canUse(req.user))) return next();
   res.status(402).json({ error: 'Abbonamento non attivo', inactive: true });
 }
 
@@ -150,11 +167,14 @@ app.get('/api/programs/:id', member, active, (req, res) => {
     add(e.easierId);
     add(e.harderId);
   };
-  for (const w of p.workouts || []) for (const ph of w.phases || []) for (const b of ph.blocks || []) for (const it of b.items || []) add(it.exerciseId);
+  // in prova: le altre settimane si vedono (titolo e settimana) ma sono bloccate e senza contenuto
+  const trial = !isAdmin(req) && req.user && inTrial(req.user), tw = trial ? trialWeek(p) : 0;
+  const workouts = (p.workouts || []).map((w) => (trial && (Number(w.week) || 1) !== tw ? { id: w.id, title: w.title, week: w.week, locked: true, phases: [] } : w));
+  for (const w of workouts) for (const ph of w.phases || []) for (const b of ph.blocks || []) for (const it of b.items || []) add(it.exerciseId);
   // tutorial collegati agli esercizi del programma, per il tasto "Tutorial" nel player
   const tutorials = {};
   for (const t of db.tutorials) if (t.published && t.exerciseId && used.has(t.exerciseId)) tutorials[t.exerciseId] = { id: t.id, title: t.title, videoUrl: t.videoUrl };
-  res.json({ ...summary(p), ...p, exercises: Object.fromEntries(used), tutorials });
+  res.json({ ...summary(p), ...p, workouts, trialWeek: tw, exercises: Object.fromEntries(used), tutorials });
 });
 
 app.get('/api/tutorials', member, active, (req, res) => {
@@ -180,6 +200,16 @@ me.use((req, res, next) => {
   next();
 });
 me.get('/', (req, res) => res.json(publicUser(req.user)));
+me.post('/trial', (req, res) => {
+  const u = req.user;
+  if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Hai già un abbonamento attivo' : 'La settimana di prova si può fare una sola volta' });
+  const days = Math.max(1, Number(db.settings.trialDays) || 7);
+  u.trialStart = today();
+  u.trialUntil = new Date(Date.now() + (days - 1) * 864e5).toISOString().slice(0, 10); // oggi compreso
+  db.trialEmails.push(trialKey(u.email));
+  save();
+  res.json(publicUser(u));
+});
 me.put('/', (req, res) => {
   const u = req.user;
   if (typeof req.body.name === 'string' && req.body.name.trim()) u.name = req.body.name.trim();
@@ -306,7 +336,7 @@ const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`;
 const blockedBy = (u, otherId) => (u.community?.blocked || []).includes(otherId);
 function community(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Accedi per continuare' });
-  if (!hasAccess(req.user)) return res.status(402).json({ error: 'Abbonamento non attivo', inactive: true });
+  if (!canUse(req.user)) return res.status(402).json({ error: 'Abbonamento non attivo', inactive: true });
   if (req.user.community?.banned) return res.status(403).json({ error: 'Sei stato escluso dalla community' });
   if (!inCommunity(req.user)) return res.status(409).json({ error: 'Entra prima nella community', notJoined: true });
   next();
@@ -504,7 +534,7 @@ crud('challenges', () => ({ title: 'Nuova challenge', description: '', unit: 'ri
 
 admin.get('/users', (req, res) => res.json(db.users.map((u) => ({
   id: u.id, name: u.name, email: u.email, joined: u.joined, workouts: u.history.length,
-  lastWorkout: u.history.at(-1)?.date || '', accessUntil: u.accessUntil || '', active: hasAccess(u),
+  lastWorkout: u.history.at(-1)?.date || '', accessUntil: u.accessUntil || '', active: hasAccess(u), trialUntil: u.trialUntil || '', trial: inTrial(u),
   accessLog: (u.accessLog || []).slice(-5), nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) },
   profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays },
   weight: u.weights.at(-1)?.kg || '',

@@ -186,7 +186,8 @@ const fmtDate = (d) => (d ? new Date(d + (d.length === 10 ? 'T12:00' : '')).toLo
 const daysLeft = (u) => (u.accessUntil ? Math.ceil((new Date(u.accessUntil + 'T23:59').getTime() - Date.now()) / 864e5) : null);
 function userStatus(u) {
   const d = daysLeft(u);
-  if (!u.accessUntil) return ['pending', 'In attesa'];
+  if (u.trial && !u.active) return ['trial', `In prova fino al ${fmtDate(u.trialUntil)}`];
+  if (!u.accessUntil) return ['pending', u.trialUntil ? `Prova finita il ${fmtDate(u.trialUntil)}` : 'In attesa'];
   if (d < 0 || !u.active) return ['expired', 'Scaduto'];
   if (d <= 7) return ['soon', `Scade tra ${d} g`];
   return ['ok', 'Attivo'];
@@ -197,7 +198,7 @@ function usersView() {
   for (const u of S.users) { const k = userStatus(u)[0]; counts[k] = (counts[k] || 0) + 1; }
   const list = S.users.filter((u) => (S.uf === 'all' || userStatus(u)[0] === S.uf) && (!q || u.name.toLowerCase().includes(q) || u.email.includes(q)))
     .sort((a, b) => (a.accessUntil || '').localeCompare(b.accessUntil || ''));
-  const filters = [['all', 'Tutti'], ['pending', 'In attesa'], ['soon', 'In scadenza'], ['expired', 'Scaduti'], ['ok', 'Attivi']];
+  const filters = [['all', 'Tutti'], ['trial', 'In prova'], ['pending', 'In attesa'], ['soon', 'In scadenza'], ['expired', 'Scaduti'], ['ok', 'Attivi']];
   const pend = Object.entries(S.pending);
   return `<div class="cols two">
     <div class="panel">
@@ -297,7 +298,12 @@ function settingsView() {
   return `<div class="panel" style="max-width:620px">
     <div class="f"><label>Nome dell'app</label><input type="text" data-set="appName" value="${esc(st.appName)}"></div>
     <div class="f"><label>Frase sotto il logo</label><input type="text" data-set="tagline" value="${esc(st.tagline)}"></div>
-    <div class="f"><label>Link al sito per comprare l'abbonamento</label><input type="text" data-set="shopUrl" value="${esc(st.shopUrl)}" placeholder="https://tuosito.it/abbonamento"></div>
+    <div class="f"><label>Link al sito per comprare l'abbonamento</label><input type="text" data-set="shopUrl" value="${esc(st.shopUrl)}" placeholder="https://tuosito.it/abbonamento">
+      <div class="muted small">Ci arriva chi tocca "Abbonati": dalla prova gratuita, dagli allenamenti bloccati e dal profilo.</div></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Settimana di prova gratuita</label>
+      <label class="chk"><input type="checkbox" data-set="trialEnabled" ${st.trialEnabled ? 'checked' : ''}> Attiva: chi si registra può provare gratis</label>
+      <div class="grid2" style="margin-top:8px"><div class="f" style="margin:0"><label>Giorni di prova</label><input type="number" min="1" max="30" data-set="trialDays" value="${esc(st.trialDays ?? 7)}"></div></div>
+      <div class="muted small">In prova si vede una sola settimana di ogni programma (la settimana 1, o la settimana in corso nei cicli): le altre compaiono con il lucchetto. Si può fare una sola volta per email. Alla fine compare il tasto per abbonarsi.</div></div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
     <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
     <div class="f"><label>Logo (PNG trasparente, versione bianca per sfondo scuro)</label><input type="file" accept="image/*" data-upload="logo">
@@ -436,7 +442,7 @@ root.addEventListener('input', (e) => {
     x[field] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
     x._dirty = true;
   }
-  if (t.dataset.set) S.settings[t.dataset.set] = t.value;
+  if (t.dataset.set) S.settings[t.dataset.set] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
   if (t.id === 'uq') { S.uq = t.value; softRender(); document.getElementById('uq')?.focus(); }
   if (t.id === 'exlistq') {
     S.exQ = t.value;

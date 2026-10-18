@@ -85,3 +85,4 @@ input[type=search]:focus { border-color: var(--accent); }
 .exhit:hover, .exhit:focus { background: rgba(255, 122, 0, .15); }
 .exhit small { color: var(--muted); font-size: 11px; white-space: nowrap; }
 @media (max-width: 700px) { .irow > .exsel { grid-column: 1 / -1; } }
+.st.trial { background: rgba(58, 160, 255, .15); color: #3aa0ff; }

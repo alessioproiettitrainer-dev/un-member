@@ -676,7 +676,7 @@ function compressVideo(src) {
     if (!FFMPEG) return resolve(null);
     const out = src.replace(/\.[^.]+$/, '') + '-720.mp4';
     const { execFile } = require('child_process');
-    execFile(FFMPEG, ['-y', '-i', src, '-vf', "scale='if(gt(iw,ih),1280,-2)':'if(gt(iw,ih),-2,1280)'", '-r', '30',
+    execFile(FFMPEG, ['-y', '-i', src, '-vf', "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'", '-r', '30',
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', out],
     { timeout: 10 * 60 * 1000 }, (err) => resolve(err ? null : out));
   });

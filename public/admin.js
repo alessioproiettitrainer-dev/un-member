@@ -143,6 +143,11 @@ function exercisesView() {
           <div style="display:grid;gap:8px"><input type="file" accept="video/*" data-upload="ex-video"><div class="prog-bar"><i id="upbar"></i></div>
           <div class="muted small">Consigliato: verticale 4:5 o 9:16, 5–10 s, MP4 (H.264), senza audio.</div>
           ${e.video ? '<button class="sbtn ghost danger" data-act="ex-unvideo">Togli il video caricato</button>' : ''}</div></div></div>
+      <div class="f"><label>Video per il riquadro 4:5 (opzionale)</label>
+        <div class="upl">${e.videoBox ? `<video class="vid" style="aspect-ratio:4/5" src="${esc(e.videoBox)}" autoplay muted loop playsinline></video>` : ''}
+          <div style="display:grid;gap:8px"><input type="file" accept="video/*" data-upload="ex-videobox">
+          <div class="muted small">Se c'è, il player lo usa nella vista normale (riempie il riquadro senza bordi sfocati); il video sopra resta per il tutto schermo.</div>
+          ${e.videoBox ? '<button class="sbtn ghost danger" data-act="ex-unvideobox">Togli il video 4:5</button>' : ''}</div></div></div>
       <div class="f"><label>Oppure link YouTube / Google Drive / Vimeo</label><input type="text" data-exf="videoUrl" value="${esc(e.videoUrl)}" placeholder="https://youtu.be/… oppure https://drive.google.com/file/d/…">
         <div class="muted small">Usato solo se non c'è un video caricato. YouTube e Vimeo girano in loop senza audio; Drive si avvia con un tocco. Su Drive il file va condiviso con "Chiunque abbia il link".</div>
         ${!e.video && embedUrl(e.videoUrl) ? `<iframe class="vid" style="border:0" src="${esc(embedUrl(e.videoUrl, { loop: true }))}" allow="autoplay; encrypted-media"></iframe>` : e.videoUrl && !embedUrl(e.videoUrl) ? '<div class="small danger">Link non riconosciuto: usa un link di YouTube, Google Drive o Vimeo.</div>' : ''}</div>
@@ -512,9 +517,9 @@ root.addEventListener('change', async (e) => {
   const bar = document.getElementById('upbar');
   try {
     const url = await uploadFile(t.files[0], (f) => bar && (bar.style.width = `${f * 100}%`));
-    if (t.dataset.upload === 'ex-video') {
+    if (t.dataset.upload === 'ex-video' || t.dataset.upload === 'ex-videobox') {
       const ex = S.exercises.find((x) => x.id === S.exId);
-      ex.video = url.url || url;
+      ex[t.dataset.upload === 'ex-video' ? 'video' : 'videoBox'] = url.url || url;
       await call('PUT', `/api/admin/exercises/${ex.id}`, ex);
       toast(url.after ? `Video pronto: da ${Math.round(url.before / 1048576)} MB a ${(url.after / 1048576).toFixed(1)} MB` : 'Video caricato');
     } else if (t.dataset.upload === 'logo') {
@@ -623,6 +628,7 @@ root.addEventListener('click', async (e) => {
       }
       case 'bd-del': if (!confirm('Eliminare?')) return; await call('DELETE', `/api/admin/${t.dataset.kind}/${t.dataset.id}`); S[t.dataset.kind] = S[t.dataset.kind].filter((y) => y.id !== t.dataset.id); break;
       case 'u-del': if (!confirm('Eliminare questo membro e tutti i suoi dati (foto comprese)?')) return; await call('DELETE', `/api/admin/users/${t.dataset.id}`); S.users = S.users.filter((y) => y.id !== t.dataset.id); break;
+      case 'ex-unvideobox': { const x = S.exercises.find((y) => y.id === S.exId); x.videoBox = ''; await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Video 4:5 tolto'); break; }
       case 'ex-unvideo': { const x = S.exercises.find((y) => y.id === S.exId); x.video = ''; await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Video tolto'); break; }
       case 'ex-back': S.exId = null; render(); return window.scrollTo(0, 0);
       case 'p-back':

@@ -376,3 +376,4 @@ a.btn { text-decoration: none; }
 .photoview { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .95); display: grid; place-items: center; }
 .photoview img { max-width: 100vw; max-height: 100dvh; object-fit: contain; }
 .photoview .icon { position: absolute; top: 14px; right: 14px; }
+.video.sq.boxfit video { object-fit: cover; }

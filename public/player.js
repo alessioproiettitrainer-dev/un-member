@@ -363,7 +363,7 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq">${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
+      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
       ${next && !s.ready && !s.rest && !emomRest ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
         <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>

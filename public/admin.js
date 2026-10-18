@@ -300,6 +300,16 @@ function settingsView() {
     <div class="f"><label>Frase sotto il logo</label><input type="text" data-set="tagline" value="${esc(st.tagline)}"></div>
     <div class="f"><label>Link al sito per comprare l'abbonamento</label><input type="text" data-set="shopUrl" value="${esc(st.shopUrl)}" placeholder="https://tuosito.it/abbonamento">
       <div class="muted small">Ci arriva chi tocca "Abbonati": dalla prova gratuita, dagli allenamenti bloccati e dal profilo.</div></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Piani di abbonamento</label>
+      <div class="muted small">Il membro tocca un piano e si apre direttamente il link di pagamento. Si vedono solo i piani con il link compilato.</div>
+      ${(st.plans || []).map((x, i) => `<div class="urow" style="margin-top:8px"><div class="grid2">
+        <div class="f"><label>Nome del piano</label><input type="text" data-plan="${i}.title" value="${esc(x.title)}"></div>
+        <div class="f"><label>Prezzo</label><input type="text" data-plan="${i}.price" value="${esc(x.price)}" placeholder="es. 30 €"></div>
+        <div class="f"><label>Periodo</label><input type="text" data-plan="${i}.period" value="${esc(x.period)}" placeholder="al mese / all'anno"></div>
+        <div class="f"><label>Nota (opzionale)</label><input type="text" data-plan="${i}.note" value="${esc(x.note)}"></div></div>
+        <div class="f"><label>Link di pagamento</label><input type="text" data-plan="${i}.url" value="${esc(x.url)}" placeholder="https://…"></div>
+        <div class="row" style="justify-content:space-between"><label class="chk"><input type="checkbox" data-plan="${i}.best" ${x.best ? 'checked' : ''}> Consigliato</label><button class="sbtn danger" data-act="plan-rm" data-i="${i}">Elimina</button></div></div>`).join('')}
+      <button class="sbtn" style="margin-top:8px" data-act="plan-add">+ Aggiungi piano</button></div>
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Settimana di prova gratuita</label>
       <label class="chk"><input type="checkbox" data-set="trialEnabled" ${st.trialEnabled ? 'checked' : ''}> Attiva: chi si registra può provare gratis</label>
       <div class="grid2" style="margin-top:8px"><div class="f" style="margin:0"><label>Giorni di prova</label><input type="number" min="1" max="30" data-set="trialDays" value="${esc(st.trialDays ?? 7)}"></div></div>
@@ -452,6 +462,7 @@ root.addEventListener('input', (e) => {
     x[field] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
     x._dirty = true;
   }
+  if (t.dataset.plan) { const [i, f] = t.dataset.plan.split('.'); S.settings.plans[Number(i)][f] = t.type === 'checkbox' ? t.checked : t.value; }
   if (t.dataset.set) S.settings[t.dataset.set] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
   if (t.id === 'uq') { S.uq = t.value; softRender(); document.getElementById('uq')?.focus(); }
   if (t.id === 'exlistq') {
@@ -581,6 +592,8 @@ root.addEventListener('click', async (e) => {
         const defaults = { emom: { minutes: 10, every: 60 }, amrap: { cap: 12 }, fortime: { rounds: 3, cap: 0 }, intervals: { rounds: 3, work: 40, rest: 20, restRounds: 60 }, sets: { rounds: 3, rest: 60 }, ladder: { from: 1, to: 10, step: 1, rest: 0, updown: false }, video: { minutes: 20, url: '' }, rest: { seconds: 60 } }[t.dataset.type];
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
       }
+      case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
+      case 'plan-rm': if (!confirm('Eliminare questo piano?')) return; S.settings.plans.splice(Number(t.dataset.i), 1); break;
       case 'copy-trial': { try { await navigator.clipboard.writeText(`${location.origin}/#/prova`); toast('Link copiato'); } catch { prompt('Copia il link:', `${location.origin}/#/prova`); } return; }
       case 'b-dup': {
         const { arr, i } = parentOf(path);

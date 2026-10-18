@@ -63,9 +63,20 @@ function tabbar(on) {
   return `<nav class="tabbar">${t('#/', 'home', 'Oggi', ICONS.home)}${t('#/train', 'train', 'Allenamenti', ICONS.train)}${t('#/community', 'community', 'Community<i class="badge" id="cbadge" hidden></i>', ICONS.community)}${t('#/progress', 'progress', 'Progressi', ICONS.progress)}${t('#/food', 'food', 'Cibo', ICONS.food)}</nav>`;
 }
 const previewBar = () => (ME?.id === 'admin-preview' ? `<div class="pvbar">Anteprima admin: qui le modifiche non vengono salvate. <a href="#/register">Iscriviti come membro</a> o <a href="#/login">accedi</a> per usare l'app come i tuoi clienti.</div>` : '');
+// Piani di abbonamento: ognuno apre direttamente il suo link di pagamento (se non ci sono piani, il link del sito)
+const plans = () => (SETTINGS.plans || []).filter((x) => x.url && x.title);
+const hasPlans = () => plans().length > 0 || !!SETTINGS.shopUrl;
+function plansHtml() {
+  const list = plans();
+  if (!list.length) return SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Scegli il tuo abbonamento')}</a>` : '';
+  return `<div class="plans">${list.map((x) => `<a class="plan ${x.best ? 'best' : ''}" href="${esc(x.url)}" target="_blank" rel="noopener">
+    ${x.best ? '<span class="tag">Consigliato</span>' : ''}<div class="pt">${esc(x.title)}</div>
+    ${x.price ? `<div class="pp"><b>${esc(x.price)}</b> <span>${esc(x.period || '')}</span></div>` : ''}
+    ${x.note ? `<div class="pn">${esc(x.note)}</div>` : ''}<div class="pgo">Scegli ›</div></a>`).join('')}</div>`;
+}
 // Durante la prova gratuita: giorni rimasti e link per abbonarsi, in cima a ogni pagina
 const trialLeft = () => Math.max(0, Math.ceil((new Date(ME.trialUntil + 'T23:59').getTime() - Date.now()) / 864e5));
-const trialBar = () => (ME?.trial ? `<div class="trialbar">Prova gratuita · ${trialLeft() === 1 ? 'ultimo giorno' : `ancora ${trialLeft()} giorni`}${SETTINGS.shopUrl ? ` · <a href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">Abbonati ›</a>` : ''}</div>` : '');
+const trialBar = () => (ME?.trial ? `<div class="trialbar">Prova gratuita · ${trialLeft() === 1 ? 'ultimo giorno' : `ancora ${trialLeft()} giorni`}${hasPlans() ? ' · <a href="#/abbonati">Abbonati ›</a>' : ''}</div>` : '');
 // Contenuto bloccato in prova: spiega e porta al sito per l'abbonamento
 function lockedSheet() {
   document.querySelector('.locksheet')?.remove();
@@ -73,7 +84,7 @@ function lockedSheet() {
   m.className = 'locksheet';
   m.innerHTML = `<div class="card"><div class="h1" style="font-size:24px;margin-top:0">🔒 Sblocca <em>tutto</em></div>
     <p class="muted" style="margin-top:0">Nella settimana di prova puoi fare gli allenamenti di una settimana. Con l'abbonamento sblocchi tutti i programmi, tutte le settimane e i nuovi cicli.</p>
-    ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Abbonati ora')}</a>` : ''}
+    ${plansHtml()}
     <button class="btn block" style="margin-top:8px" data-close>Continua la prova</button></div>`;
   m.onclick = (e) => { if (e.target === m || e.target.closest('[data-close]')) m.remove(); };
   document.body.append(m);
@@ -113,6 +124,7 @@ async function route() {
     ls.set('wantTrial', false);
     if (ME.trialAvailable) { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast(`Settimana di prova attiva: buon allenamento!`); } catch (err) { toast(err.message, true); } }
   }
+  if (parts[0] === 'abbonati') return plansView();
   if (!ME.active && parts[0] !== 'profile') return paywallView();
   try {
     if (parts[0] === 'train') return await trainView();
@@ -540,7 +552,7 @@ function profileView() {
     <div class="card"><div class="row" style="gap:14px">${avatar(c.avatar, ME.name, 64)}<div style="flex:1"><b>Community</b><div class="muted small">${c.joined ? 'Sei nella community. La tua foto e la bio le vedono gli altri membri.' : 'Non sei ancora nella community.'}</div></div></div>
       <div class="row" style="margin-top:12px"><a class="btn ${c.joined ? '' : 'primary'}" href="#/community/edit" style="flex:1">${c.joined ? 'Modifica foto e bio' : 'Entra nella community'}</a>${c.joined ? '<button class="btn" id="leave">Esci</button>' : ''}</div></div>
     <div class="card"><div class="row between"><b>Abbonamento</b>${accessInfo()}</div>
-      ${SETTINGS.shopUrl ? `<a class="btn block" style="margin-top:12px" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${ME.paid ? 'Rinnova sul sito' : 'Abbonati sul sito'}</a>` : ''}</div>
+      ${hasPlans() ? `<a class="btn block" style="margin-top:12px" href="#/abbonati">${ME.paid ? 'Rinnova o cambia piano' : 'Scegli il tuo piano'}</a>` : ''}</div>
     <form class="card form" id="prof">
       <label>Nome<input name="name" value="${esc(ME.name)}"></label>
       <div class="muted small">${esc(ME.email)} · iscritto dal ${new Date(ME.joined).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
@@ -573,6 +585,14 @@ function profileView() {
   document.getElementById('logout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };
 }
 
+// ---- piani di abbonamento ---------------------------------------------------------
+function plansView() {
+  page('', `<a class="back" href="#/">‹ Indietro</a><div class="h1">Scegli il tuo <em>piano</em></div>
+    <div class="muted" style="margin-bottom:14px">Tocca un piano: si apre la pagina di pagamento. Usa la stessa email dell'app (<b>${esc(ME.email)}</b>): entro 24 ore attiviamo il tuo accesso.</div>
+    ${plansHtml()}
+    ${SETTINGS.extraAppUrl ? `<a class="btn block" style="margin-top:12px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}`);
+}
+
 // ---- abbonamento non attivo -----------------------------------------------------
 function paywallView() {
   const expired = !!ME.accessUntil, trialOver = !expired && (!!ME.trialUntil || !!ME.trialUsed);
@@ -589,7 +609,7 @@ function paywallView() {
         : ME.trialAvailable ? 'Vuoi già tutto? Con l\'abbonamento sblocchi subito tutti i programmi e tutte le settimane.'
         : 'Il tuo account è creato. Per sbloccare programmi, challenge e allenamenti serve un abbonamento attivo.'}</p>
       <p class="muted small">Hai già pagato sul sito? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>
-      ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Scegli il tuo abbonamento')}</a>` : ''}
+      ${plansHtml()}
       ${SETTINGS.extraAppUrl ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
       ${SETTINGS.supportEmail ? `<a class="btn block" style="margin-top:8px" href="mailto:${esc(SETTINGS.supportEmail)}">Scrivici</a>` : ''}
       <button class="btn block" style="margin-top:8px" id="recheck">Ho già pagato, ricontrolla</button>

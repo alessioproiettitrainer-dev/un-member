@@ -17,7 +17,13 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, shopLabel: '', extraAppUrl: '', extraAppLabel: '',
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, shopLabel: '',
+    plans: [
+      { title: 'Solo allenamenti', price: '30 €', period: 'al mese', note: '', url: '', best: false },
+      { title: 'Allenamenti + alimentazione', price: '56 €', period: 'al mese', note: 'Con il piano alimentare del nutrizionista', url: '', best: true },
+      { title: 'Solo allenamenti · annuale', price: '', period: "all'anno", note: '', url: '', best: false },
+      { title: 'Allenamenti + alimentazione · annuale', price: '', period: "all'anno", note: 'Con il piano alimentare del nutrizionista', url: '', best: false },
+    ], extraAppUrl: '', extraAppLabel: '',
     trialEndText: 'La tua settimana di prova è finita. Abbonati sul nostro sito: entro 24 ore dal pagamento attiviamo il tuo accesso all\'app con la stessa email. Progressi e storico restano salvati.', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
   exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {}, trialEmails: [],
   messages: [], reports: [],

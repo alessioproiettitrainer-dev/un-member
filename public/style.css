@@ -359,3 +359,13 @@ a { color: inherit; }
 .subnote button { display: block; margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: var(--card-2); font-weight: 800; font-size: 12px; }
 .subcard { outline: 1px solid var(--accent); margin-bottom: 16px; }
 a.btn { text-decoration: none; }
+/* piani di abbonamento */
+.plans { display: grid; gap: 10px; }
+.plan { position: relative; display: block; padding: 14px 16px; border-radius: 16px; background: var(--card-2); border: 1px solid var(--line); text-decoration: none; color: var(--text); }
+.plan.best { border: 2px solid var(--accent); }
+.plan .tag { position: absolute; top: -9px; right: 12px; background: var(--accent); color: var(--accent-ink); font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; }
+.plan .pt { font-weight: 900; text-transform: uppercase; font-size: 15px; }
+.plan .pp b { font-size: 26px; font-weight: 900; color: var(--accent); }
+.plan .pp span { color: var(--muted); font-size: 13px; }
+.plan .pn { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.plan .pgo { margin-top: 6px; font-weight: 800; font-size: 13px; color: var(--accent); }

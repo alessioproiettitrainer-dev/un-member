@@ -25,9 +25,9 @@ export function fmt(sec) {
 export function blockSummary(b) {
   switch (b.type) {
     case 'emom': {
-      const ev = Number(b.every) || 60, n = emomRounds(b), tot = Math.round((n * ev) / 60 * 10) / 10;
+      const ev = Number(b.every) || 60, r = emomRounds(b), tot = Math.round((emomIntervals(b) * ev) / 60 * 10) / 10;
       const lad = Number(b.ladderStep) || (b.items || []).some((it) => Number(it.ladderStep));
-      return `EMOM ${ev === 60 ? `${n} min` : `${n} round × ${ev}s (${tot} min)`}${lad ? ` · ladder${b.ladderUpDown ? ' su e giù' : ''}` : ''}`;
+      return `EMOM ${r} round · ${String(tot).replace('.', ',')} min${ev !== 60 ? ` · ogni ${ev}s` : ''}${lad ? ` · ladder${b.ladderUpDown ? ' su e giù' : ''}` : ''}`;
     }
     case 'amrap': return `AMRAP ${b.cap || 0} min`;
     case 'fortime': return `AFAP · ${b.rounds || 1} round${b.cap ? ` · cap ${b.cap} min` : ''}`;
@@ -51,8 +51,11 @@ function shiftReps(text, delta) {
   return m && !m[3].includes('+') ? `${m[1]}${Math.max(1, Number(m[2]) + delta)}${m[3]}` : text;
 }
 
-// round dell'EMOM: quelli impostati, oppure (blocchi vecchi) i minuti totali divisi per l'intervallo
-export const emomRounds = (b) => Math.max(1, Number(b.rounds) || Math.round(((Number(b.minutes) || 1) * 60) / (Number(b.every) || 60)));
+// EMOM: un round = un giro di tutti gli esercizi (quelli "con sopra" stanno nello stesso intervallo).
+// Intervalli totali = round × intervalli per giro; i blocchi vecchi (minuti totali) restano come erano.
+export const emomSlotCount = (b) => Math.max(1, emomSlots(b.items || []).length);
+export const emomRounds = (b) => Math.max(1, Number(b.rounds) || Math.round(emomIntervals(b) / emomSlotCount(b)));
+export const emomIntervals = (b) => (Number(b.rounds) ? Number(b.rounds) * emomSlotCount(b) : Math.max(1, Math.round(((Number(b.minutes) || 1) * 60) / (Number(b.every) || 60))));
 function emomSlots(items) {
   const slots = [];
   for (const it of items) {
@@ -82,7 +85,7 @@ export function buildSteps(workout) {
       }
       if (b.type === 'emom') {
         const every = Number(b.every) || 60;
-        const n = emomRounds(b);
+        const n = emomIntervals(b);
         const slots = emomSlots(items);
         const giri = Math.ceil(n / slots.length);
         for (let k = 0; k < n; k++) {

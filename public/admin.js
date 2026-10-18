@@ -1,4 +1,4 @@
-import { BLOCK_TYPES, PHASE_TYPES, blockSummary, embedUrl, emomRounds, estimateSeconds } from './engine.js';
+import { BLOCK_TYPES, PHASE_TYPES, blockSummary, embedUrl, emomIntervals, emomRounds, emomSlotCount, estimateSeconds } from './engine.js';
 
 const root = document.getElementById('admin');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -424,7 +424,7 @@ const num = (P, key, val, label, ph = '') => `<div class="f"><label>${label}</la
 function blockEditor(b, P) {
   const params = {
     emom: num(P, 'every', b.every, 'Ogni (secondi)', '60') + `<div class="f"><label>Round</label><input type="number" min="1" data-b="${P}.rounds" value="${esc(b.rounds || emomRounds(b))}">
-        <div class="muted small">Totale: ${Math.round((emomRounds(b) * (Number(b.every) || 60)) / 6) / 10} min</div></div>`
+        <div class="muted small">${emomRounds(b)} round × ${emomSlotCount(b)} ${emomSlotCount(b) === 1 ? 'intervallo' : 'intervalli'} = <b>${String(Math.round((emomIntervals(b) * (Number(b.every) || 60)) / 6) / 10).replace('.', ',')} min</b></div></div>`
       + `<div class="f"><label>Ladder: rip in più a ogni giro (tutti)</label><input type="number" data-b="${P}.ladderStep" value="${esc(b.ladderStep ?? '')}" placeholder="0 = sempre uguali"></div>`
       + `<div class="f"><label>Andamento ladder</label><label class="chk"><input type="checkbox" data-b="${P}.ladderUpDown" ${b.ladderUpDown ? 'checked' : ''}> Sale fino a metà, poi scende</label></div>`,
     ladder: num(P, 'from', b.from, 'Da (rip)') + num(P, 'to', b.to, 'A (rip)') + num(P, 'step', b.step, 'Salto', '1') + num(P, 'rest', b.rest, 'Recupero tra gradini (s)')

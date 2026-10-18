@@ -1,5 +1,6 @@
 import { blockSummary, embedUrl, estimateSeconds, fmt, PHASE_TYPES } from './engine.js';
 import { startPlayer, stopPlayer } from './player.js';
+import { FOODS } from './foods.js';
 
 const $app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -316,8 +317,19 @@ async function workoutView(pid, wid) {
     <div class="blocklist">${(w.phases || []).map((ph) => `<div class="ph">${esc(ph.title || PHASE_TYPES[ph.type])}</div>` + (ph.blocks || []).map((b) => `
       <div class="bl"><div style="font-weight:800">${esc(b.title || '')} <span class="muted small">${esc(blockSummary(b))}</span></div>
       ${b.type === 'video' ? '<div class="ex"><div class="thumb" style="display:grid;place-items:center">▶</div><div>Video da seguire</div></div>' : ''}
-      ${(b.items || []).map((it) => `<div class="ex">${thumb(ex(it.exerciseId))}<div><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b> ${esc(ex(it.exerciseId).name)}</div></div>`).join('')}</div>`).join('')).join('')}</div>
+      ${(b.items || []).map((it) => `<button class="ex" data-demo="${esc(it.exerciseId)}">${thumb(ex(it.exerciseId))}<div style="flex:1"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b> ${esc(ex(it.exerciseId).name)}</div><span class="demo-go">▶</span></button>`).join('')}</div>`).join('')).join('')}</div>
     <div style="height:16px"></div><a class="btn primary block" href="#/play/${pid}/${wid}">▶ Inizia allenamento</a>`);
+  // tocca un esercizio: si apre la sua demo in loop con la descrizione
+  $app.querySelectorAll('[data-demo]').forEach((b) => (b.onclick = () => {
+    const e = ex(b.dataset.demo), emb = !e.video && embedUrl(e.videoUrl, { loop: true });
+    const m = document.createElement('div');
+    m.className = 'demosheet';
+    m.innerHTML = `<div class="card"><div class="row between"><div class="h2" style="margin:0">${esc(e.name)}</div><button class="icon" data-close aria-label="Chiudi">✕</button></div>
+      <div class="demovid">${e.videoBox || e.video ? `<video src="${esc(e.videoBox || e.video)}" autoplay muted loop playsinline></video>` : emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : '<div class="muted" style="padding:40px;text-align:center">Video non ancora caricato</div>'}</div>
+      ${e.cues ? `<div class="muted" style="margin-top:10px">${esc(e.cues)}</div>` : ''}</div>`;
+    m.onclick = (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) m.remove(); };
+    document.body.append(m);
+  }));
   const rs = document.getElementById('resetsubs');
   if (rs) rs.onclick = () => { for (const id of mySubs) delete subs[id]; try { localStorage.setItem('subs', JSON.stringify(subs)); } catch {} toast('Esercizi originali ripristinati'); workoutView(pid, wid); };
 }
@@ -497,8 +509,14 @@ function foodView(day) {
         ${macroBar(`Proteine ${n.p}%`, sum('protein'), tg.p, 'var(--accent)')}${macroBar(`Carboidrati ${n.c}%`, sum('carbs'), tg.c, '#3aa0ff')}${macroBar(`Grassi ${n.f}%`, sum('fat'), tg.f, '#f5c542')}`
         : `<div class="kcal"><b>${kcal}</b><span>kcal</span></div><div class="muted small">Inserisci peso, altezza, sesso e anno di nascita nel <a href="#/profile">profilo</a>: calcolo io le tue calorie e i tuoi macro.</div>`}
     </div>
+    <div class="card form">
+      <div class="row"><input id="fq" type="search" placeholder="🔍 Cerca un cibo…" autocomplete="off" style="flex:2"><select id="fmeal" style="flex:1">${MEALS.map((m) => `<option ${m === defMeal ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div id="fres" class="fres"></div><div id="fpick"></div>
+      <div class="muted small">Valori medi indicativi per 100 g: scegli il cibo, scrivi i grammi e calcolo io calorie e macro.</div>
+    </div>
     <form class="card form" id="fform">
-      <div class="row"><input name="name" placeholder="Cosa hai mangiato?" required style="flex:2"><select name="meal" style="flex:1">${MEALS.map((m) => `<option ${m === defMeal ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div class="muted small" style="margin-top:0"><b>Non lo trovi?</b> Scrivilo tu:</div>
+      <div class="row"><input name="name" placeholder="Cosa hai mangiato?" required style="flex:2"><input type="hidden" name="meal"></div>
       <div class="row four"><input name="kcal" type="number" min="0" placeholder="kcal"><input name="protein" type="number" min="0" placeholder="P g"><input name="carbs" type="number" min="0" placeholder="C g"><input name="fat" type="number" min="0" placeholder="G g"></div>
       <div class="muted small" style="margin-top:-4px">Se non sai le kcal, scrivi solo i grammi dei macro: le calcolo io.</div>
       <button class="btn primary block">Aggiungi</button>
@@ -517,13 +535,38 @@ function foodView(day) {
         <div class="muted small" id="msum"></div>`}
     </div>`);
   const add = async (f) => { try { ME.food.push(await api('/api/me/food', 'POST', { ...f, date: d })); foodView(day); } catch (err) { toast(err.message, true); } };
+  // ricerca nel database: tutte le parole devono comparire nel nome (senza accenti)
+  const nrm = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const fq = document.getElementById('fq'), fres = document.getElementById('fres'), fpick = document.getElementById('fpick');
+  const meal = () => document.getElementById('fmeal').value;
+  fq.oninput = () => {
+    const words = nrm(fq.value).split(/\s+/).filter(Boolean);
+    const hits = words.length ? FOODS.filter((f) => words.every((w) => nrm(f[0]).includes(w))).slice(0, 8) : [];
+    fres.innerHTML = hits.map((f) => `<button type="button" data-food="${FOODS.indexOf(f)}"><b>${esc(f[0])}</b><span>${f[1]} kcal / 100 g</span></button>`).join('') || (words.length ? '<div class="muted small">Nessun risultato: scrivilo a mano qui sotto.</div>' : '');
+  };
+  fres.onclick = (e) => {
+    const b = e.target.closest('[data-food]'); if (!b) return;
+    const [name, k, p, c, g, por] = FOODS[Number(b.dataset.food)];
+    fres.innerHTML = ''; fq.value = '';
+    fpick.innerHTML = `<div class="fpick"><b>${esc(name)}</b>
+      <div class="row" style="align-items:center;gap:8px;margin-top:8px"><input id="fg" type="number" min="1" inputmode="numeric" value="${por}" style="width:90px"><span>grammi</span>
+        <button type="button" class="sbtn" data-g="${por}">porzione ${por} g</button><button type="button" class="sbtn" data-g="100">100 g</button></div>
+      <div class="fcalc" id="fcalc"></div><button type="button" class="btn primary block" id="fadd">Aggiungi a ${esc(meal())}</button></div>`;
+    const calc = () => { const q = (Number(document.getElementById('fg').value) || 0) / 100; return { kcal: Math.round(k * q), protein: Math.round(p * q * 10) / 10, carbs: Math.round(c * q * 10) / 10, fat: Math.round(g * q * 10) / 10, grams: Math.round(q * 100) }; };
+    const show = () => { const v = calc(); document.getElementById('fcalc').innerHTML = `<b>${v.kcal} kcal</b> · P ${v.protein} g · C ${v.carbs} g · G ${v.fat} g`; };
+    document.getElementById('fg').oninput = show;
+    fpick.querySelectorAll('[data-g]').forEach((x) => (x.onclick = () => { document.getElementById('fg').value = x.dataset.g; show(); }));
+    document.getElementById('fadd').onclick = () => { const v = calc(); if (!v.grams) return toast('Scrivi i grammi', true); add({ name: `${name} · ${v.grams} g`, kcal: v.kcal, protein: v.protein, carbs: v.carbs, fat: v.fat, meal: meal() }); };
+    show();
+  };
   document.getElementById('fform').onsubmit = (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
+    f.meal = meal();
     if (!Number(f.kcal) && !Number(f.protein) && !Number(f.carbs) && !Number(f.fat)) return toast('Scrivi le kcal o almeno un macro', true);
     add(f);
   };
-  $app.querySelectorAll('[data-re]').forEach((b) => (b.onclick = () => { const f = recent[Number(b.dataset.re)]; add({ name: f.name, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, meal: document.querySelector('#fform [name=meal]').value }); }));
+  $app.querySelectorAll('[data-re]').forEach((b) => (b.onclick = () => { const f = recent[Number(b.dataset.re)]; add({ name: f.name, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, meal: meal() }); }));
   $app.querySelectorAll('[data-delf]').forEach((b) => (b.onclick = async () => { await api(`/api/me/food/${b.dataset.delf}`, 'DELETE'); ME.food = ME.food.filter((x) => x.id !== b.dataset.delf); foodView(day); }));
   const saveMacros = async (p, c, f) => { try { ME = await api('/api/me', 'PUT', { nutrition: { p, c, f } }); toast('Macro salvati'); foodView(day); } catch (err) { toast(err.message, true); } };
   $app.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => saveMacros(...b.dataset.preset.split(',').map(Number))));

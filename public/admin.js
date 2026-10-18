@@ -323,6 +323,9 @@ function settingsView() {
         <div class="f"><label>Link di pagamento</label><input type="text" data-plan="${i}.url" value="${esc(x.url)}" placeholder="https://…"></div>
         <div class="row" style="justify-content:space-between"><label class="chk"><input type="checkbox" data-plan="${i}.best" ${x.best ? 'checked' : ''}> Consigliato</label><button class="sbtn danger" data-act="plan-rm" data-i="${i}">Elimina</button></div></div>`).join('')}
       <button class="sbtn" style="margin-top:8px" data-act="plan-add">+ Aggiungi piano</button></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Sblocco graduale delle settimane</label>
+      <label class="chk"><input type="checkbox" data-set="dripWeeks" ${st.dripWeeks !== false ? 'checked' : ''}> Programmi base: una settimana nuova ogni 7 giorni da quando il membro inizia</label>
+      <div class="muted small">Così chi si abbona un mese non può vedere (e fotografare) tutto il programma il primo giorno. Nei cicli si vedono sempre le settimane passate e quella in corso, mai quelle future.</div></div>
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Settimana di prova gratuita</label>
       <label class="chk"><input type="checkbox" data-set="trialEnabled" ${st.trialEnabled ? 'checked' : ''}> Attiva: chi si registra può provare gratis</label>
       <div class="grid2" style="margin-top:8px"><div class="f" style="margin:0"><label>Giorni di prova</label><input type="number" min="1" max="30" data-set="trialDays" value="${esc(st.trialDays ?? 7)}"></div></div>

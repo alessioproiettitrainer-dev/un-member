@@ -136,3 +136,9 @@ Impostazioni → "Settimana di prova gratuita": la attivi quando vuoi e scegli i
 - Programma di tipo **Ciclo**: imposti **inizio** e **fine** (es. 1–30 novembre). I membri lo vedono solo in quel periodo.
 - Finito il ciclo, sparisce da solo per i membri e nel pannello va in **Archivio cicli**, raggruppato per mese.
 - Per riusarlo l'anno dopo: aprilo dall'archivio → **Duplica programma** → metti le nuove date → Pubblicato → Salva.
+
+### Sblocco graduale delle settimane
+
+- **Programmi base**: il membro vede la settimana 1 il giorno in cui inizia il programma, poi se ne sblocca una nuova ogni 7 giorni. Le settimane bloccate si vedono con il lucchetto e la data di sblocco. Si può spegnere da Impostazioni.
+- **Cicli**: si vedono le settimane passate e quella in corso; quelle future non compaiono.
+- **Prova gratuita**: una settimana sola, come prima.

@@ -17,7 +17,7 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, shopLabel: '',
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, dripWeeks: true, shopLabel: '',
     plans: [
       { title: 'Solo allenamenti', price: '30 €', period: 'al mese', note: '', url: '', best: false },
       { title: 'Allenamenti + alimentazione', price: '56 €', period: 'al mese', note: 'Con il piano alimentare del nutrizionista', url: '', best: true },
@@ -176,9 +176,30 @@ app.get('/api/programs/:id', member, active, (req, res) => {
     add(e.easierId);
     add(e.harderId);
   };
-  // in prova: le altre settimane si vedono (titolo e settimana) ma sono bloccate e senza contenuto
-  const trial = !isAdmin(req) && req.user && inTrial(req.user), tw = trial ? trialWeek(p) : 0;
-  const workouts = (p.workouts || []).map((w) => (trial && (Number(w.week) || 1) !== tw ? { id: w.id, title: w.title, week: w.week, locked: true, phases: [] } : w));
+  // Settimane visibili (le altre arrivano solo con titolo e lucchetto, senza contenuto):
+  //  - prova gratuita: una settimana sola (la 1, o quella in corso nei cicli)
+  //  - cicli: le settimane passate e quella in corso (le future non si vedono)
+  //  - programmi base: sblocco graduale, una settimana in più ogni 7 giorni da quando il membro ha iniziato il programma
+  const u = !isAdmin(req) && req.user && req.user.id !== 'admin-preview' ? req.user : null;
+  const trial = u && inTrial(u), tw = trial ? trialWeek(p) : 0;
+  let open = () => true, why = () => '', unlockDate = () => '';
+  if (trial) { open = (wk) => wk === tw; why = () => 'trial'; }
+  else if (u && p.kind === 'cycle' && p.startDate) { const cw = trialWeek(p); open = (wk) => wk <= cw; why = () => 'cycle'; }
+  else if (u && db.settings.dripWeeks !== false) {
+    const starts = (u.programStarts ||= {});
+    // chi lo stava già facendo parte dal primo allenamento fatto, gli altri da oggi
+    if (!starts[p.id]) { starts[p.id] = u.history.filter((h) => h.programId === p.id).map((h) => String(h.date).slice(0, 10)).sort()[0] || today(); save(); }
+    const days = Math.floor((Date.now() - new Date(starts[p.id] + 'T00:00:00Z').getTime()) / 864e5);
+    const unlocked = Math.floor(days / 7) + 1;
+    open = (wk) => wk <= unlocked; why = () => 'drip';
+    unlockDate = (wk) => addWeeks(starts[p.id], wk - 1);
+  }
+  const workouts = (p.workouts || []).map((w) => {
+    const wk = Number(w.week) || 1;
+    if (open(wk)) return w;
+    const reason = why(wk);
+    return { id: w.id, title: w.title, week: w.week, locked: true, lockReason: reason, unlockOn: reason === 'drip' ? unlockDate(wk) : reason === 'cycle' ? addWeeks(p.startDate, wk - 1) : '', phases: [] };
+  });
   for (const w of workouts) for (const ph of w.phases || []) for (const b of ph.blocks || []) for (const it of b.items || []) add(it.exerciseId);
   // tutorial collegati agli esercizi del programma, per il tasto "Tutorial" nel player
   const tutorials = {};

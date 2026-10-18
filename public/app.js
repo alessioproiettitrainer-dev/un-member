@@ -78,6 +78,14 @@ function plansHtml() {
 // Durante la prova gratuita: giorni rimasti e link per abbonarsi, in cima a ogni pagina
 const trialLeft = () => Math.max(0, Math.ceil((new Date(ME.trialUntil + 'T23:59').getTime() - Date.now()) / 864e5));
 const trialBar = () => (ME?.trial ? `<div class="trialbar">Prova gratuita · ${trialLeft() === 1 ? 'ultimo giorno' : `ancora ${trialLeft()} giorni`}${hasPlans() ? ' · <a href="#/abbonati">Abbonati ›</a>' : ''}</div>` : '');
+const dayIt = (d) => new Date(d + 'T12:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+const lockText = (w) => (w.lockReason === 'drip' && w.unlockOn ? `Si sblocca ${dayIt(w.unlockOn)}` : w.lockReason === 'cycle' && w.unlockOn ? `Dal ${dayIt(w.unlockOn)}` : "Con l'abbonamento");
+// allenamento bloccato: in prova si propone l'abbonamento, altrimenti si dice quando si sblocca
+function openLocked(pid, w) {
+  location.replace(`#/p/${pid}`);
+  if (w.lockReason === 'trial') return lockedSheet();
+  toast(`${lockText(w)}: una settimana nuova ogni 7 giorni 💪`);
+}
 // Contenuto bloccato in prova: spiega e porta al sito per l'abbonamento
 function lockedSheet() {
   document.querySelector('.locksheet')?.remove();
@@ -279,7 +287,8 @@ async function programView(pid) {
   const done = new Set(ME.history.filter((h) => h.programId === pid).map((h) => h.workoutId));
   const wk = cycleWeek(p);
   const byWeek = new Map();
-  for (const w of p.workouts) {
+  // nei cicli le settimane future non compaiono proprio
+  for (const w of p.workouts.filter((x) => !(x.locked && x.lockReason === 'cycle'))) {
     const k = w.week ? Number(w.week) : 0;
     if (!byWeek.has(k)) byWeek.set(k, []);
     byWeek.get(k).push(w);
@@ -292,7 +301,7 @@ async function programView(pid) {
     <button class="btn ${isMine ? '' : 'primary'} block" style="margin-top:14px" id="setmine" ${isMine ? 'disabled' : ''}>${isMine ? '✓ È il tuo programma' : 'Segui questo programma'}</button>
     ${[...byWeek].sort((a, b) => a[0] - b[0]).map(([k, ws]) => `<div class="h2">${k ? `Settimana ${k}${k === wk ? ' · <em>questa settimana</em>' : ''}` : 'Allenamenti'}</div>` + ws.map((w, i) => (w.locked ? `
       <a class="wo locked" href="#/w/${pid}/${w.id}"><div class="num">🔒</div>
-        <div><div class="t">${esc(w.title)}</div><div class="muted small">Con l'abbonamento</div></div><div class="go">›</div></a>` : `
+        <div><div class="t">${esc(w.title)}</div><div class="muted small">${lockText(w)}</div></div><div class="go">›</div></a>` : `
       <a class="wo ${done.has(w.id) ? 'done' : ''}" href="#/w/${pid}/${w.id}"><div class="num">${done.has(w.id) ? '✓' : i + 1}</div>
         <div><div class="t">${esc(w.title)}</div><div class="muted small">~${Math.round(estimateSeconds(w) / 60)} min${w.description ? ` · ${esc(w.description)}` : ''}</div></div><div class="go">›</div></a>`)).join('')).join('')}`);
   document.getElementById('setmine').onclick = async () => { ME = await api('/api/me', 'PUT', { activeProgramId: pid }); toast('Programma impostato'); programView(pid); };
@@ -302,7 +311,7 @@ async function workoutView(pid, wid) {
   const p = await getProgram(pid);
   const w = p.workouts.find((x) => x.id === wid);
   if (!w) throw new Error('Allenamento non trovato');
-  if (w.locked) { location.replace(`#/p/${pid}`); return lockedSheet(); }
+  if (w.locked) return openLocked(pid, w);
   const ex = (id) => p.exercises[id] || { name: '?' };
   // varianti più facili/difficili scelte nel player e ricordate sul telefono: qui si vedono e si possono annullare
   let subs = {}; try { subs = JSON.parse(localStorage.getItem('subs')) || {}; } catch {}
@@ -339,7 +348,7 @@ async function playView(pid, wid) {
   const p = await getProgram(pid);
   const w = p.workouts.find((x) => x.id === wid);
   if (!w) throw new Error('Allenamento non trovato');
-  if (w.locked) { location.replace(`#/p/${pid}`); return lockedSheet(); }
+  if (w.locked) return openLocked(pid, w);
   startPlayer($app, p, w, {
     onExit: () => { location.hash = `#/w/${pid}/${wid}`; },
     onFinish: async (res) => {

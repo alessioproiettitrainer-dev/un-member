@@ -87,3 +87,4 @@ input[type=search]:focus { border-color: var(--accent); }
 @media (max-width: 700px) { .irow > .exsel { grid-column: 1 / -1; } }
 .st.trial { background: rgba(58, 160, 255, .15); color: #3aa0ff; }
 .block.pauseblock { border-left-color: #3aa0ff; }
+[hidden] { display: none !important; }

@@ -19,17 +19,29 @@ function beep(freq = 880, ms = 150, vol = 0.25) {
 }
 // Voce: sceglie la voce italiana più naturale del telefono e legge il testo come lo direbbe un coach
 // (sigle pronunciate come parole, "rip" → ripetizioni, "3/10" → 3 di 10…).
-let VOICE = null;
+// I nomi degli esercizi (tra « ») si leggono con una voce inglese, il resto in italiano.
+let VOICE = null, VOICE_EN = null;
 function pickVoice() {
   const rank = (v) => (/natural|neural|premium|enhanced|online/i.test(v.name) ? 4 : 0) + (/google/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
-  VOICE = (window.speechSynthesis?.getVoices() || []).filter((v) => /^it/i.test(v.lang)).sort((a, b) => rank(b) - rank(a))[0] || null;
+  const all = window.speechSynthesis?.getVoices() || [];
+  VOICE = all.filter((v) => /^it/i.test(v.lang)).sort((a, b) => rank(b) - rank(a))[0] || null;
+  VOICE_EN = all.filter((v) => /^en/i.test(v.lang)).sort((a, b) => rank(b) - rank(a) + (/^en-us/i.test(b.lang) ? 0.5 : 0) - (/^en-us/i.test(a.lang) ? 0.5 : 0))[0] || null;
 }
+// sigle dei nomi esercizio sciolte per la voce inglese
+export function spokenEn(name) {
+  return String(name)
+    .replace(/\b2\s*KT\b/gi, 'two kettlebells').replace(/\bKT\b/gi, 'kettlebell').replace(/\b2H\b/gi, 'two hands').replace(/\b1H\b/gi, 'one hand')
+    .replace(/\bBW\b/gi, 'bodyweight').replace(/\bDX\b/gi, 'right').replace(/\bSX\b/gi, 'left').replace(/\bDRF\b/gi, 'dragon flag')
+    .replace(/\bATW\b/gi, 'around the world').replace(/\b1 Arm\b/gi, 'one arm').replace(/\b2 Arm\b/gi, 'two arms')
+    .replace(/\bT\. /g, 'T ').replace(/&/g, ' and ').replace(/\+/g, ' and ').replace(/\s+/g, ' ').trim();
+}
+const exSay = (it) => `${it.reps || (it.time ? it.time + 's' : '')} «${exOf(it.exerciseId).name}»`;
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 export function spoken(text) {
   return String(text).toLowerCase()
     .replace(/\bemom\b/g, 'èmom').replace(/\bamrap\b/g, 'àmrap').replace(/\bafap\b/g, 'àfap')
-    .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 di $2').replace(/(\d+)\s*-\s*(\d+)/g, 'da $1 a $2').replace(/\+\s*(\d+)/g, 'più $1').replace(/\s\/\s/g, ', ')
+    .replace(/(\d+)\s*\/\s*(\d+)/g, (m, x, y) => (x === y ? `${x} per lato` : `${x} e ${y}`)).replace(/(\d+)\s*-\s*(\d+)/g, 'da $1 a $2').replace(/\+\s*(\d+)/g, 'più $1').replace(/\s\/\s/g, ', ')
     .replace(/(\d+)\s*s\b/g, '$1 secondi').replace(/(\d+)\s*min\b/g, '$1 minuti').replace(/\brip\b/g, 'ripetizioni')
     .replace(/\b1 (minuti|secondi|ripetizioni)\b/g, (m, w) => `1 ${{ minuti: 'minuto', secondi: 'secondo', ripetizioni: 'ripetizione' }[w]}`)
     .replace(/→/g, ' a ').replace(/\s*[·|]\s*/g, ', ').replace(/\s*&\s*/g, ' e ').replace(/\s+([,.!?])/g, '$1').replace(/\s+/g, ' ').trim();
@@ -37,10 +49,15 @@ export function spoken(text) {
 function say(text) {
   if (!P?.voice || !window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(spoken(text));
-  if (VOICE) u.voice = VOICE;
-  u.lang = 'it-IT'; u.rate = 1; u.pitch = 1;
-  speechSynthesis.speak(u);
+  String(text).split(/«([^»]*)»/).forEach((part, i) => {
+    const en = i % 2 === 1, t = en ? spokenEn(part) : spoken(part);
+    if (!t || !/[a-z0-9àèéìòù]/i.test(t)) return;
+    const u = new SpeechSynthesisUtterance(t);
+    const v = en ? VOICE_EN : VOICE;
+    if (v) u.voice = v;
+    u.lang = en ? (v?.lang || 'en-US') : 'it-IT'; u.rate = 1; u.pitch = 1;
+    speechSynthesis.speak(u);
+  });
 }
 
 export function stopPlayer() {
@@ -85,12 +102,12 @@ function enterStep(i) {
   if (s.ladder && s.firstRung && !P.ladderStart[s.blockKey]) P.ladderStart[s.blockKey] = Date.now();
   render();
   if (s.video) return say(`Ora un video: ${s.block}.`);
-  const e = exOf(s.items[0].exerciseId), first = `${s.items[0].reps || ''} ${e.name}`;
+  const first = exSay(s.items[0]);
   if (s.ready) say(`Preparati! ${s.block}. ${s.summary || ''}. Si parte con ${first}.`);
   else if (s.pause) say(`Pausa. ${Math.round(s.dur)} secondi di recupero. Poi ${s.nextBlock || ''}: ${first}.`);
   else if (s.rest) say(`${pick(['Recupera.', 'Bene, recupero.', 'Ottimo, respira.'])} Poi: ${first}.`);
   else if (P.g) say(`${s.label}. ${pick(['Via!', 'Vai!', 'Forza!'])} ${first}.`);
-  else if (s.items.length > 1) say(`${s.label}. ${s.items.map((it) => `${it.reps || ''} ${exOf(it.exerciseId).name}`).join(', ')}.`);
+  else if (s.items.length > 1) say(`${s.label}. ${s.items.map(exSay).join(', ')}.`);
   else say(`${first}.`);
 }
 
@@ -100,7 +117,7 @@ function advanceGuide() {
   g.i++; g.t = 0; g.rep = 0;
   // EMOM: un solo "Fatto" per tutto il minuto, il tempo che resta è recupero
   if (s.emom) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready), ni = nx && !nx.video && nx.items[0];
-    say(`${pick(['Fatto! Recupera.', 'Bravo, ora recupero.'])}${ni ? ` Poi: ${ni.reps || ''} ${exOf(ni.exerciseId).name}.` : ''}`); return render(); }
+    say(`${pick(['Fatto! Recupera.', 'Bravo, ora recupero.'])}${ni ? ` Poi: ${exSay(ni)}.` : ''}`); return render(); }
   if (g.i >= s.items.length) {
     g.i = 0; g.round++;
     if (s.amrap) P.amrap[s.block] = g.round;
@@ -110,7 +127,7 @@ function advanceGuide() {
   P.focus = g.i;
   render();
   const it = s.items[g.i];
-  say(`${it.reps || ''} ${exOf(it.exerciseId).name}.`);
+  say(`${exSay(it)}.`);
 }
 
 function tick() {
@@ -139,7 +156,7 @@ function tick() {
       // EMOM: ogni esercizio dura le sue ripetizioni (rip × secondi per rip); finita la sequenza parte da solo il recupero
       P.g.t += dt;
       if (P.g.t >= pace.dur) {
-        if (P.g.i < s.items.length - 1) { P.g.i++; P.g.t = 0; P.focus = P.g.i; beep(1200, 40, 0.06); return render(); }
+        if (P.g.i < s.items.length - 1) { P.g.i++; P.g.t = 0; P.focus = P.g.i; beep(1200, 40, 0.06); render(); return say(`${exSay(s.items[P.g.i])}.`); }
         return advanceGuide();
       }
     } else if (!pace.reps) {

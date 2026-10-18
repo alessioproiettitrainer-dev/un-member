@@ -17,7 +17,8 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, shopLabel: '', extraAppUrl: '', extraAppLabel: '',
+    trialEndText: 'La tua settimana di prova è finita. Abbonati sul nostro sito: entro 24 ore dal pagamento attiviamo il tuo accesso all\'app con la stessa email. Progressi e storico restano salvati.', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
   exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {}, trialEmails: [],
   messages: [], reports: [],
 };
@@ -97,7 +98,7 @@ function member(req, res, next) {
 const publicUser = (u) => {
   const { password, accessLog, ...rest } = u;
   const c = u.community || {};
-  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u),
+  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u), trialUsed: !hasAccess(u) && !u.trialUntil && db.trialEmails.includes(trialKey(u.email)),
     community: { joined: !!c.joined, bio: c.bio || '', avatar: c.avatar ? `/api/avatars/${c.avatar}` : '', blocked: c.blocked || [], banned: !!c.banned } };
 };
 // Contenuti riservati a chi ha l'abbonamento attivo (l'admin passa sempre).

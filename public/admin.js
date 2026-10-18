@@ -303,6 +303,11 @@ function settingsView() {
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Settimana di prova gratuita</label>
       <label class="chk"><input type="checkbox" data-set="trialEnabled" ${st.trialEnabled ? 'checked' : ''}> Attiva: chi si registra può provare gratis</label>
       <div class="grid2" style="margin-top:8px"><div class="f" style="margin:0"><label>Giorni di prova</label><input type="number" min="1" max="30" data-set="trialDays" value="${esc(st.trialDays ?? 7)}"></div></div>
+      <div class="f" style="margin-top:8px"><label>Messaggio a fine prova</label><textarea data-set="trialEndText" rows="4">${esc(st.trialEndText || '')}</textarea></div>
+      <div class="grid2"><div class="f"><label>Testo del tasto per abbonarsi</label><input type="text" data-set="shopLabel" value="${esc(st.shopLabel || '')}" placeholder="es. Fai il piano da 30 € al mese"></div>
+        <div class="f"><label>Seconda app da scaricare (link, opzionale)</label><input type="text" data-set="extraAppUrl" value="${esc(st.extraAppUrl || '')}" placeholder="https://…"></div>
+        <div class="f"><label>Testo del tasto seconda app</label><input type="text" data-set="extraAppLabel" value="${esc(st.extraAppLabel || '')}" placeholder="es. Scarica l'app per abbonamento e dieta"></div></div>
+      <div class="muted small" style="margin-bottom:6px">Link da mandare per la prova: <b>${esc(location.origin)}/#/prova</b> <button class="sbtn" data-act="copy-trial">Copia</button></div>
       <div class="muted small">In prova si vede una sola settimana di ogni programma (la settimana 1, o la settimana in corso nei cicli): le altre compaiono con il lucchetto. Si può fare una sola volta per email. Alla fine compare il tasto per abbonarsi.</div></div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
     <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
@@ -576,6 +581,7 @@ root.addEventListener('click', async (e) => {
         const defaults = { emom: { minutes: 10, every: 60 }, amrap: { cap: 12 }, fortime: { rounds: 3, cap: 0 }, intervals: { rounds: 3, work: 40, rest: 20, restRounds: 60 }, sets: { rounds: 3, rest: 60 }, ladder: { from: 1, to: 10, step: 1, rest: 0, updown: false }, video: { minutes: 20, url: '' }, rest: { seconds: 60 } }[t.dataset.type];
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
       }
+      case 'copy-trial': { try { await navigator.clipboard.writeText(`${location.origin}/#/prova`); toast('Link copiato'); } catch { prompt('Copia il link:', `${location.origin}/#/prova`); } return; }
       case 'b-dup': {
         const { arr, i } = parentOf(path);
         arr.splice(i + 1, 0, JSON.parse(JSON.stringify(arr[i]), (k, v) => (k === 'id' ? uid() : v))); S.dirty = true; break;

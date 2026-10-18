@@ -5,6 +5,7 @@ const $app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ls = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const DAY = 864e5;
 const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -72,7 +73,7 @@ function lockedSheet() {
   m.className = 'locksheet';
   m.innerHTML = `<div class="card"><div class="h1" style="font-size:24px;margin-top:0">🔒 Sblocca <em>tutto</em></div>
     <p class="muted" style="margin-top:0">Nella settimana di prova puoi fare gli allenamenti di una settimana. Con l'abbonamento sblocchi tutti i programmi, tutte le settimane e i nuovi cicli.</p>
-    ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">Abbonati ora</a>` : ''}
+    ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Abbonati ora')}</a>` : ''}
     <button class="btn block" style="margin-top:8px" data-close>Continua la prova</button></div>`;
   m.onclick = (e) => { if (e.target === m || e.target.closest('[data-close]')) m.remove(); };
   document.body.append(m);
@@ -96,9 +97,21 @@ async function route() {
   stopPlayer();
   stopPoll();
   const parts = (location.hash.slice(1) || '/').split('/').filter(Boolean);
-  if (parts[0] === 'login' || parts[0] === 'register') return authView(parts[0]);
+  // link da mandare per la prova gratuita: #/prova → registrazione e la prova parte da sola
+  if (parts[0] === 'prova') {
+    ls.set('wantTrial', true);
+    if (!ME) { const r = await fetch('/api/me', { credentials: 'same-origin' }); if (r.ok) ME = await r.json(); }
+    if (!ME) return authView('register', true);
+    location.replace('#/'); return;
+  }
+  if (parts[0] === 'login' || parts[0] === 'register') return authView(parts[0], ls.get('wantTrial', false));
   if (!ME) {
     try { ME = await api('/api/me'); } catch { return; }
+  }
+  // arrivato dal link della prova: la attiva appena entra (se è ancora disponibile per la sua email)
+  if (ls.get('wantTrial', false)) {
+    ls.set('wantTrial', false);
+    if (ME.trialAvailable) { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast(`Settimana di prova attiva: buon allenamento!`); } catch (err) { toast(err.message, true); } }
   }
   if (!ME.active && parts[0] !== 'profile') return paywallView();
   try {
@@ -118,9 +131,11 @@ async function route() {
 }
 
 // ---- accesso -----------------------------------------------------------------
-function authView(mode) {
+function authView(mode, trial = false) {
   const reg = mode === 'register';
+  const days = Number(SETTINGS.trialDays) || 7;
   $app.innerHTML = `<div class="wrap auth">${brand(34)}<div class="muted" style="margin:6px 0 26px">${esc(SETTINGS.tagline || '')}</div>
+    ${trial && SETTINGS.trialEnabled ? `<div class="card trialcard" style="margin-bottom:12px"><b>Settimana di prova gratuita</b><div class="muted small">${reg ? 'Crea il tuo account' : 'Accedi'} e hai ${days} giorni di allenamenti gratis, senza pagamento.</div></div>` : ''}
     <form class="card form">
       <div class="h2" style="margin-top:0">${reg ? 'Crea il tuo account' : 'Accedi'}</div>
       ${reg ? '<label>Nome<input name="name" autocomplete="name" required></label>' : ''}
@@ -560,21 +575,22 @@ function profileView() {
 
 // ---- abbonamento non attivo -----------------------------------------------------
 function paywallView() {
-  const expired = !!ME.accessUntil, trialOver = !expired && !!ME.trialUntil;
+  const expired = !!ME.accessUntil, trialOver = !expired && (!!ME.trialUntil || !!ME.trialUsed);
   const days = Number(SETTINGS.trialDays) || 7;
   page('', `<div class="topbar">${brand(24)}</div>
-    <div class="h1">${expired ? 'Abbonamento <em>scaduto</em>' : trialOver ? 'Prova <em>finita</em>' : ME.trialAvailable ? `Prova gratis <em>${days} giorni</em>` : 'Quasi <em>dentro</em>'}</div>
+    <div class="h1">${expired ? 'Abbonamento <em>scaduto</em>' : trialOver ? (ME.trialUsed ? 'Prova già <em>usata</em>' : 'Prova <em>finita</em>') : ME.trialAvailable ? `Prova gratis <em>${days} giorni</em>` : 'Quasi <em>dentro</em>'}</div>
     ${ME.trialAvailable ? `<div class="card trialcard">
       <p style="margin-top:0"><b>Allenati con noi gratis per ${days} giorni.</b> Hai accesso a una settimana di allenamenti con video, timer e voce guida, alla community e ai tuoi progressi.</p>
       <p class="muted small">Nessun pagamento e nessun rinnovo automatico: alla fine decidi tu se abbonarti.</p>
       <button class="btn primary block" id="starttrial">Inizia la prova gratuita</button></div>` : ''}
     <div class="card">
       <p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Rinnova per tornare ai tuoi allenamenti: progressi e storico restano salvati.`
-        : trialOver ? `La tua settimana di prova è finita il ${new Date(ME.trialUntil + 'T12:00').toLocaleDateString('it-IT')}. Abbonati per sbloccare tutti i programmi e continuare da dove sei arrivato: progressi e storico restano salvati.`
+        : trialOver ? `<span style="white-space:pre-line">${esc(SETTINGS.trialEndText || 'La tua settimana di prova è finita. Abbonati per sbloccare tutti i programmi e continuare da dove sei arrivato: progressi e storico restano salvati.')}</span>`
         : ME.trialAvailable ? 'Vuoi già tutto? Con l\'abbonamento sblocchi subito tutti i programmi e tutte le settimane.'
         : 'Il tuo account è creato. Per sbloccare programmi, challenge e allenamenti serve un abbonamento attivo.'}</p>
       <p class="muted small">Hai già pagato sul sito? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>
-      ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">Scegli il tuo abbonamento</a>` : ''}
+      ${SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Scegli il tuo abbonamento')}</a>` : ''}
+      ${SETTINGS.extraAppUrl ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
       ${SETTINGS.supportEmail ? `<a class="btn block" style="margin-top:8px" href="mailto:${esc(SETTINGS.supportEmail)}">Scrivici</a>` : ''}
       <button class="btn block" style="margin-top:8px" id="recheck">Ho già pagato, ricontrolla</button>
     </div>

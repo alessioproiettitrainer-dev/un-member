@@ -358,3 +358,4 @@ a { color: inherit; }
 .subnote { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 122, 0, .12); font-size: 13px; }
 .subnote button { display: block; margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: var(--card-2); font-weight: 800; font-size: 12px; }
 .subcard { outline: 1px solid var(--accent); margin-bottom: 16px; }
+a.btn { text-decoration: none; }

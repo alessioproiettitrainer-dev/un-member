@@ -331,7 +331,7 @@ function programEditor(p) {
     <div class="h2" style="margin-top:22px">Allenamenti</div>
     ${(p.workouts || []).map((w, wi) => workoutEditor(w, wi)).join('')}
     <button class="sbtn acc" data-act="w-add">+ Aggiungi allenamento</button>
-    <div class="savebar"><button class="sbtn danger" data-act="p-del">Elimina programma</button><button class="btn primary" data-act="p-save">${S.dirty ? '● ' : ''}Salva programma</button></div>`;
+    <div class="savebar"><button class="sbtn danger" data-act="p-del">Elimina programma</button><button class="sbtn" data-act="p-dup">Duplica programma</button><button class="btn primary" data-act="p-save">${S.dirty ? '● ' : ''}Salva programma</button></div>`;
 }
 
 function workoutEditor(w, wi) {
@@ -531,6 +531,17 @@ root.addEventListener('click', async (e) => {
       case 'ex-del': if (!confirm('Eliminare questo esercizio?')) return; await call('DELETE', `/api/admin/exercises/${S.exId}`); S.exercises = await call('GET', '/api/admin/exercises'); S.exId = null; break;
       case 'p-new': { const x = await call('POST', '/api/admin/programs', {}); S.programs.push(x); S.progId = x.id; S.draft = structuredClone(x); S.dirty = false; render(); window.scrollTo(0, 0); return; }
       case 'p-save': { const x = await call('PUT', `/api/admin/programs/${S.draft.id}`, S.draft); S.programs = S.programs.map((y) => (y.id === x.id ? x : y)); S.dirty = false; toast('Programma salvato'); break; }
+      case 'p-dup': {
+        // copia completa (allenamenti, fasi, blocchi, esercizi) con id nuovi; "Vol. 1" diventa "Vol. 2", nascosta ai membri finché non la pubblichi
+        if (S.dirty && !confirm('Ci sono modifiche non salvate: verranno copiate anche quelle nel nuovo programma. Continuare?')) return;
+        const copy = JSON.parse(JSON.stringify(S.draft), (k, v) => (k === 'id' ? uid() : v));
+        delete copy.id;
+        copy.title = /\d+\s*$/.test(copy.title) ? copy.title.replace(/(\d+)\s*$/, (m, n) => String(Number(n) + 1)) : `${copy.title} (copia)`;
+        copy.published = false;
+        const x = await call('POST', '/api/admin/programs', copy);
+        S.programs.push(x); S.progId = x.id; S.draft = structuredClone(x); S.dirty = false; S.openWk = {};
+        toast(`Creato "${x.title}" · è nascosto ai membri finché non lo pubblichi`); render(); window.scrollTo(0, 0); return;
+      }
       case 'p-del': if (!confirm('Eliminare il programma e tutti i suoi allenamenti?')) return; await call('DELETE', `/api/admin/programs/${S.draft.id}`); S.programs = S.programs.filter((y) => y.id !== S.draft.id); S.draft = null; S.progId = null; S.dirty = false; break;
       case 'w-add': {
         const w = { id: uid(), title: `Allenamento ${S.draft.workouts.length + 1}`, week: 1, description: '', phases: [{ id: uid(), type: 'warmup', title: 'Riscaldamento', blocks: [] }, { id: uid(), type: 'workout', title: 'Workout', blocks: [] }, { id: uid(), type: 'cooldown', title: 'Defaticamento', blocks: [] }] };

@@ -101,6 +101,11 @@ const exOptions = (sel, empty = '— scegli —', skipId = '') => {
   }
   return `<option value="">${empty}</option>` + [...groups].sort((a, b) => a[0].localeCompare(b[0])).map(([c, xs]) => `<optgroup label="${esc(c)}">${xs.map((e) => `<option value="${e.id}" ${e.id === sel ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</optgroup>`).join('');
 };
+// Ricerca esercizi: senza maiuscole e accenti, cerca nel nome e nella categoria
+const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const exMatch = (e, q) => !q || norm(`${e.name} ${e.category}`).includes(norm(q).trim());
+// Menu esercizio con barra di ricerca sopra: scrivi il nome e tocchi il risultato, oppure scegli dal menu come prima
+const exPick = (attrs, sel, empty, skipId) => `<div class="exsel"><input type="search" class="exq" placeholder="🔍 Cerca esercizio…" autocomplete="off" data-skip="${esc(skipId || '')}"><div class="exres" hidden></div><select ${attrs}>${exOptions(sel, empty, skipId)}</select></div>`;
 // La scala completa (più facili ← esercizio → più difficili), per vederla nell'admin
 function exLadder(id) {
   const by = new Map(S.exercises.map((e) => [e.id, e])), out = [id], seen = new Set([id]);
@@ -123,7 +128,8 @@ function exercisesView() {
   const e = S.exercises.find((x) => x.id === S.exId);
   return `<div class="cols ${e ? 'has-sel' : ''}">
     <div class="side"><button class="btn primary add" data-act="ex-new">+ Nuovo esercizio</button>
-      ${S.exercises.map((x) => `<button class="it ${x.id === S.exId ? 'on' : ''}" data-ex="${x.id}">
+      <input type="search" id="exlistq" class="listq" placeholder="🔍 Cerca per nome o categoria…" value="${esc(S.exQ || '')}" autocomplete="off">
+      ${S.exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).map((x) => `<button class="it ${x.id === S.exId ? 'on' : ''}" data-ex="${x.id}" ${exMatch(x, S.exQ) ? '' : 'hidden'}>
         ${x.video ? `<video class="thumb" src="${esc(x.video)}#t=0.5" muted preload="metadata"></video>` : '<div class="thumb"></div>'}
         <div><div style="font-weight:800">${esc(x.name)}</div><div class="meta">${esc(x.category || '')}${x.video ? '' : ' · senza video'}</div></div></button>`).join('') || '<div class="muted small" style="padding:8px">Nessun esercizio ancora.</div>'}
     </div>
@@ -142,8 +148,8 @@ function exercisesView() {
       <div class="grid2"><div class="f"><label>Ripetizioni nel video demo</label><input type="number" min="0" step="1" data-exf="repsInVideo" value="${esc(e.repsInVideo)}" placeholder="es. 7"></div>
         <div class="f"><label>Secondi per ripetizione</label><input type="number" min="0" step="0.1" data-exf="secPerRep" id="spr" value="${esc(e.secPerRep)}" placeholder="es. 1 per lo swing"></div></div>
       <div class="muted small" style="margin:-4px 0 12px">Serve al giro guidato di AMRAP e AFAP: 50 swing a 1 s = 50 s, poi passa da solo all'esercizio dopo. Se scrivi quante ripetizioni ci sono nel video, il ritmo lo calcolo io dalla durata del video.</div>
-      <div class="grid2"><div class="f"><label>Regressione (più facile)</label><select data-exf="easierId">${exOptions(e.easierId, '— nessuna —', e.id)}</select></div>
-      <div class="f"><label>Progressione (più difficile)</label><select data-exf="harderId">${exOptions(e.harderId, '— nessuna —', e.id)}</select></div></div>
+      <div class="grid2"><div class="f"><label>Regressione (più facile)</label>${exPick('data-exf="easierId"', e.easierId, '— nessuna —', e.id)}</div>
+      <div class="f"><label>Progressione (più difficile)</label>${exPick('data-exf="harderId"', e.harderId, '— nessuna —', e.id)}</div></div>
       <div class="muted small" style="margin:-4px 0 12px">Scegli tra gli esercizi già caricati: non serve rifarli. Il collegamento vale nei due sensi (se le Ginocchia sono la regressione del Push-up, il Push-up diventa la progressione delle Ginocchia).
         ${e.easierId || e.harderId ? `<div style="margin-top:6px">Scala: ${exLadder(e.id)}</div>` : ''}</div>
       <div class="savebar"><button class="sbtn danger" data-act="ex-del">Elimina</button><button class="btn primary" data-act="ex-save">Salva esercizio</button></div>`
@@ -247,7 +253,7 @@ function tutorialsView() {
       <div class="f"><label>Link del video (YouTube, Google Drive o Vimeo)</label><input type="text" data-bd="tutorials.${x.id}.videoUrl" value="${esc(x.videoUrl)}" placeholder="https://youtu.be/…">
         ${x.videoUrl && !embedUrl(x.videoUrl) ? '<div class="small danger">Link non riconosciuto</div>' : ''}</div>
       <div class="f"><label>Descrizione: punti chiave ed errori comuni</label><textarea data-bd="tutorials.${x.id}.description" rows="4">${esc(x.description)}</textarea></div>
-      <div class="f"><label>Esercizio collegato (opzionale)</label><select data-bd="tutorials.${x.id}.exerciseId">${exOptions(x.exerciseId, '— nessuno —')}</select></div>
+      <div class="f"><label>Esercizio collegato (opzionale)</label>${exPick(`data-bd="tutorials.${x.id}.exerciseId"`, x.exerciseId, '— nessuno —')}</div>
       <div class="row" style="justify-content:space-between;margin-top:6px"><label class="chk"><input type="checkbox" data-bd="tutorials.${x.id}.published" ${x.published ? 'checked' : ''}> Pubblicato</label>
         <span><button class="sbtn danger" data-act="bd-del" data-kind="tutorials" data-id="${x.id}">Elimina</button> <button class="sbtn acc" data-act="bd-save" data-kind="tutorials" data-id="${x.id}">Salva</button></span></div>
     </div>`).join('') || '<div class="muted">Nessun tutorial ancora.</div>'}
@@ -380,7 +386,7 @@ function blockEditor(b, P) {
       <div class="muted small">Su Drive il file va condiviso con "Chiunque abbia il link". Su YouTube puoi usare video "Non in elenco": li vede solo chi ha il link.</div></div></div>` : `
     <div class="items"><div class="irow ihdr"><span>Esercizio</span><span>Reps / tempo</span><span>${thirdCol}</span><span>Note</span><span></span></div>
       ${(b.items || []).map((it, ii) => `<div class="irow">
-        <select data-b="${P}.items.${ii}.exerciseId">${exOptions(it.exerciseId)}</select>
+        ${exPick(`data-b="${P}.items.${ii}.exerciseId"`, it.exerciseId)}
         ${b.type === 'ladder' ? '<span class="muted small">rip dal gradino</span>' : `<input type="text" data-b="${P}.items.${ii}.reps" value="${esc(it.reps)}" placeholder="es. 10 o 8-12">`}
         ${b.type === 'intervals' ? `<input type="number" min="0" data-b="${P}.items.${ii}.time" value="${esc(it.time ?? '')}" placeholder="${esc(b.work || '')}">`
           : b.type === 'emom' ? `<label class="chk" title="Esegui nello stesso minuto dell'esercizio sopra"><input type="checkbox" data-b="${P}.items.${ii}.samePrev" ${it.samePrev ? 'checked' : ''} ${ii === 0 ? 'disabled' : ''}> con sopra</label>` : '<span></span>'}
@@ -432,6 +438,28 @@ root.addEventListener('input', (e) => {
   }
   if (t.dataset.set) S.settings[t.dataset.set] = t.value;
   if (t.id === 'uq') { S.uq = t.value; softRender(); document.getElementById('uq')?.focus(); }
+  if (t.id === 'exlistq') {
+    S.exQ = t.value;
+    root.querySelectorAll('.side .it[data-ex]').forEach((b) => { b.hidden = !exMatch(S.exercises.find((x) => x.id === b.dataset.ex) || {}, S.exQ); });
+  }
+  if (t.classList.contains('exq')) {
+    const res = t.nextElementSibling, q = t.value.trim();
+    const hits = q ? S.exercises.filter((x) => x.id !== t.dataset.skip && exMatch(x, q)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8) : [];
+    res.innerHTML = hits.map((x) => `<button type="button" class="exhit" data-pick="${x.id}"><b>${esc(x.name)}</b><small>${esc(x.category || '')}</small></button>`).join('') || (q ? '<div class="muted small" style="padding:8px">Nessun esercizio trovato</div>' : '');
+    res.hidden = !q;
+  }
+});
+// Scelta dai risultati della ricerca: imposta il menu e salva come se l'avessi scelto lì
+function pickExercise(btn) {
+  const box = btn.closest('.exsel'), sel = box.querySelector('select');
+  sel.value = btn.dataset.pick;
+  box.querySelector('.exq').value = '';
+  box.querySelector('.exres').hidden = true;
+  sel.dispatchEvent(new Event('input', { bubbles: true }));
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
+root.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.classList?.contains('exq')) { e.preventDefault(); const first = e.target.nextElementSibling.querySelector('.exhit'); if (first) pickExercise(first); }
 });
 
 // Ridisegna senza perdere il punto in cui stavi scrivendo.
@@ -469,6 +497,8 @@ root.addEventListener('change', async (e) => {
 });
 
 root.addEventListener('click', async (e) => {
+  const hit = e.target.closest('[data-pick]');
+  if (hit) return pickExercise(hit);
   const t = e.target.closest('[data-tab],[data-ex],[data-prog],[data-act],[data-grant],[data-uf]');
   if (!t) return;
   try {

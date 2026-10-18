@@ -75,3 +75,13 @@ input[type=date] { width: 100%; padding: 10px 12px; border-radius: 10px; border:
 input[type=file] { max-width: 100%; width: 100%; font-size: 13px; }
 .chk { flex-wrap: wrap; }
 @media (max-width: 820px) { .savebar { position: static; } }
+/* ricerca esercizi */
+input[type=search] { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); outline: none; }
+input[type=search]:focus { border-color: var(--accent); }
+.listq { margin-bottom: 8px; }
+.exsel { position: relative; display: grid; gap: 4px; min-width: 0; }
+.exres { position: absolute; top: 44px; left: 0; right: 0; z-index: 5; background: var(--card-2); border: 1px solid var(--accent); border-radius: 10px; max-height: 280px; overflow: auto; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+.exhit { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+.exhit:hover, .exhit:focus { background: rgba(255, 122, 0, .15); }
+.exhit small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+@media (max-width: 700px) { .irow > .exsel { grid-column: 1 / -1; } }

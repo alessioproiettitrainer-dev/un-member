@@ -340,12 +340,34 @@ function settingsView() {
 }
 
 // ---- programmi --------------------------------------------------------------
+// Cicli: date e stato (in arrivo / in corso / archiviato) come li vedono i membri
+const isoDay = (d) => d.toISOString().slice(0, 10);
+function cycleInfo(x) {
+  if (x.kind !== 'cycle' || !x.startDate) return null;
+  const start = new Date(x.startDate + 'T12:00:00Z');
+  const last = x.endDate ? new Date(x.endDate + 'T12:00:00Z') : new Date(start.getTime() + ((Number(x.weeks) || 4) * 7 - 1) * 864e5);
+  const t = isoDay(new Date()), state = x.startDate > t ? 'next' : isoDay(last) < t ? 'past' : 'now';
+  const month = start.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  return { state, month: month[0].toUpperCase() + month.slice(1), last: isoDay(last) };
+}
 function programsView() {
   const p = S.draft;
+  const item = (x) => { const ci = cycleInfo(x); return `<button class="it ${x.id === S.progId ? 'on' : ''}" data-prog="${x.id}"><div><div style="font-weight:800">${esc(x.title)}</div>
+    <div class="meta">${x.published ? '● Pubblicato' : '○ Bozza'} · ${ci ? `${esc(fmtDate(x.startDate))} → ${esc(fmtDate(ci.last))}` : x.kind === 'cycle' ? 'ciclo senza data' : 'base'} · ${(x.workouts || []).length} allenamenti</div></div></button>`; };
+  const groups = { base: [], now: [], next: [], past: [] };
+  for (const x of S.programs) { const ci = cycleInfo(x); groups[x.kind === 'cycle' ? (ci ? ci.state : 'next') : 'base'].push(x); }
+  groups.next.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+  groups.past.sort((a, b) => b.startDate.localeCompare(a.startDate));
+  // archivio raggruppato per mese di partenza, dal più recente
+  const byMonth = new Map();
+  for (const x of groups.past) { const m = cycleInfo(x).month; if (!byMonth.has(m)) byMonth.set(m, []); byMonth.get(m).push(x); }
+  const sec = (title, list, note = '') => (list.length ? `<div class="lbl2" style="margin:12px 4px 6px">${title}</div>${note}${list.map(item).join('')}` : '');
   return `<div class="cols ${p ? 'has-sel' : ''}">
     <div class="side"><button class="btn primary add" data-act="p-new">+ Nuovo programma</button>
-      ${S.programs.map((x) => `<button class="it ${x.id === S.progId ? 'on' : ''}" data-prog="${x.id}"><div><div style="font-weight:800">${esc(x.title)}</div>
-        <div class="meta">${x.published ? '● Pubblicato' : '○ Bozza'} · ${x.kind === 'cycle' ? `ciclo dal ${esc(x.startDate || '?')}` : 'base'} · ${(x.workouts || []).length} allenamenti</div></div></button>`).join('') || '<div class="muted small" style="padding:8px">Nessun programma ancora.</div>'}
+      ${sec('Programmi base', groups.base)}${sec('Cicli in corso', groups.now)}${sec('Cicli in arrivo', groups.next)}
+      ${groups.past.length ? `<div class="lbl2" style="margin:16px 4px 2px">Archivio cicli</div><div class="muted small" style="margin:0 4px 6px">Finiti: i membri non li vedono più. Puoi duplicarli e riusarli con nuove date.</div>
+        ${[...byMonth].map(([m, list]) => `<div class="small" style="margin:8px 4px 4px;font-weight:800">${esc(m)}</div>${list.map(item).join('')}`).join('')}` : ''}
+      ${S.programs.length ? '' : '<div class="muted small" style="padding:8px">Nessun programma ancora.</div>'}
     </div>
     <div class="panel">${p ? `<button class="sbtn mback" data-act="p-back">‹ Torna all\'elenco</button>` + programEditor(p) : '<div class="muted">Scegli un programma o creane uno nuovo. Struttura: programma → allenamenti (per settimana) → fasi (riscaldamento, workout, defaticamento) → blocchi (EMOM, AMRAP, AFAP, round a tempo, serie) → esercizi.</div>'}</div>
   </div>`;
@@ -358,7 +380,9 @@ function programEditor(p) {
     <div class="grid2"><div class="f"><label>Livello</label><select data-b="level">${['Principiante', 'Intermedio', 'Intermedio/Avanzato', 'Avanzato'].map((l) => `<option ${p.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="f"><label>Settimane</label><input type="number" min="0" data-b="weeks" value="${esc(p.weeks)}"></div>
       <div class="f"><label>Tipo</label><select data-b="kind"><option value="base" ${p.kind !== 'cycle' ? 'selected' : ''}>Programma base (sempre disponibile)</option><option value="cycle" ${p.kind === 'cycle' ? 'selected' : ''}>Ciclo (dura N settimane da una data)</option></select></div>
-      ${p.kind === 'cycle' ? `<div class="f"><label>Inizio del ciclo</label><input type="date" data-b="startDate" value="${esc(p.startDate)}"></div>` : ''}
+      ${p.kind === 'cycle' ? `<div class="f"><label>Inizio del ciclo</label><input type="date" data-b="startDate" value="${esc(p.startDate)}"></div>
+        <div class="f"><label>Fine del ciclo (ultimo giorno)</label><input type="date" data-b="endDate" value="${esc(p.endDate || '')}">
+          <div class="muted small">${cycleInfo(p) ? `Visibile ai membri dal ${esc(fmtDate(p.startDate))} al ${esc(fmtDate(cycleInfo(p).last))}, poi va in archivio.` : 'Se la lasci vuota: inizio + settimane.'}</div></div>` : ''}
       <div class="f"><label>Copertina</label><input type="file" accept="image/*" data-upload="cover">${p.cover ? `<img src="${esc(p.cover)}" style="width:100%;border-radius:10px;margin-top:6px">` : ''}</div></div>
     <div class="f"><label>Descrizione</label><textarea data-b="description">${esc(p.description)}</textarea></div>
     <label class="chk"><input type="checkbox" data-b="published" ${p.published ? 'checked' : ''}> Pubblicato (visibile agli utenti)</label>
@@ -458,7 +482,7 @@ root.addEventListener('input', (e) => {
     const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : Number(t.value)) : t.value;
     setPath(S.draft, t.dataset.b, v);
     S.dirty = true;
-    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url|ladderStep|from|to|step|updown|seconds|restAfter)$/.test(t.dataset.b)) softRender();
+    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /^(startDate|endDate|weeks)$/.test(t.dataset.b) || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url|ladderStep|from|to|step|updown|seconds|restAfter)$/.test(t.dataset.b)) softRender();
   }
   if (t.dataset.exf) {
     const ex = S.exercises.find((x) => x.id === S.exId);
@@ -578,9 +602,10 @@ root.addEventListener('click', async (e) => {
         delete copy.id;
         copy.title = /\d+\s*$/.test(copy.title) ? copy.title.replace(/(\d+)\s*$/, (m, n) => String(Number(n) + 1)) : `${copy.title} (copia)`;
         copy.published = false;
+        if (copy.kind === 'cycle') { copy.startDate = ''; copy.endDate = ''; }
         const x = await call('POST', '/api/admin/programs', copy);
         S.programs.push(x); S.progId = x.id; S.draft = structuredClone(x); S.dirty = false; S.openWk = {};
-        toast(`Creato "${x.title}" · è nascosto ai membri finché non lo pubblichi`); render(); window.scrollTo(0, 0); return;
+        toast(x.kind === 'cycle' ? `Creato "${x.title}" · metti le nuove date e pubblicalo` : `Creato "${x.title}" · è nascosto ai membri finché non lo pubblichi`); render(); window.scrollTo(0, 0); return;
       }
       case 'p-del': if (!confirm('Eliminare il programma e tutti i suoi allenamenti?')) return; await call('DELETE', `/api/admin/programs/${S.draft.id}`); S.programs = S.programs.filter((y) => y.id !== S.draft.id); S.draft = null; S.progId = null; S.dirty = false; break;
       case 'w-add': {

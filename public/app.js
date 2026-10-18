@@ -269,7 +269,7 @@ async function trainView() {
   page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('programs')}
     ${current.length ? `<div class="h2">Ciclo in corso</div>${current.map((p) => programCard(p, `<span class="pill">Settimana ${cycleWeek(p)} di ${p.weeks}</span>${mine(p)}`)).join('')}` : ''}
     ${base.length ? `<div class="h2">Programmi base</div>${base.map((p) => programCard(p, mine(p))).join('')}` : ''}
-    ${past.length ? `<div class="h2">Cicli passati</div>${past.map((p) => programCard(p, mine(p))).join('')}` : ''}
+
     ${!list.length ? '<div class="empty">Nessun programma pubblicato per ora.</div>' : ''}`);
 }
 

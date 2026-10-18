@@ -149,16 +149,18 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/settings', (req, res) => res.json(db.settings));
 
 const addWeeks = (d, w) => new Date(new Date(d).getTime() + w * 7 * 864e5).toISOString().slice(0, 10);
+// fine del ciclo (giorno dopo l'ultimo): la data scelta nel pannello, altrimenti inizio + settimane
+const cycleEnd = (p) => (p.kind !== 'cycle' || !p.startDate ? '' : p.endDate ? addWeeks(p.endDate, 1 / 7) : addWeeks(p.startDate, Number(p.weeks) || 4));
 const summary = (p) => ({
   id: p.id, title: p.title, subtitle: p.subtitle, level: p.level, weeks: p.weeks, kind: p.kind || 'base',
-  startDate: p.startDate || '', endDate: p.kind === 'cycle' && p.startDate ? addWeeks(p.startDate, Number(p.weeks) || 4) : '',
+  startDate: p.startDate || '', endDate: cycleEnd(p),
   description: p.description, cover: p.cover, workoutCount: (p.workouts || []).length,
 });
 
 app.get('/api/programs', member, active, (req, res) => {
   const t = today();
-  // i cicli futuri restano nascosti finché non partono
-  res.json(db.programs.filter((p) => p.published && !(p.kind === 'cycle' && p.startDate > t)).map(summary));
+  // i cicli si vedono solo nel loro periodo: prima della partenza sono nascosti, finiti vanno in archivio (solo admin)
+  res.json(db.programs.filter((p) => p.published && !(p.kind === 'cycle' && (p.startDate > t || (cycleEnd(p) && cycleEnd(p) <= t)))).map(summary));
 });
 
 // Il programma arriva con tutti gli esercizi che usa (anche le varianti), così il player lavora offline.

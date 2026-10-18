@@ -130,3 +130,9 @@ Impostazioni → "Settimana di prova gratuita": la attivi quando vuoi e scegli i
 - Blocco **"Pausa"**: lo metti tra due blocchi e scegli i secondi.
 - Oppure, su ogni blocco, **"Recupero dopo il blocco (s)"**: comodo con **⧉ Duplica** (es. 6 tabata uguali con 1 minuto di recupero tra uno e l'altro).
 - Durante la pausa il membro vede il conto alla rovescia, il prossimo esercizio con il suo video e il blocco che arriva.
+
+### Cicli mensili e archivio
+
+- Programma di tipo **Ciclo**: imposti **inizio** e **fine** (es. 1–30 novembre). I membri lo vedono solo in quel periodo.
+- Finito il ciclo, sparisce da solo per i membri e nel pannello va in **Archivio cicli**, raggruppato per mese.
+- Per riusarlo l'anno dopo: aprilo dall'archivio → **Duplica programma** → metti le nuove date → Pubblicato → Salva.

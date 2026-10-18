@@ -62,7 +62,7 @@ Su Google Drive il file va condiviso con "Chiunque abbia il link". Su YouTube pu
 
 Per ogni esercizio scrivi quante ripetizioni ci sono nel video demo (es. 7 swing in un video di 7 s): l'app calcola il ritmo (1 s a ripetizione). In alternativa scrivi direttamente i secondi per ripetizione (swing 1, push-up 1,5…).
 
-Nell'AMRAP e nell'AFAP il player fa il **giro guidato**: mostra il numero di ripetizione che sale (1, 2, 3… 50) al ritmo dell'esercizio, il video riparte in sincrono, poi passa da solo all'esercizio dopo e conta i round. Chi va più veloce preme "Fatto ›" e passa subito al prossimo. Nell'AMRAP il risultato salvato è tipo "4 round + 12 rip", nell'AFAP il tempo.
+Nell'AMRAP, nell'AFAP e nell'EMOM il player fa il **giro guidato**: mostra le ripetizioni e il nome dell'esercizio, il video gira in loop e il membro preme **Fatto ›** quando ha finito; allora passa all'esercizio dopo e conta i round. Gli esercizi a tempo (es. `30s`) partono invece con il conto alla rovescia e vanno avanti da soli.
 
 **Risultati e record**: a fine AMRAP compare "Quanti giri hai fatto?" (precompilato dal giro guidato, il membro corregge); a fine AFAP il tempo, anch'esso correggibile. A fine allenamento il membro vede "🏆 Nuovo record!" oppure il confronto con l'ultima volta (+1 round, −0:23…).
 

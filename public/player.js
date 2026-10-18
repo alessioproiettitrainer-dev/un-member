@@ -133,11 +133,14 @@ function tick() {
     return askScore(s, 'fortime', { seconds: s.cap, capped: true });
   }
   if (P.g && P.running && !P.g.finished) {
+    // a ripetizioni: il video gira in loop e si va avanti solo con "Fatto"; a tempo (es. 30s) parte il conto alla rovescia
     const pace = paceOf(s.items[P.g.i]);
-    P.g.t += dt;
-    if (P.g.t >= pace.dur) return advanceGuide();
-    const rep = pace.reps ? Math.min(pace.reps, Math.floor(P.g.t / pace.spr) + 1) : 0;
-    if (rep !== P.g.rep) { P.g.rep = rep; if (rep > 1) beep(1400, 35, 0.08); updateRep(pace); }
+    if (!pace.reps) {
+      P.g.t += dt;
+      if (P.g.t >= pace.dur) return advanceGuide();
+      const left = Math.ceil(pace.dur - P.g.t);
+      if (left !== P.g.rep) { P.g.rep = left; updateRep(pace); }
+    }
   }
   updateClock();
 }
@@ -146,7 +149,7 @@ function tick() {
 function amrapCounts(s) {
   const g = P.g;
   if (!g) return { rounds: 0, reps: 0 };
-  const reps = s.items.slice(0, g.i).reduce((a, it) => a + paceOf(it).reps, 0) + Math.max(0, g.rep - 1);
+  const reps = s.items.slice(0, g.i).reduce((a, it) => a + paceOf(it).reps, 0); // esercizi del giro in corso già completati
   return { rounds: g.round, reps };
 }
 const scoreText = (sc) => (sc.type === 'amrap' ? `${sc.rounds} round${sc.reps ? ` + ${sc.reps} rip` : ''}` : sc.capped ? `Time cap (${fmt(sc.seconds)})` : fmt(sc.seconds));
@@ -319,9 +322,9 @@ function render() {
       : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
       : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
-         <div class="repline"><span class="repnow" id="rep">${pace.reps ? g.rep || 1 : fmt(Math.ceil(pace.dur - g.t))}</span>${pace.reps ? `<span class="reptot">/ ${pace.reps} rip</span>` : '<span class="reptot">tempo</span>'}</div>
+         <div class="repline"><span class="repnow" id="rep">${pace.reps ? esc(focusItem.reps) : fmt(Math.ceil(pace.dur - g.t))}</span><span class="reptot">${pace.reps ? 'rip' : 'tempo'}</span></div>
          <div class="name">${esc(fe.name)}</div>
-         <div class="gbar"><i></i></div>
+         ${pace.reps ? '<div class="note donehint">Premi FATTO quando hai finito le ripetizioni</div>' : '<div class="gbar"><i></i></div>'}
          ${items.length < 2 ? '' : `<div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === g.i ? 'sel' : k < g.i ? 'past' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`}`;
   } else if (items.length > 1) {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === P.focus ? 'sel' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;

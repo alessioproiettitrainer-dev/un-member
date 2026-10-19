@@ -681,7 +681,7 @@ async function tutorialsView(cat) {
   page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('tutorials')}
     ${cats.length > 1 ? `<div class="chips"><a href="#/tutorials" class="${!cat ? 'on' : ''}">Tutti</a>${cats.map((c) => `<a href="#/tutorials/${encodeURIComponent(c)}" class="${c === cat ? 'on' : ''}">${esc(c)}</a>`).join('')}</div>` : ''}
     ${shown.map((t) => `<a class="tut" href="#/tutorial/${t.id}"><div class="play">▶</div><div><div class="t">${esc(t.title)}</div>
-      <div class="muted small">${[t.category, t.level, t.minutes && `${t.minutes} min`].filter(Boolean).map(esc).join(' · ')}</div></div></a>`).join('') || '<div class="empty">Nessun tutorial per ora.</div>'}`);
+      <div class="muted small">${[t.category, t.level, t.minutes && `${t.minutes} min`].filter(Boolean).map(esc).join(' · ')}</div></div></a>`).join('') || '<div class="empty">🎬 I tutorial approfonditi sugli esercizi più tecnici arrivano a breve.</div>'}`);
 }
 async function tutorialView(id) {
   const t = (await api('/api/tutorials')).find((x) => x.id === id);

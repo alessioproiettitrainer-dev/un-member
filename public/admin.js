@@ -23,12 +23,12 @@ function toast(msg, err) {
   document.body.append(t);
   setTimeout(() => t.remove(), 2200);
 }
-function uploadFile(file, onProgress) {
+function uploadFile(file, onProgress, query = '') {
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
     const fd = new FormData();
     fd.append('file', file);
-    x.open('POST', '/api/admin/upload');
+    x.open('POST', '/api/admin/upload' + query);
     for (const [k, v] of Object.entries(authHeaders())) x.setRequestHeader(k, v);
     x.upload.onprogress = (e) => {
       if (!e.lengthComputable) return;
@@ -335,6 +335,12 @@ function settingsView() {
         <div class="f"><label>Testo del tasto seconda app</label><input type="text" data-set="extraAppLabel" value="${esc(st.extraAppLabel || '')}" placeholder="es. Scarica l'app per abbonamento e dieta"></div></div>
       <div class="muted small" style="margin-bottom:6px">Link da mandare per la prova: <b>${esc(location.origin)}/#/prova</b> <button class="sbtn" data-act="copy-trial">Copia</button></div>
       <div class="muted small">In prova si vede una sola settimana di ogni programma (la settimana 1, o la settimana in corso nei cicli): le altre compaiono con il lucchetto. Si può fare una sola volta per email. Alla fine compare il tasto per abbonarsi.</div></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Video di benvenuto</label>
+      <div class="f"><label>Titolo della schermata</label><input type="text" data-set="welcomeTitle" value="${esc(st.welcomeTitle || '')}" placeholder="Guarda il video di benvenuto"></div>
+      <div class="f"><label>Carica il video (con audio)</label><input type="file" accept="video/*" data-upload="welcome"><div class="prog-bar"><i id="wbar"></i></div></div>
+      ${st.welcomeVideo ? `<video src="${esc(st.welcomeVideo)}" controls playsinline style="width:180px;border-radius:10px;background:#000"></video><div><button class="sbtn danger" data-act="welcome-rm" style="margin-top:6px">Togli il video</button></div>` : ''}
+      <div class="f" style="margin-top:8px"><label>…oppure un link (YouTube, Vimeo)</label><input type="text" data-set="welcomeUrl" value="${esc(st.welcomeUrl || '')}" placeholder="https://…"></div>
+      <div class="muted small">Compare in Oggi a chi non l'ha ancora visto: sparisce quando lo guarda fino in fondo o lo chiude con ✕, e si può rivedere dal Profilo. Se carichi un video nuovo, ricompare a tutti.</div></div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
     <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
     <div class="f"><label>Logo (PNG trasparente, versione bianca per sfondo scuro)</label><input type="file" accept="image/*" data-upload="logo">
@@ -546,12 +552,16 @@ root.addEventListener('change', async (e) => {
   if (!t.dataset.upload || !t.files[0]) return;
   const bar = document.getElementById('upbar');
   try {
-    const url = await uploadFile(t.files[0], (f) => bar && (bar.style.width = `${f * 100}%`));
+    const welcome = t.dataset.upload === 'welcome';
+    const url = await uploadFile(t.files[0], (f) => { const b = welcome ? document.getElementById('wbar') : bar; if (b) b.style.width = `${f * 100}%`; }, welcome ? '?audio=1' : '');
     if (t.dataset.upload === 'ex-video' || t.dataset.upload === 'ex-videobox') {
       const ex = S.exercises.find((x) => x.id === S.exId);
       ex[t.dataset.upload === 'ex-video' ? 'video' : 'videoBox'] = url.url || url;
       await call('PUT', `/api/admin/exercises/${ex.id}`, ex);
       toast(url.after ? `Video pronto: da ${Math.round(url.before / 1048576)} MB a ${(url.after / 1048576).toFixed(1)} MB` : 'Video caricato');
+    } else if (welcome) {
+      S.settings.welcomeVideo = String(url);
+      toast('Video di benvenuto pronto · ricordati di salvare');
     } else if (t.dataset.upload === 'logo') {
       S.settings.logo = String(url);
       toast('Logo caricato · ricordati di salvare');
@@ -637,6 +647,7 @@ root.addEventListener('click', async (e) => {
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
+      case 'welcome-rm': S.settings.welcomeVideo = ''; toast('Video tolto · ricordati di salvare'); break;
       case 'plan-rm': if (!confirm('Eliminare questo piano?')) return; S.settings.plans.splice(Number(t.dataset.i), 1); break;
       case 'copy-trial': { try { await navigator.clipboard.writeText(`${location.origin}/#/prova`); toast('Link copiato'); } catch { prompt('Copia il link:', `${location.origin}/#/prova`); } return; }
       case 'b-dup': {

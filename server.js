@@ -17,7 +17,7 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, dripWeeks: true, shopLabel: '',
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, dripWeeks: true, welcomeTitle: 'Guarda il video di benvenuto', welcomeVideo: '', welcomeUrl: '', shopLabel: '',
     plans: [
       { title: 'Solo allenamenti', price: '30 €', period: 'al mese', note: '', url: '', best: false },
       { title: 'Allenamenti + alimentazione', price: '56 €', period: 'al mese', note: 'Con il piano alimentare del nutrizionista', url: '', best: true },
@@ -230,6 +230,12 @@ me.use((req, res, next) => {
   next();
 });
 me.get('/', (req, res) => res.json(publicUser(req.user)));
+// video di benvenuto: si ricorda quale video ha già guardato (o chiuso); se cambia il video, ricompare
+me.put('/welcome', (req, res) => {
+  req.user.welcomeSeen = String(req.body?.seen || '').slice(0, 500);
+  save();
+  res.json(publicUser(req.user));
+});
 me.post('/trial', (req, res) => {
   const u = req.user;
   if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Hai già un abbonamento attivo' : 'La settimana di prova si può fare una sola volta' });
@@ -694,13 +700,13 @@ const upload = multer({
 // pesano 1-2 MB, partono subito sul telefono dei clienti e vanno in loop puliti.
 let FFMPEG = null;
 try { FFMPEG = require('ffmpeg-static'); } catch {}
-function compressVideo(src) {
+function compressVideo(src, keepAudio = false) {
   return new Promise((resolve) => {
     if (!FFMPEG) return resolve(null);
     const out = src.replace(/\.[^.]+$/, '') + '-720.mp4';
     const { execFile } = require('child_process');
     execFile(FFMPEG, ['-y', '-i', src, '-vf', "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'", '-r', '30',
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', out],
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', ...(keepAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']), '-movflags', '+faststart', out],
     { timeout: 10 * 60 * 1000 }, (err) => resolve(err ? null : out));
   });
 }
@@ -708,7 +714,7 @@ admin.post('/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Carica un video o un\'immagine' });
   if (/^video\//.test(req.file.mimetype)) {
     const before = req.file.size;
-    const out = await compressVideo(req.file.path);
+    const out = await compressVideo(req.file.path, req.query.audio === '1'); // le demo senza audio, il video di benvenuto con la voce
     if (out) {
       fs.rm(req.file.path, () => {});
       return res.json({ url: '/uploads/' + path.basename(out), before, after: fs.statSync(out).size });

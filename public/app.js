@@ -226,6 +226,7 @@ async function homeView() {
   page('home', `
     <div class="topbar">${brand(24)}<span class="row" style="gap:8px"><span class="pill">Membro da ${memberDays} ${memberDays === 1 ? 'giorno' : 'giorni'}</span>${meAvatar()}</span></div>
     <div class="h1">Ciao <em>${esc(ME.name.split(' ')[0])}</em></div>
+    ${welcomeSrc() && ME.welcomeSeen !== welcomeSrc() ? `<div class="card welcome" id="welcome"><button class="wplay" data-wplay>▶</button><div style="flex:1" data-wplay><b>${esc(SETTINGS.welcomeTitle || 'Guarda il video di benvenuto')}</b><div class="muted small">Come funziona l'app, in poco più di un minuto</div></div><button class="icon" id="wclose" aria-label="Non mostrare più">✕</button></div>` : ''}
     <div class="card">
       <div class="row between"><b>La tua settimana</b><span class="muted small">${doneThisWeek}/${plan.length || '–'} allenamenti</span></div>
       <div class="week">${days.map((d) => {
@@ -243,6 +244,9 @@ async function homeView() {
     ${board.tips.length ? `<div class="h2">Consigli</div>${board.tips.map((tp) => `<div class="card tip">${embedUrl(tp.videoUrl) ? `<div class="tvid"><iframe src="${esc(embedUrl(tp.videoUrl))}" allow="encrypted-media; fullscreen" allowfullscreen loading="lazy" title="${esc(tp.title)}"></iframe></div>` : tp.image ? `<img src="${esc(tp.image)}" alt="">` : ''}<b>${esc(tp.title)}</b><div class="muted">${esc(tp.text).replace(/\n/g, '<br>')}</div></div>`).join('')}` : ''}
   `);
   $app.querySelectorAll('[data-ch]').forEach((el) => el.addEventListener('click', onChallenge));
+  $app.querySelectorAll('[data-wplay]').forEach((el) => { el.onclick = () => welcomePlayer(); });
+  const wc = document.getElementById('wclose');
+  if (wc) wc.onclick = () => welcomeDone();
 }
 
 function challengeCard(c) {
@@ -618,7 +622,10 @@ function profileView() {
       <label>Obiettivo<select name="goal">${[['lose', 'Dimagrire'], ['maintain', 'Mantenere'], ['gain', 'Aumentare massa']].map(([v, l]) => `<option value="${v}" ${pr.goal === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <button class="btn primary block">Salva profilo</button>
     </form>
+    ${welcomeSrc() ? '<button class="btn block" style="margin-top:12px" id="rewatch">▶ Rivedi il video di benvenuto</button>' : ''}
     <button class="btn block" style="margin-top:12px" id="logout">Esci</button>`);
+  const rw = document.getElementById('rewatch');
+  if (rw) rw.onclick = () => welcomePlayer();
   const form = document.getElementById('prof');
   const tdn = () => { const n = form.querySelectorAll('[name=td]:checked').length; document.getElementById('tdn').textContent = `${n} allenamenti a settimana: li uso anche per calcolare le tue calorie.`; };
   form.addEventListener('change', tdn); tdn();
@@ -825,6 +832,30 @@ function shrinkPhoto(file) {
     img.src = url;
   });
 }
+// Video di benvenuto: la card in Oggi sparisce quando lo guardi fino in fondo o lo chiudi con ✕.
+// Si ricorda quale video hai visto: se in Impostazioni ne metto uno nuovo, ricompare a tutti.
+const welcomeSrc = () => SETTINGS.welcomeVideo || SETTINGS.welcomeUrl || '';
+async function welcomeDone() {
+  const src = welcomeSrc();
+  document.getElementById('welcome')?.remove();
+  if (ME.welcomeSeen === src) return;
+  ME.welcomeSeen = src;
+  try { await api('/api/me/welcome', 'PUT', { seen: src }); } catch { /* riprova la prossima volta */ }
+}
+function welcomePlayer() {
+  const emb = !SETTINGS.welcomeVideo && embedUrl(SETTINGS.welcomeUrl);
+  if (!SETTINGS.welcomeVideo && !emb) { if (SETTINGS.welcomeUrl) window.open(SETTINGS.welcomeUrl, '_blank'); return; }
+  const m = document.createElement('div');
+  m.className = 'photoview welcomeview';
+  m.innerHTML = `${emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="Video di benvenuto"></iframe>`
+    : `<video src="${esc(SETTINGS.welcomeVideo)}" controls autoplay playsinline></video>`}<button class="icon" aria-label="Chiudi">✕</button>`;
+  const v = m.querySelector('video');
+  if (v) v.addEventListener('ended', () => { welcomeDone(); setTimeout(() => m.remove(), 600); });
+  else welcomeDone(); // dei link esterni non sappiamo quando finiscono: basta averlo aperto
+  m.querySelector('.icon').onclick = () => { v?.pause(); m.remove(); };
+  document.body.append(m);
+}
+
 function photoViewer(src) {
   const m = document.createElement('div');
   m.className = 'photoview';

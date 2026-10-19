@@ -340,7 +340,7 @@ function settingsView() {
       <div class="f"><label>Carica il video (con audio)</label><input type="file" accept="video/*" data-upload="welcome"><div class="prog-bar"><i id="wbar"></i></div></div>
       ${st.welcomeVideo ? `<video src="${esc(st.welcomeVideo)}" controls playsinline style="width:180px;border-radius:10px;background:#000"></video><div><button class="sbtn danger" data-act="welcome-rm" style="margin-top:6px">Togli il video</button></div>` : ''}
       <div class="f" style="margin-top:8px"><label>…oppure un link (YouTube, Vimeo)</label><input type="text" data-set="welcomeUrl" value="${esc(st.welcomeUrl || '')}" placeholder="https://…"></div>
-      <div class="muted small">Compare in Oggi a chi non l'ha ancora visto: sparisce quando lo guarda fino in fondo o lo chiude con ✕, e si può rivedere dal Profilo. Se carichi un video nuovo, ricompare a tutti.</div></div>
+      <div class="muted small">Compare in Oggi a chi non l'ha ancora visto: sparisce quando lo guarda fino in fondo o lo chiude con ✕, e si può rivedere dal Profilo. Il video si attiva appena finisce di caricare. Se ne carichi uno nuovo, ricompare a tutti.</div></div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
     <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
     <div class="f"><label>Logo (PNG trasparente, versione bianca per sfondo scuro)</label><input type="file" accept="image/*" data-upload="logo">
@@ -560,8 +560,8 @@ root.addEventListener('change', async (e) => {
       await call('PUT', `/api/admin/exercises/${ex.id}`, ex);
       toast(url.after ? `Video pronto: da ${Math.round(url.before / 1048576)} MB a ${(url.after / 1048576).toFixed(1)} MB` : 'Video caricato');
     } else if (welcome) {
-      S.settings.welcomeVideo = String(url);
-      toast('Video di benvenuto pronto · ricordati di salvare');
+      S.settings.welcomeVideo = (await call('PUT', '/api/admin/settings', { welcomeVideo: String(url) })).welcomeVideo; // si salva subito, senza dover premere Salva
+      toast('Video di benvenuto caricato e attivo');
     } else if (t.dataset.upload === 'logo') {
       S.settings.logo = String(url);
       toast('Logo caricato · ricordati di salvare');
@@ -647,7 +647,7 @@ root.addEventListener('click', async (e) => {
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
-      case 'welcome-rm': S.settings.welcomeVideo = ''; toast('Video tolto · ricordati di salvare'); break;
+      case 'welcome-rm': if (!confirm('Togliere il video di benvenuto?')) return; await call('PUT', '/api/admin/settings', { welcomeVideo: '' }); S.settings.welcomeVideo = ''; toast('Video tolto'); break;
       case 'plan-rm': if (!confirm('Eliminare questo piano?')) return; S.settings.plans.splice(Number(t.dataset.i), 1); break;
       case 'copy-trial': { try { await navigator.clipboard.writeText(`${location.origin}/#/prova`); toast('Link copiato'); } catch { prompt('Copia il link:', `${location.origin}/#/prova`); } return; }
       case 'b-dup': {

@@ -712,7 +712,7 @@ async function runKalos(by = 'Kalos') {
     const list = await fetchLowTicketClients(process.env.KALOS_EMAIL, process.env.KALOS_PASSWORD);
     for (const c of list) {
       const prev = db.kalos.clients[c.email];
-      db.kalos.clients[c.email] = { name: c.name, plan: c.plan, until: c.until, status: c.active ? 'attivo' : c.paused ? 'pausa' : 'scaduto', first: prev?.first || today(), invited: prev?.invited || '' };
+      db.kalos.clients[c.email] = { name: c.name, plan: c.plan, until: c.until, status: c.active ? 'attivo' : c.paused ? 'pausa' : 'scaduto', first: prev?.first || today(), invited: prev?.invited || '', inviteLabel: prev?.inviteLabel || '' };
     }
     const r = applySync(list.filter((c) => c.active), by);
     db.kalos.last = { date: new Date().toISOString(), ok: true, total: list.length, attivi: list.filter((c) => c.active).length, scaduti: list.filter((c) => !c.active).length, activated: r.activated, extended: r.extended, pending: r.pending, nuovi: r.nuovi.length };

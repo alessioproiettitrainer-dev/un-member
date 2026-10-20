@@ -245,9 +245,9 @@ function kalosView() {
     ${!k.configured ? '<div class="st pending" style="margin-top:10px;display:inline-block">Da collegare: su Render aggiungi KALOS_EMAIL e KALOS_PASSWORD nelle variabili d\'ambiente</div>' : ''}
     ${last ? `<div class="muted small" style="margin-top:10px">Ultima lettura: ${new Date(last.date).toLocaleString('it-IT')} · ${last.ok ? `${last.total} clienti (${last.attivi} attivi, ${last.scaduti} scaduti/in pausa) · ${last.activated} attivati, ${last.extended} rinnovati, ${last.pending} in attesa di iscrizione` : `<b style="color:var(--danger,#e55)">errore: ${esc(last.error)}</b>`}</div>` : ''}
     <div class="row" style="gap:8px;flex-wrap:wrap;margin:14px 0 10px">${Object.entries(groups).map(([st, l]) => `<button class="sbtn ${f === st ? 'acc' : ''}" data-act="kalos-f" data-f="${st}">${l} ${n(st)}</button>`).join('')}
-      <button class="sbtn" data-act="kalos-copy" ${list.length ? '' : 'disabled'}>Copia le ${list.length} email</button>
+      <button class="sbtn" data-act="kalos-copy" ${list.some((c) => !c.invited) ? '' : 'disabled'}>Copia le ${list.filter((c) => !c.invited).length} email non ancora invitate</button>
       <span class="muted small">Ora della lettura: <select id="khour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === k.hour ? 'selected' : ''}>${h}:00</option>`).join('')}</select></span></div>
-    ${list.map((c) => `<div class="urow"><div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(c.name || c.email)}</b><div class="muted small">${esc(c.email)} · ${esc(c.plan)}</div></div>
+    ${list.map((c) => `<div class="urow"><div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(c.name || c.email)}</b><div class="muted small">${esc(c.email)} · ${esc(c.plan)}${c.invited ? ` · <b>email inviata il ${fmtDate(c.invited)}</b>${c.inviteLabel ? ` (${esc(c.inviteLabel)})` : ''}` : ''}</div></div>
       <span class="st ${c.status === 'attivo' ? 'ok' : 'expired'}">${{ attivo: 'scade', scaduto: 'scaduto', pausa: 'in pausa · scade' }[c.status]} ${fmtDate(c.until)}</span>
       <span class="st ${c.registered ? 'ok' : 'pending'}">${c.linkedTo ? `Collegato a ${esc(c.linkedTo)}` : c.registered ? 'Iscritto all\'app' : 'Non ancora iscritto'}</span>
       ${!c.registered || c.linkedTo ? `<button class="sbtn" data-act="kalos-link" data-email="${esc(c.email)}">${c.linkedTo ? 'Cambia' : 'Collega a un iscritto'}</button>` : ''}</div></div>`).join('') || '<div class="muted">Nessun cliente in questo elenco.</div>'}
@@ -696,7 +696,7 @@ root.addEventListener('click', async (e) => {
         [S.kalos, S.users] = await Promise.all([call('GET', '/api/admin/kalos'), call('GET', '/api/admin/users')]); break;
       }
       case 'kalos-copy': {
-        const txt = S.kalos.clients.filter((c) => c.status === (S.kf || 'attivo')).map((c) => c.email).join('\n');
+        const txt = S.kalos.clients.filter((c) => c.status === (S.kf || 'attivo') && !c.invited).map((c) => c.email).join('\n');
         try { await navigator.clipboard.writeText(txt); toast('Email copiate'); } catch { prompt('Copia le email:', txt.replace(/\n/g, ', ')); }
         return;
       }

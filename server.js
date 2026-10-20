@@ -752,6 +752,15 @@ admin.post('/kalos/link', (req, res) => {
   save();
   res.json({ ok: true, accessUntil: u.accessUntil });
 });
+// segna chi ha già ricevuto un'email di invito (per non mandargliela di nuovo)
+admin.post('/kalos/invited', (req, res) => {
+  const emails = (Array.isArray(req.body?.emails) ? req.body.emails : []).map((e) => String(e).trim().toLowerCase());
+  const label = String(req.body?.label || 'invito').slice(0, 60), date = String(req.body?.date || today()).slice(0, 10);
+  let n = 0;
+  for (const em of emails) { const c = db.kalos?.clients?.[em]; if (c) { c.invited = date; c.inviteLabel = label; n++; } }
+  save();
+  res.json({ marked: n });
+});
 admin.post('/kalos/run', async (req, res) => {
   if (!kalosConfigured()) return res.status(400).json({ error: 'Mancano KALOS_EMAIL e KALOS_PASSWORD su Render' });
   try { res.json(await runKalos(`Kalos (${req.who})`)); } catch (e) { res.status(409).json({ error: e.message }); }

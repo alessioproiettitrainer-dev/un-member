@@ -671,6 +671,8 @@ admin.post('/pending/bulk', (req, res) => {
 // Sincronizzazione col gestionale dei clienti low ticket: [{ email, until: 'AAAA-MM-GG', plan }].
 // Si può rilanciare ogni giorno: chi è iscritto ha l'accesso fino alla sua scadenza, chi non lo è
 // lo trova attivo quando si registra. `nuovi` = email mai viste prima (a cui mandare l'invito).
+// chi si è iscritto all'app con un'email diversa da quella di Kalos si collega a mano dal pannello
+const kalosUser = (em) => db.users.find((x) => x.email === em) || db.users.find((x) => x.id === db.kalosLinks?.[em]);
 function applySync(list, by) {
   const out = { total: 0, activated: 0, extended: 0, pending: 0, unchanged: 0, nuovi: [], errors: [] };
   db.synced ||= {};
@@ -680,7 +682,7 @@ function applySync(list, by) {
     out.total++;
     if (!db.synced[em]) { db.synced[em] = { first: today(), plan: String(c.plan || '') }; out.nuovi.push(em); }
     db.synced[em].until = until; db.synced[em].last = today();
-    const u = db.users.find((x) => x.email === em);
+    const u = kalosUser(em);
     if (u) {
       const was = hasAccess(u);
       if (grantUntil(u, until, by)) was ? out.extended++ : out.activated++; else out.unchanged++;
@@ -734,7 +736,21 @@ setInterval(() => {
 admin.get('/kalos', (req, res) => {
   const k = db.kalos || { clients: {} };
   res.json({ configured: kalosConfigured(), hour: Number(db.settings.kalosHour ?? 7), last: k.last || null, running: kalosRunning,
-    clients: Object.entries(k.clients).map(([email, c]) => { const u = db.users.find((x) => x.email === email); return { email, ...c, registered: !!u, accessUntil: u?.accessUntil || '' }; }) });
+    clients: Object.entries(k.clients).map(([email, c]) => { const u = kalosUser(email); return { email, ...c, registered: !!u, linkedTo: u && u.email !== email ? u.email : '', accessUntil: u?.accessUntil || '' }; }) });
+});
+admin.post('/kalos/link', (req, res) => {
+  const em = String(req.body?.kalosEmail || '').trim().toLowerCase(), appEm = String(req.body?.appEmail || '').trim().toLowerCase();
+  const c = db.kalos?.clients?.[em];
+  if (!c) return res.status(404).json({ error: 'Cliente Kalos non trovato' });
+  db.kalosLinks ||= {};
+  if (!appEm) { delete db.kalosLinks[em]; save(); return res.json({ ok: true }); }
+  const u = db.users.find((x) => x.email === appEm);
+  if (!u) return res.status(404).json({ error: `Nessun iscritto all'app con l'email ${appEm}` });
+  db.kalosLinks[em] = u.id;
+  delete db.pendingGrants[em];
+  if (c.status === 'attivo') grantUntil(u, c.until, `Kalos ${em} (${req.who})`);
+  save();
+  res.json({ ok: true, accessUntil: u.accessUntil });
 });
 admin.post('/kalos/run', async (req, res) => {
   if (!kalosConfigured()) return res.status(400).json({ error: 'Mancano KALOS_EMAIL e KALOS_PASSWORD su Render' });

@@ -249,7 +249,8 @@ function kalosView() {
       <span class="muted small">Ora della lettura: <select id="khour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === k.hour ? 'selected' : ''}>${h}:00</option>`).join('')}</select></span></div>
     ${list.map((c) => `<div class="urow"><div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(c.name || c.email)}</b><div class="muted small">${esc(c.email)} · ${esc(c.plan)}</div></div>
       <span class="st ${c.status === 'attivo' ? 'ok' : 'expired'}">${{ attivo: 'scade', scaduto: 'scaduto', pausa: 'in pausa · scade' }[c.status]} ${fmtDate(c.until)}</span>
-      <span class="st ${c.registered ? 'ok' : 'pending'}">${c.registered ? 'Iscritto all\'app' : 'Non ancora iscritto'}</span></div></div>`).join('') || '<div class="muted">Nessun cliente in questo elenco.</div>'}
+      <span class="st ${c.registered ? 'ok' : 'pending'}">${c.linkedTo ? `Collegato a ${esc(c.linkedTo)}` : c.registered ? 'Iscritto all\'app' : 'Non ancora iscritto'}</span>
+      ${!c.registered || c.linkedTo ? `<button class="sbtn" data-act="kalos-link" data-email="${esc(c.email)}">${c.linkedTo ? 'Cambia' : 'Collega a un iscritto'}</button>` : ''}</div></div>`).join('') || '<div class="muted">Nessun cliente in questo elenco.</div>'}
   </div>`;
 }
 function userDetail(u) {
@@ -684,6 +685,15 @@ root.addEventListener('click', async (e) => {
         S.kalos.running = true; render();
         try { const r = await call('POST', '/api/admin/kalos/run'); toast(r.ok ? `Letti ${r.total} clienti da Kalos` : `Errore: ${r.error}`, !r.ok); } catch (err) { toast(err.message, true); }
         S.kalos = await call('GET', '/api/admin/kalos'); break;
+      }
+      case 'kalos-link': {
+        const appEmail = prompt(`Con quale email si è iscritto all'app ${t.dataset.email}?\n(lascia vuoto per scollegare)`);
+        if (appEmail === null) return;
+        try {
+          const r = await call('POST', '/api/admin/kalos/link', { kalosEmail: t.dataset.email, appEmail });
+          toast(appEmail ? `Collegato${r.accessUntil ? ` · accesso fino al ${fmtDate(r.accessUntil)}` : ''}` : 'Scollegato');
+        } catch (err) { return toast(err.message, true); }
+        [S.kalos, S.users] = await Promise.all([call('GET', '/api/admin/kalos'), call('GET', '/api/admin/users')]); break;
       }
       case 'kalos-copy': {
         const txt = S.kalos.clients.filter((c) => c.status === (S.kf || 'attivo')).map((c) => c.email).join('\n');

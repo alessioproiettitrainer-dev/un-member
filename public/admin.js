@@ -226,7 +226,7 @@ function usersView() {
         <select name="months"><option value="1">1 mese</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">1 anno</option></select><button class="btn primary">Attiva tutte</button></form>
       <div class="lbl2" style="margin:14px 0 6px">Un cliente alla volta</div>
       <form id="pendf" class="f"><input type="text" name="email" placeholder="email@cliente.it"><select name="months"><option value="1">1 mese</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">1 anno</option></select><button class="btn primary">Attiva</button></form>
-      ${pend.length ? `<div class="lbl2" style="margin-top:12px">In attesa di iscrizione</div>${pend.map(([em, g]) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b class="small">${esc(em)}</b><div class="muted small">${g.months} ${g.months === 1 ? 'mese' : 'mesi'} · da ${esc(g.by)} · ${fmtDate(g.date)}</div></div><button class="sbtn ghost danger" data-act="pend-del" data-email="${esc(em)}">✕</button></div>`).join('')}` : ''}
+      ${pend.length ? `<div class="lbl2" style="margin-top:12px">In attesa di iscrizione</div>${pend.map(([em, g]) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b class="small">${esc(em)}</b><div class="muted small">${g.until ? `fino al ${fmtDate(g.until)}` : `${g.months} ${g.months === 1 ? 'mese' : 'mesi'}`} · da ${esc(g.by)} · ${fmtDate(g.date)}</div></div><button class="sbtn ghost danger" data-act="pend-del" data-email="${esc(em)}">✕</button></div>`).join('')}` : ''}
     </div></div>`;
 }
 function userDetail(u) {

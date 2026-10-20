@@ -65,6 +65,13 @@ function grant(u, months, by) {
   u.accessUntil = addMonths(from, months);
   (u.accessLog ||= []).push({ date: new Date().toISOString(), months, by, until: u.accessUntil });
 }
+// accesso fino a una data precisa (sincronizzazione col gestionale): non accorcia mai un accesso più lungo
+function grantUntil(u, until, by) {
+  if (!until || (u.accessUntil && u.accessUntil >= until)) return false;
+  u.accessUntil = until;
+  (u.accessLog ||= []).push({ date: new Date().toISOString(), months: 0, by, until });
+  return true;
+}
 const DEFAULT_NUTRITION = { kcal: '', p: 30, c: 40, f: 30, by: 'user', note: '' };
 
 const app = express();
@@ -127,7 +134,11 @@ app.post('/api/auth/register', (req, res) => {
     accessUntil: '', accessLog: [], nutrition: { ...DEFAULT_NUTRITION },
   };
   const pending = db.pendingGrants[em];
-  if (pending) { grant(u, pending.months, `${pending.by} (pre-attivazione)`); delete db.pendingGrants[em]; }
+  if (pending) {
+    if (pending.until) grantUntil(u, pending.until, `${pending.by} (pre-attivazione)`);
+    else grant(u, pending.months, `${pending.by} (pre-attivazione)`);
+    delete db.pendingGrants[em];
+  }
   db.users.push(u);
   startSession(res, u.id);
   res.json(publicUser(u));
@@ -655,6 +666,33 @@ admin.post('/pending/bulk', (req, res) => {
   }
   save();
   res.json({ total: emails.length, activated, pending });
+});
+// Sincronizzazione col gestionale dei clienti low ticket: [{ email, until: 'AAAA-MM-GG', plan }].
+// Si può rilanciare ogni giorno: chi è iscritto ha l'accesso fino alla sua scadenza, chi non lo è
+// lo trova attivo quando si registra. `nuovi` = email mai viste prima (a cui mandare l'invito).
+admin.post('/sync', (req, res) => {
+  const list = Array.isArray(req.body?.clients) ? req.body.clients : [];
+  const by = String(req.body?.source || 'gestionale').slice(0, 40);
+  const out = { total: 0, activated: 0, extended: 0, pending: 0, unchanged: 0, nuovi: [], errors: [] };
+  db.synced ||= {};
+  for (const c of list) {
+    const em = String(c?.email || '').trim().toLowerCase(), until = String(c?.until || '');
+    if (!/^\S+@\S+\.\S+$/.test(em) || !/^\d{4}-\d{2}-\d{2}$/.test(until)) { out.errors.push(c?.email || '?'); continue; }
+    out.total++;
+    if (!db.synced[em]) { db.synced[em] = { first: today(), plan: String(c.plan || '') }; out.nuovi.push(em); }
+    db.synced[em].until = until; db.synced[em].last = today();
+    const u = db.users.find((x) => x.email === em);
+    if (u) {
+      const was = hasAccess(u);
+      if (grantUntil(u, until, by)) was ? out.extended++ : out.activated++; else out.unchanged++;
+    } else {
+      const g = db.pendingGrants[em];
+      if (g?.until && g.until >= until) out.unchanged++;
+      else { db.pendingGrants[em] = { until, by, date: today() }; out.pending++; }
+    }
+  }
+  save();
+  res.json(out);
 });
 admin.delete('/pending/:email', (req, res) => {
   delete db.pendingGrants[req.params.email];

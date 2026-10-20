@@ -117,9 +117,9 @@ function exLadder(id) {
 function render() {
   root.innerHTML = `<div class="adm">
     <header><div class="h1">${esc(S.settings.appName || 'Admin')} <em style="color:var(--accent);font-style:normal">admin</em></div>
-      <div class="tabs">${(S.role === 'owner' ? [['programs', 'Programmi'], ['exercises', 'Esercizi & video'], ['tutorials', 'Tutorial'], ['board', 'Bacheca'], ['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`], ['staff', 'Staff'], ['settings', 'Impostazioni']] : [['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`]]).map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="tabs">${(S.role === 'owner' ? [['programs', 'Programmi'], ['exercises', 'Esercizi & video'], ['tutorials', 'Tutorial'], ['board', 'Bacheca'], ['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`], ['staff', 'Staff'], ['kalos', 'Kalos'], ['settings', 'Impostazioni']] : [['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`]]).map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       <span class="muted small">${esc(S.me)}</span><button class="sbtn" data-act="logout">Esci</button>${S.role === 'owner' ? '<a class="sbtn" href="/" target="_blank">Apri app ↗</a>' : ''}</header>
-    ${({ exercises: exercisesView, tutorials: tutorialsView, board: boardView, users: usersView, moderation: moderationView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
+    ${({ exercises: exercisesView, tutorials: tutorialsView, board: boardView, users: usersView, kalos: kalosView, moderation: moderationView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
   </div>`;
   if (S.tab === 'moderation') loadModPhotos();
 }
@@ -228,6 +228,29 @@ function usersView() {
       <form id="pendf" class="f"><input type="text" name="email" placeholder="email@cliente.it"><select name="months"><option value="1">1 mese</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">1 anno</option></select><button class="btn primary">Attiva</button></form>
       ${pend.length ? `<div class="lbl2" style="margin-top:12px">In attesa di iscrizione</div>${pend.map(([em, g]) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b class="small">${esc(em)}</b><div class="muted small">${g.until ? `fino al ${fmtDate(g.until)}` : `${g.months} ${g.months === 1 ? 'mese' : 'mesi'}`} · da ${esc(g.by)} · ${fmtDate(g.date)}</div></div><button class="sbtn ghost danger" data-act="pend-del" data-email="${esc(em)}">✕</button></div>`).join('')}` : ''}
     </div></div>`;
+}
+// ---- Kalos: clienti low ticket letti ogni giorno dal gestionale (solo lettura) ----
+function kalosView() {
+  const k = S.kalos;
+  if (!k) return '<div class="panel muted">Carico…</div>';
+  const f = S.kf || 'attivo';
+  const groups = { attivo: 'Attivi', scaduto: 'Scaduti', pausa: 'In pausa' };
+  const list = k.clients.filter((c) => c.status === f).sort((a, b) => (a.until || '').localeCompare(b.until || ''));
+  const n = (st) => k.clients.filter((c) => c.status === st).length;
+  const last = k.last;
+  return `<div class="panel">
+    <div class="row between" style="flex-wrap:wrap;gap:10px"><div><div class="h2" style="margin:0">Clienti low ticket da Kalos</div>
+      <div class="muted small">Ogni giorno alle ${k.hour}:00 legge da Kalos email, piano e scadenza (solo lettura: su Kalos non viene mai modificato niente). Chi è attivo ha l'accesso all'app fino alla sua scadenza.</div></div>
+      <button class="btn primary" data-act="kalos-run" ${k.configured && !k.running ? '' : 'disabled'}>${k.running ? 'In corso…' : 'Sincronizza ora'}</button></div>
+    ${!k.configured ? '<div class="st pending" style="margin-top:10px;display:inline-block">Da collegare: su Render aggiungi KALOS_EMAIL e KALOS_PASSWORD nelle variabili d\'ambiente</div>' : ''}
+    ${last ? `<div class="muted small" style="margin-top:10px">Ultima lettura: ${new Date(last.date).toLocaleString('it-IT')} · ${last.ok ? `${last.total} clienti (${last.attivi} attivi, ${last.scaduti} scaduti/in pausa) · ${last.activated} attivati, ${last.extended} rinnovati, ${last.pending} in attesa di iscrizione` : `<b style="color:var(--danger,#e55)">errore: ${esc(last.error)}</b>`}</div>` : ''}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin:14px 0 10px">${Object.entries(groups).map(([st, l]) => `<button class="sbtn ${f === st ? 'acc' : ''}" data-act="kalos-f" data-f="${st}">${l} ${n(st)}</button>`).join('')}
+      <button class="sbtn" data-act="kalos-copy" ${list.length ? '' : 'disabled'}>Copia le ${list.length} email</button>
+      <span class="muted small">Ora della lettura: <select id="khour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === k.hour ? 'selected' : ''}>${h}:00</option>`).join('')}</select></span></div>
+    ${list.map((c) => `<div class="urow"><div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(c.name || c.email)}</b><div class="muted small">${esc(c.email)} · ${esc(c.plan)}</div></div>
+      <span class="st ${c.status === 'attivo' ? 'ok' : 'expired'}">${{ attivo: 'scade', scaduto: 'scaduto', pausa: 'in pausa · scade' }[c.status]} ${fmtDate(c.until)}</span>
+      <span class="st ${c.registered ? 'ok' : 'pending'}">${c.registered ? 'Iscritto all\'app' : 'Non ancora iscritto'}</span></div></div>`).join('') || '<div class="muted">Nessun cliente in questo elenco.</div>'}
+  </div>`;
 }
 function userDetail(u) {
   const n = u.nutrition, pr = u.profile || {};
@@ -549,6 +572,11 @@ function softRender() {
 
 root.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'khour') {
+    await call('PUT', '/api/admin/settings', { kalosHour: Number(t.value) });
+    S.settings.kalosHour = S.kalos.hour = Number(t.value);
+    return toast(`Lettura da Kalos ogni giorno alle ${t.value}:00`);
+  }
   if (!t.dataset.upload || !t.files[0]) return;
   const bar = document.getElementById('upbar');
   try {
@@ -590,7 +618,11 @@ root.addEventListener('click', async (e) => {
       toast(`Attivo fino al ${fmtDate(u.accessUntil)}`);
       return softRender();
     }
-    if (t.dataset.tab) { S.tab = t.dataset.tab; return render(); }
+    if (t.dataset.tab) {
+      S.tab = t.dataset.tab;
+      if (S.tab === 'kalos') { S.kalos = null; render(); S.kalos = await call('GET', '/api/admin/kalos'); }
+      return render();
+    }
     if (t.dataset.ex) { S.exId = t.dataset.ex; render(); return window.scrollTo(0, 0); }
     if (t.dataset.prog) {
       if (S.dirty && !confirm('Ci sono modifiche non salvate. Continuare?')) return;
@@ -647,6 +679,17 @@ root.addEventListener('click', async (e) => {
         getPath(S.draft, path).blocks.push({ id: uid(), type: t.dataset.type, title: '', notes: '', items: [], ...defaults }); S.dirty = true; break;
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
+      case 'kalos-f': S.kf = t.dataset.f; break;
+      case 'kalos-run': {
+        S.kalos.running = true; render();
+        try { const r = await call('POST', '/api/admin/kalos/run'); toast(r.ok ? `Letti ${r.total} clienti da Kalos` : `Errore: ${r.error}`, !r.ok); } catch (err) { toast(err.message, true); }
+        S.kalos = await call('GET', '/api/admin/kalos'); break;
+      }
+      case 'kalos-copy': {
+        const txt = S.kalos.clients.filter((c) => c.status === (S.kf || 'attivo')).map((c) => c.email).join('\n');
+        try { await navigator.clipboard.writeText(txt); toast('Email copiate'); } catch { prompt('Copia le email:', txt.replace(/\n/g, ', ')); }
+        return;
+      }
       case 'welcome-rm': if (!confirm('Togliere il video di benvenuto?')) return; await call('PUT', '/api/admin/settings', { welcomeVideo: '' }); S.settings.welcomeVideo = ''; toast('Video tolto'); break;
       case 'plan-rm': if (!confirm('Eliminare questo piano?')) return; S.settings.plans.splice(Number(t.dataset.i), 1); break;
       case 'copy-trial': { try { await navigator.clipboard.writeText(`${location.origin}/#/prova`); toast('Link copiato'); } catch { prompt('Copia il link:', `${location.origin}/#/prova`); } return; }

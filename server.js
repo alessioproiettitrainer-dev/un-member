@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const { fetchLowTicketClients } = require('./kalos');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
@@ -670,9 +671,7 @@ admin.post('/pending/bulk', (req, res) => {
 // Sincronizzazione col gestionale dei clienti low ticket: [{ email, until: 'AAAA-MM-GG', plan }].
 // Si può rilanciare ogni giorno: chi è iscritto ha l'accesso fino alla sua scadenza, chi non lo è
 // lo trova attivo quando si registra. `nuovi` = email mai viste prima (a cui mandare l'invito).
-admin.post('/sync', (req, res) => {
-  const list = Array.isArray(req.body?.clients) ? req.body.clients : [];
-  const by = String(req.body?.source || 'gestionale').slice(0, 40);
+function applySync(list, by) {
   const out = { total: 0, activated: 0, extended: 0, pending: 0, unchanged: 0, nuovi: [], errors: [] };
   db.synced ||= {};
   for (const c of list) {
@@ -692,7 +691,54 @@ admin.post('/sync', (req, res) => {
     }
   }
   save();
-  res.json(out);
+  return out;
+}
+admin.post('/sync', (req, res) => {
+  const list = Array.isArray(req.body?.clients) ? req.body.clients : [];
+  res.json(applySync(list, String(req.body?.source || 'gestionale').slice(0, 40)));
+});
+
+// ---- Kalos: ogni giorno legge i clienti low ticket (solo lettura, vedi kalos.js) -------------
+// Attivi → accesso fino alla loro scadenza. Scaduti o in pausa → solo in elenco (per l'invito alla prova).
+const kalosConfigured = () => !!(process.env.KALOS_EMAIL && process.env.KALOS_PASSWORD);
+let kalosRunning = false;
+async function runKalos(by = 'Kalos') {
+  if (kalosRunning) throw new Error('Sincronizzazione già in corso');
+  kalosRunning = true;
+  db.kalos ||= { clients: {} };
+  try {
+    const list = await fetchLowTicketClients(process.env.KALOS_EMAIL, process.env.KALOS_PASSWORD);
+    for (const c of list) {
+      const prev = db.kalos.clients[c.email];
+      db.kalos.clients[c.email] = { name: c.name, plan: c.plan, until: c.until, status: c.active ? 'attivo' : c.paused ? 'pausa' : 'scaduto', first: prev?.first || today(), invited: prev?.invited || '' };
+    }
+    const r = applySync(list.filter((c) => c.active), by);
+    db.kalos.last = { date: new Date().toISOString(), ok: true, total: list.length, attivi: list.filter((c) => c.active).length, scaduti: list.filter((c) => !c.active).length, activated: r.activated, extended: r.extended, pending: r.pending, nuovi: r.nuovi.length };
+  } catch (e) {
+    db.kalos.last = { date: new Date().toISOString(), ok: false, error: e.message };
+  } finally {
+    kalosRunning = false;
+    save();
+  }
+  return db.kalos.last;
+}
+const romeNow = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).formatToParts(new Date()).map((x) => [x.type, x.value])); return { date: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) % 24 }; };
+setInterval(() => {
+  if (!kalosConfigured() || kalosRunning) return;
+  const n = romeNow(), hour = Number(db.settings.kalosHour ?? 7);
+  if (n.hour >= hour && db.kalos?.lastAuto !== n.date) {
+    (db.kalos ||= { clients: {} }).lastAuto = n.date;
+    runKalos().catch(() => {});
+  }
+}, 5 * 60 * 1000);
+admin.get('/kalos', (req, res) => {
+  const k = db.kalos || { clients: {} };
+  res.json({ configured: kalosConfigured(), hour: Number(db.settings.kalosHour ?? 7), last: k.last || null, running: kalosRunning,
+    clients: Object.entries(k.clients).map(([email, c]) => { const u = db.users.find((x) => x.email === email); return { email, ...c, registered: !!u, accessUntil: u?.accessUntil || '' }; }) });
+});
+admin.post('/kalos/run', async (req, res) => {
+  if (!kalosConfigured()) return res.status(400).json({ error: 'Mancano KALOS_EMAIL e KALOS_PASSWORD su Render' });
+  try { res.json(await runKalos(`Kalos (${req.who})`)); } catch (e) { res.status(409).json({ error: e.message }); }
 });
 admin.delete('/pending/:email', (req, res) => {
   delete db.pendingGrants[req.params.email];

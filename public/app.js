@@ -864,6 +864,34 @@ function photoViewer(src) {
   document.body.append(m);
 }
 
+// La barra per scrivere resta sempre visibile: la chat finisce esattamente sopra la barra in basso
+// (che sull'iPhone è più alta per la linea home) e, con la tastiera aperta, si restringe allo spazio
+// che resta visibile (iOS non ridimensiona la pagina quando compare la tastiera).
+function keepComposerVisible(chat, box) {
+  const vv = window.visualViewport;
+  const fit = () => {
+    if (!document.body.contains(chat)) { // cambiata schermata: smetto di ascoltare
+      document.body.classList.remove('kbd');
+      vv?.removeEventListener('resize', fit); vv?.removeEventListener('scroll', fit); window.removeEventListener('resize', fit);
+      return;
+    }
+    const kb = vv ? window.innerHeight - vv.height : 0;
+    const open = kb > 120;
+    document.body.classList.toggle('kbd', open);
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    if (open) {
+      chat.style.top = `${vv.offsetTop}px`; chat.style.bottom = 'auto'; chat.style.height = `${vv.height}px`;
+    } else {
+      const tb = document.querySelector('.tabbar');
+      chat.style.top = ''; chat.style.height = '';
+      chat.style.bottom = tb ? `${tb.offsetHeight}px` : '';
+    }
+    if (nearBottom) box.scrollTop = box.scrollHeight;
+  };
+  vv?.addEventListener('resize', fit); vv?.addEventListener('scroll', fit); window.addEventListener('resize', fit);
+  fit();
+}
+
 async function chatView(room) {
   const general = room === 'general';
   let last = 0;
@@ -875,10 +903,11 @@ async function chatView(room) {
     ${general ? `<div style="padding:0 16px">${ctabs('chat')}</div>` : ''}
     <div class="msgs" id="msgs"></div>
     ${first.blocked ? '<div class="chat-in muted small" style="justify-content:center">Hai bloccato questo membro.</div>'
-      : `<form class="chat-in" id="cform"><label class="btn photobtn" aria-label="Manda una foto">📷<input type="file" accept="image/*" id="cphoto" hidden></label><textarea id="ctext" rows="1" maxlength="1000" placeholder="${general ? 'Scrivi a tutta la community…' : 'Scrivi un messaggio…'}"></textarea><button class="btn primary" aria-label="Invia">➤</button></form>`}
+      : `<form class="chat-in" id="cform"><label class="btn photobtn" aria-label="Manda una foto">📷<input type="file" accept="image/*" id="cphoto" hidden></label><textarea id="ctext" rows="1" maxlength="1000" placeholder="Scrivi un messaggio…"></textarea><button class="btn primary" aria-label="Invia">➤</button></form>`}
   </div>${tabbar('community')}`;
   refreshBadge();
   const box = document.getElementById('msgs');
+  keepComposerVisible($app.querySelector('.chat'), box);
   const add = (msgs) => {
     if (!msgs.length) return;
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;

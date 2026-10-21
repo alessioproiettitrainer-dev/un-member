@@ -1,4 +1,4 @@
-import { blockSummary, embedUrl, estimateSeconds, fmt, PHASE_TYPES } from './engine.js';
+import { blockSummary, embedUrl, estimateSeconds, fmt, PHASE_TYPES, setPace } from './engine.js';
 import { startPlayer, stopPlayer } from './player.js';
 import { FOODS } from './foods.js';
 
@@ -1021,6 +1021,7 @@ async function chatView(room) {
 (async () => {
   try {
     SETTINGS = await (await fetch('/api/settings')).json();
+    setPace(SETTINGS.paceFactor);
     document.title = SETTINGS.appName;
   } catch {}
   route();

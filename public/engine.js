@@ -159,8 +159,12 @@ export function parseReps(text) {
   return { reps: parseInt(t, 10) || 0, secs: 0 };
 }
 
+// Ritmo generale scelto dal coach in Impostazioni (1 = come nei video demo, 1.3 = 30% più lento):
+// i video sono eseguiti a ritmo pulito, chi si allena con carico e fatica va più piano.
+let PACE = 1;
+export function setPace(f) { PACE = Number(f) > 0 ? Number(f) : 1; }
 export function secPerRep(ex) {
-  return Number(ex?.secPerRep) || 2;
+  return (Number(ex?.secPerRep) || 2) * PACE;
 }
 
 // Durata di un esercizio nel giro guidato: ripetizioni x secondi per ripetizione, oppure il tempo scritto.
@@ -170,7 +174,7 @@ export function itemPace(item, ex) {
   if (Number(item.time)) return { reps: 0, spr: 0, dur: Number(item.time) };
   if (!reps) return { reps: 0, spr: 0, dur: 30 };
   const spr = secPerRep(ex);
-  return { reps, spr, dur: reps * spr };
+  return { reps, spr, dur: Math.round(reps * spr) };
 }
 
 // ---- video esterni (YouTube, Google Drive, Vimeo) -----------------------------

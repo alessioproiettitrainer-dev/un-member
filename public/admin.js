@@ -1,4 +1,4 @@
-import { BLOCK_TYPES, PHASE_TYPES, blockSummary, embedUrl, emomIntervals, emomRounds, emomSlotCount, estimateSeconds } from './engine.js';
+import { BLOCK_TYPES, PHASE_TYPES, blockSummary, embedUrl, emomIntervals, emomRounds, emomSlotCount, estimateSeconds, setPace } from './engine.js';
 
 const root = document.getElementById('admin');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -86,6 +86,7 @@ async function load(who) {
     [S.users, S.pending, S.mod, S.settings] = await Promise.all([call('GET', '/api/admin/users'), call('GET', '/api/admin/pending'), call('GET', '/api/admin/moderation'), settings]);
     S.tab = 'users';
   }
+  setPace(S.settings.paceFactor);
   render();
 }
 
@@ -396,6 +397,9 @@ function settingsView() {
         <div class="f"><label>Link di pagamento</label><input type="text" data-plan="${i}.url" value="${esc(x.url)}" placeholder="https://…"></div>
         <div class="row" style="justify-content:space-between"><label class="chk"><input type="checkbox" data-plan="${i}.best" ${x.best ? 'checked' : ''}> Consigliato</label><button class="sbtn danger" data-act="plan-rm" data-i="${i}">Elimina</button></div></div>`).join('')}
       <button class="sbtn" style="margin-top:8px" data-act="plan-add">+ Aggiungi piano</button></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Ritmo delle ripetizioni (EMOM e giri guidati)</label>
+      <select id="pace">${[[1, 'Come nei video demo'], [1.15, '+15% più lento'], [1.25, '+25% più lento'], [1.35, '+35% più lento'], [1.5, '+50% più lento']].map(([v, l]) => `<option value="${v}" ${Number(st.paceFactor || 1) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <div class="muted small">Vale per tutti gli esercizi a ripetizioni: es. 10 swing da 1 secondo durano 10 s "come nei video", 12,5 s con +25%. I video demo sono eseguiti a ritmo pulito; chi si allena con il peso e la fatica va più piano. Si applica subito, senza toccare i workout.</div></div>
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Sblocco graduale delle settimane</label>
       <label class="chk"><input type="checkbox" data-set="dripWeeks" ${st.dripWeeks !== false ? 'checked' : ''}> Programmi base: una settimana nuova ogni 7 giorni da quando il membro inizia</label>
       <div class="muted small">Così chi si abbona un mese non può vedere (e fotografare) tutto il programma il primo giorno. Nei cicli si vedono sempre le settimane passate e quella in corso, mai quelle future.</div></div>
@@ -636,6 +640,11 @@ function softRender() {
 
 root.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'pace') {
+    await call('PUT', '/api/admin/settings', { paceFactor: Number(t.value) });
+    S.settings.paceFactor = Number(t.value); setPace(S.settings.paceFactor);
+    return toast(Number(t.value) === 1 ? 'Ritmo come nei video demo' : `Ripetizioni ${Math.round((Number(t.value) - 1) * 100)}% più lente per tutti`);
+  }
   if (t.id === 'mg') { S.mg = t.value; return render(); }
   if (t.id === 'mhour') {
     await call('PUT', '/api/admin/settings', { trialMailHour: Number(t.value) });

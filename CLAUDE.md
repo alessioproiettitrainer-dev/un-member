@@ -63,3 +63,28 @@ MediaPipe / rimozione sfondo (`hyperframes remove-background`) dove serve separa
 | Datamosh | pixel che "colano" tra due clip | rimozione I-frame (ffmpeg + bitstream) o simulazione con blend a blocchi | transizione molto stilizzata, da usare raramente |
 | Fisheye | lente grandangolo bombata | `lenscorrection` / `v360` | momenti comici, primo piano |
 | Pixel reveal | mosaico a pixel grossi che si risolve nell'immagine | `scale` down/up animato (`neighbor`) | svelare risultato, esercizio "segreto" |
+
+Fonte 2: Reel "17 video effects Claude can create" (@tenfoldmarc), copia vista il 21/10 (caricata in chat).
+Formato: titolo in alto giallo minuscolo bold ("17 video effects / claude can create"); nome dell'effetto grande in basso
+a sinistra con contatore "01/17"; sfondo reale, look scuro e caldo; outro con sottotitoli karaoke gialli e mockup del
+profilo Instagram con CTA "comment STUDIO". Per me: giallo → arancione `#FF6A00`, contatore tipo "03/05".
+
+| Effetto | Cosa fa | Quando usarlo nei miei video |
+|---|---|---|
+| Orbit | card/clip che girano intorno al soggetto | varianti di un esercizio attorno a me |
+| Couch wall | parete di foto/schermate dietro il soggetto | progressi clienti, recensioni |
+| UI world | lo sfondo diventa un'interfaccia chiara (chat/app), io dentro | parlare della app/membership Uncoach |
+| Frame break | video dentro una cornice (telefono) e il soggetto ne esce | hook, esercizio che "esce" dallo schermo |
+| Digital zoom | punch-in digitale a scatti | enfasi, alternativa al crash zoom |
+| Phone mockup | mockup di telefono con UI che entra di lato | mostrare la app, il programma, la chat |
+| Checklist | card con spunte che si spuntano una alla volta | benefici, errori da evitare, "come farlo" |
+| Headline wall | ritagli/titoli/post-it attorno alla testa | miti del fitness, frasi che senti in palestra |
+| Zoom-through cut | zoom dentro un elemento che porta alla scena dopo | transizione tra parlato ed esercizio |
+| Chart grow | grafico a linea che si disegna con punto luminoso | progressi, ladder/ripetizioni che salgono |
+| Pull-back reveal | zoom indietro: il video era dentro una finestra/app | CTA verso la app, "ecco il programma" |
+| Green screen | soggetto scontornato in un riquadro su fondo scuro | intro, cambio scena |
+| Paper cut | collage di carta: lettere ritagliate, scarabocchi, me scontornato con bordo bianco | contenuti leggeri/ironici, titoli |
+| Doodle boil | contorno disegnato a mano che "vibra" attorno al soggetto + scintille | evidenziare me o un muscolo, hook |
+| Vertigo | dolly zoom (sfondo che si allarga mentre io resto fermo) | momento "wow", rivelazione |
+| Cover story | titolo enorme serif tipo copertina di rivista | apertura di una serie, titolo forte |
+| Glass type | testo su vetro smerigliato/trasparente | citazioni, frasi chiave eleganti |

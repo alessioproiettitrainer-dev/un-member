@@ -117,9 +117,9 @@ function exLadder(id) {
 function render() {
   root.innerHTML = `<div class="adm">
     <header><div class="h1">${esc(S.settings.appName || 'Admin')} <em style="color:var(--accent);font-style:normal">admin</em></div>
-      <div class="tabs">${(S.role === 'owner' ? [['programs', 'Programmi'], ['exercises', 'Esercizi & video'], ['tutorials', 'Tutorial'], ['board', 'Bacheca'], ['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`], ['staff', 'Staff'], ['kalos', 'Kalos'], ['settings', 'Impostazioni']] : [['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`]]).map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="tabs">${(S.role === 'owner' ? [['programs', 'Programmi'], ['exercises', 'Esercizi & video'], ['tutorials', 'Tutorial'], ['board', 'Bacheca'], ['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`], ['staff', 'Staff'], ['kalos', 'Kalos'], ['email', 'Email'], ['settings', 'Impostazioni']] : [['users', 'Membri'], ['moderation', `Moderazione${S.mod.reports.length ? ` (${S.mod.reports.length})` : ''}`]]).map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       <span class="muted small">${esc(S.me)}</span><button class="sbtn" data-act="logout">Esci</button>${S.role === 'owner' ? '<a class="sbtn" href="/" target="_blank">Apri app ↗</a>' : ''}</header>
-    ${({ exercises: exercisesView, tutorials: tutorialsView, board: boardView, users: usersView, kalos: kalosView, moderation: moderationView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
+    ${({ exercises: exercisesView, tutorials: tutorialsView, board: boardView, users: usersView, kalos: kalosView, email: emailView, moderation: moderationView, staff: staffView, settings: settingsView }[S.tab] || programsView)()}
   </div>`;
   if (S.tab === 'moderation') loadModPhotos();
 }
@@ -229,6 +229,54 @@ function usersView() {
       ${pend.length ? `<div class="lbl2" style="margin-top:12px">In attesa di iscrizione</div>${pend.map(([em, g]) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b class="small">${esc(em)}</b><div class="muted small">${g.until ? `fino al ${fmtDate(g.until)}` : `${g.months} ${g.months === 1 ? 'mese' : 'mesi'}`} · da ${esc(g.by)} · ${fmtDate(g.date)}</div></div><button class="sbtn ghost danger" data-act="pend-del" data-email="${esc(em)}">✕</button></div>`).join('')}` : ''}
     </div></div>`;
 }
+// ---- Email: scrivi e invia a un gruppo (parte dall'app con la Gmail del coach) ----
+const MAIL_GROUPS = {
+  all: ['Tutti gli iscritti all\'app', () => S.users],
+  trial: ['In prova', () => S.users.filter((u) => u.trial)],
+  ok: ['Abbonati attivi', () => S.users.filter((u) => u.active)],
+  lapsed: ['Iscritti senza accesso (prova finita o scaduti)', () => S.users.filter((u) => !u.active && !u.trial)],
+  kexp: ['Kalos: scaduti non ancora invitati', () => (S.kalos?.clients || []).filter((c) => c.status !== 'attivo' && !c.invited)],
+  kact: ['Kalos: attivi non ancora iscritti all\'app', () => (S.kalos?.clients || []).filter((c) => c.status === 'attivo' && !c.registered)],
+  paste: ['Incolla un elenco di email', null],
+};
+function mailRecipients() {
+  const g = S.mg || 'trial';
+  if (g === 'paste') return [...new Set(String(S.mp || '').toLowerCase().match(/[^\s,;<>"']+@[^\s,;<>"']+\.[a-z]{2,}/g) || [])].map((email) => ({ email, name: '' }));
+  return MAIL_GROUPS[g][1]().map((x) => ({ email: x.email, name: String(x.name || '').trim().split(/\s+/)[0].replace(/^./, (c) => c.toUpperCase()) }));
+}
+function mailHtml(text, link, btn) {
+  const paras = String(text || '').split(/\n\s*\n/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+  const b = link ? `<p style="margin:22px 0"><a href="${esc(link)}" style="background:#ff7a00;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 22px;border-radius:10px;display:inline-block">${esc(btn || 'Apri')}</a></p>` : '';
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px">${paras}${b}</div>`;
+}
+function emailView() {
+  const m = S.mail;
+  if (!m) return '<div class="panel muted">Carico…</div>';
+  const d = S.md ||= { subject: '', text: 'Ciao {nome}!\n\n', link: location.origin, btn: 'Apri l\'app', label: '' };
+  const rec = mailRecipients();
+  const sample = rec[0]?.name || 'Marco';
+  const fillPrev = (x) => String(x).replace(/\{nome\}/gi, sample);
+  return `<div class="cols two"><div class="panel">
+    <div class="h2" style="margin-top:0">Scrivi un'email</div>
+    ${m.configured ? `<div class="muted small" style="margin-bottom:10px">Parte da <b>${esc(m.from)}</b> · oggi già inviate ${m.today} su ${m.cap}. Le risposte arrivano lì.</div>` : '<div class="st pending" style="margin-bottom:10px;display:inline-block">Gmail non collegata: aggiungi GMAIL_USER e GMAIL_APP_PASSWORD su Render</div>'}
+    <div class="f"><label>A chi</label><select id="mg">${Object.entries(MAIL_GROUPS).map(([k, [l, f]]) => `<option value="${k}" ${(S.mg || 'trial') === k ? 'selected' : ''}>${l}${f ? ` (${f().length})` : ''}</option>`).join('')}</select></div>
+    ${(S.mg || 'trial') === 'paste' ? `<div class="f"><textarea id="mp" rows="4" placeholder="Incolla qui le email">${esc(S.mp || '')}</textarea></div>` : ''}
+    <div class="f"><label>Nome dell'invio (serve a non mandarla due volte alla stessa persona)</label><input type="text" id="ml" value="${esc(d.label)}" placeholder="es. Evento sabato 8 novembre"></div>
+    <div class="f"><label>Oggetto</label><input type="text" id="ms" value="${esc(d.subject)}" placeholder="es. {nome}, sabato ci alleniamo insieme 🔥"></div>
+    <div class="f"><label>Testo (lascia una riga vuota tra i paragrafi · {nome} = nome della persona)</label><textarea id="mt" rows="10">${esc(d.text)}</textarea></div>
+    <div class="grid2"><div class="f"><label>Tasto: link (opzionale)</label><input type="text" id="mk" value="${esc(d.link)}" placeholder="https://…"></div>
+      <div class="f"><label>Tasto: scritta</label><input type="text" id="mb" value="${esc(d.btn)}"></div></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="mail-send" ${m.configured && rec.length ? '' : 'disabled'}>Invia a ${rec.length} ${rec.length === 1 ? 'persona' : 'persone'}</button>
+      <button class="sbtn" data-act="mail-test" ${m.configured ? '' : 'disabled'}>Manda una prova a me</button></div>
+    ${rec.length > m.cap - m.today ? `<div class="muted small" style="margin-top:8px">Gmail ne permette circa ${m.cap} al giorno: le altre partono da sole domani.</div>` : ''}
+  </div>
+  <div class="panel"><div class="h2" style="margin-top:0">Anteprima</div>
+    <div class="muted small">Come la vede ${esc(sample)}:</div>
+    <div style="background:#fff;border-radius:12px;padding:16px;margin-top:8px"><div style="font:700 15px Arial;color:#111;margin-bottom:10px">${esc(fillPrev(d.subject || '(senza oggetto)'))}</div>${mailHtml(fillPrev(d.text), d.link, d.btn)}</div>
+    ${m.campaigns.length ? `<div class="lbl2" style="margin-top:16px">Invii fatti</div>${m.campaigns.slice().reverse().slice(0, 10).map((c) => `<div class="muted small">${esc(c.label)} · ${c.sent}/${c.total} inviate${c.failed ? ` · ${c.failed} errori` : ''}${c.done ? ` · ${new Date(c.done).toLocaleDateString('it-IT')}` : ' · in corso'}</div>`).join('')}` : ''}
+  </div></div>`;
+}
+
 // ---- Kalos: clienti low ticket letti ogni giorno dal gestionale (solo lettura) ----
 function kalosView() {
   const k = S.kalos;
@@ -546,6 +594,11 @@ root.addEventListener('input', (e) => {
   }
   if (t.dataset.plan) { const [i, f] = t.dataset.plan.split('.'); S.settings.plans[Number(i)][f] = t.type === 'checkbox' ? t.checked : t.value; }
   if (t.dataset.set) S.settings[t.dataset.set] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Number(t.value) : t.value;
+  if (['ms', 'mt', 'mk', 'mb', 'ml'].includes(t.id)) {
+    S.md[{ ms: 'subject', mt: 'text', mk: 'link', mb: 'btn', ml: 'label' }[t.id]] = t.value;
+    const pos = t.selectionStart; softRender(); const el = document.getElementById(t.id); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch {} }
+  }
+  if (t.id === 'mp') { S.mp = t.value; const pos = t.selectionStart; softRender(); const el = document.getElementById('mp'); el?.focus(); try { el.setSelectionRange(pos, pos); } catch {} }
   if (t.id === 'uq') { S.uq = t.value; softRender(); document.getElementById('uq')?.focus(); }
   if (t.id === 'exlistq') {
     S.exQ = t.value;
@@ -582,6 +635,7 @@ function softRender() {
 
 root.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'mg') { S.mg = t.value; return render(); }
   if (t.id === 'mhour') {
     await call('PUT', '/api/admin/settings', { trialMailHour: Number(t.value) });
     S.settings.trialMailHour = S.mail.hour = Number(t.value);
@@ -636,6 +690,7 @@ root.addEventListener('click', async (e) => {
     if (t.dataset.tab) {
       S.tab = t.dataset.tab;
       if (S.tab === 'kalos') { S.kalos = null; render(); S.kalos = await call('GET', '/api/admin/kalos'); }
+      if (S.tab === 'email') { S.mail = null; render(); [S.mail, S.kalos] = await Promise.all([call('GET', '/api/admin/mail').catch(() => null), call('GET', '/api/admin/kalos').catch(() => ({ clients: [] }))]); }
       if (S.tab === 'settings') { S.mail = null; render(); S.mail = await call('GET', '/api/admin/mail').catch(() => null); }
       return render();
     }
@@ -696,7 +751,24 @@ root.addEventListener('click', async (e) => {
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
       case 'kalos-f': S.kf = t.dataset.f; break;
-      case 'mail-test': try { await call('POST', '/api/admin/mail/test'); toast('Email di prova inviata: controlla la tua casella'); } catch (err) { toast(err.message, true); } return;
+      case 'mail-send': {
+        const d = S.md, rec = mailRecipients();
+        if (!d.label.trim() || !d.subject.trim() || !d.text.trim()) return toast('Scrivi nome dell\'invio, oggetto e testo', true);
+        if (!confirm(`Inviare "${d.subject}" a ${rec.length} persone?`)) return;
+        try {
+          const r = await call('POST', '/api/admin/campaign', { label: d.label.trim(), subject: d.subject, body: `${d.text}${d.link ? `\n\n${d.btn || 'Apri'}: ${d.link}` : ''}`, htmlBody: mailHtml(d.text, d.link, d.btn), recipients: rec });
+          toast(`Invio partito a ${r.total} persone${r.skipped ? ` (${r.skipped} saltate: già ricevuta o doppie)` : ''}`);
+          if (S.mg === 'kexp') await call('POST', '/api/admin/kalos/invited', { emails: rec.map((x) => x.email), label: d.label.trim() });
+          S.md = null;
+        } catch (err) { return toast(err.message, true); }
+        S.mail = await call('GET', '/api/admin/mail'); break;
+      }
+      case 'mail-test': {
+        const d = S.tab === 'email' && S.md;
+        const payload = d && d.subject ? { subject: d.subject, body: `${d.text}${d.link ? `\n\n${d.btn || 'Apri'}: ${d.link}` : ''}`, htmlBody: mailHtml(d.text, d.link, d.btn) } : {};
+        try { await call('POST', '/api/admin/mail/test', payload); toast('Email di prova inviata: controlla la tua casella'); } catch (err) { toast(err.message, true); }
+        return;
+      }
       case 'mail-run': { const r = await call('POST', '/api/admin/mail/run'); toast(r.log ? `Inviate ${r.log.sent}${r.log.failed ? `, ${r.log.failed} errori` : ''}` : 'Niente da inviare'); S.mail = await call('GET', '/api/admin/mail'); break; }
       case 'kalos-run': {
         S.kalos.running = true; render();

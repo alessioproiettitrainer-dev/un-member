@@ -910,6 +910,10 @@ setInterval(() => mailTick().catch(() => {}), 5 * 60 * 1000);
 admin.get('/mail', (req, res) => res.json({ configured: mailer.configured(), from: process.env.GMAIL_USER || '', hour: Number(db.settings.trialMailHour ?? 10), today: db.mailDay?.date === romeToday() ? db.mailDay.count : 0, cap: DAILY_CAP, log: db.mailLog || [],
   campaigns: Object.entries(db.campaigns || {}).map(([id, c]) => ({ id, label: c.label, subject: c.subject, created: c.created, done: c.done || '', total: c.recipients.length, sent: c.recipients.filter((r) => r.sent).length, failed: c.recipients.filter((r) => r.error).length })) }));
 admin.post('/mail/test', async (req, res) => {
+  const b = req.body || {};
+  if (b.subject) {
+    try { await mailer.send({ to: process.env.GMAIL_USER, subject: `[PROVA] ${String(b.subject).replace(/\{nome\}/gi, 'Alessio')}`, body: String(b.body || '').replace(/\{nome\}/gi, 'Alessio'), htmlBody: String(b.htmlBody || '').replace(/\{nome\}/gi, 'Alessio') }); return res.json({ ok: true }); } catch (e) { return res.status(400).json({ error: e.message }); }
+  }
   try { await mailer.send({ to: process.env.GMAIL_USER, subject: 'Prova invio dall\'app UN-MEMBER ✅', body: 'Se leggi questa email, l\'app riesce a spedire dalla tua Gmail.', htmlBody: '<p>Se leggi questa email, l\'app riesce a spedire dalla tua Gmail. ✅</p>' }); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 admin.post('/mail/run', async (req, res) => { await mailTick(true); res.json({ ok: true, log: (db.mailLog || [])[0] || null }); });

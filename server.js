@@ -142,6 +142,8 @@ app.post('/api/auth/register', (req, res) => {
     else grant(u, pending.months, `${pending.by} (pre-attivazione)`);
     delete db.pendingGrants[em];
   }
+  // con la prova attiva in Impostazioni, chi si iscrive (da qualunque link) parte subito con la settimana gratis
+  if (trialAvailable(u)) startTrial(u);
   db.users.push(u);
   startSession(res, u.id);
   res.json(publicUser(u));
@@ -291,13 +293,16 @@ me.put('/welcome', (req, res) => {
   save();
   res.json(publicUser(req.user));
 });
-me.post('/trial', (req, res) => {
-  const u = req.user;
-  if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Hai già un abbonamento attivo' : 'La settimana di prova si può fare una sola volta' });
+function startTrial(u) {
   const days = Math.max(1, Number(db.settings.trialDays) || 7);
   u.trialStart = today();
   u.trialUntil = new Date(Date.now() + (days - 1) * 864e5).toISOString().slice(0, 10); // oggi compreso
   db.trialEmails.push(trialKey(u.email));
+}
+me.post('/trial', (req, res) => {
+  const u = req.user;
+  if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Hai già un abbonamento attivo' : 'La settimana di prova si può fare una sola volta' });
+  startTrial(u);
   save();
   res.json(publicUser(u));
 });
@@ -674,6 +679,14 @@ admin.post('/users/:id/access', (req, res) => {
   }
   save();
   res.json({ accessUntil: u.accessUntil, active: hasAccess(u), accessLog: u.accessLog.slice(-5) });
+});
+// attiva la settimana di prova a un iscritto (se non l'ha già fatta)
+admin.post('/users/:id/trial', (req, res) => {
+  const u = db.users.find((x) => x.id === req.params.id);
+  if (!u) return res.status(404).end();
+  if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Ha già un abbonamento attivo' : 'Ha già usato la prova (o la prova è disattivata)' });
+  startTrial(u); save();
+  res.json({ trialUntil: u.trialUntil });
 });
 // link per la nuova password da mandare a mano (es. su WhatsApp) se l'email non arriva
 admin.post('/users/:id/reset-link', (req, res) => {

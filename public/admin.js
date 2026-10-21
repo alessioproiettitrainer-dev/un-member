@@ -217,6 +217,7 @@ function usersView() {
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><span class="muted small">Aggiungi accesso:</span>
           ${[1, 3, 6, 12].map((m) => `<button class="sbtn acc" data-grant="${m}" data-id="${u.id}">+${m === 12 ? '1 anno' : m + (m === 1 ? ' mese' : ' mesi')}</button>`).join('')}
           ${u.accessUntil ? `<button class="sbtn ghost danger" data-act="revoke" data-id="${u.id}">Revoca</button>` : ''}
+          ${!u.accessUntil && !u.trialUntil ? `<button class="sbtn" data-act="u-trial" data-id="${u.id}">Attiva prova gratis</button>` : ''}
           <button class="sbtn" data-act="u-open" data-id="${u.id}">${open ? 'Chiudi' : 'Nutrizione & storico'}</button>
           <button class="sbtn ghost" data-act="u-reset" data-id="${u.id}" title="Link per scegliere una nuova password, da mandare su WhatsApp">🔑 Link password</button>
           ${S.role === 'owner' ? `<button class="sbtn ghost danger" data-act="u-del" data-id="${u.id}">Elimina</button>` : ''}</div>
@@ -764,6 +765,10 @@ root.addEventListener('click', async (e) => {
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
       case 'kalos-f': S.kf = t.dataset.f; break;
+      case 'u-trial': {
+        try { const r = await call('POST', `/api/admin/users/${t.dataset.id}/trial`); toast(`Prova attiva fino al ${fmtDate(r.trialUntil)}`); S.users = await call('GET', '/api/admin/users'); } catch (err) { toast(err.message, true); }
+        break;
+      }
       case 'u-reset': {
         const { link } = await call('POST', `/api/admin/users/${t.dataset.id}/reset-link`);
         try { await navigator.clipboard.writeText(link); toast('Link copiato (vale 1 ora): mandalo al cliente'); } catch { prompt('Link per la nuova password (vale 1 ora):', link); }

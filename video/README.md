@@ -29,3 +29,8 @@ Schema (`schema.json`):
 - Scritte bianche Inter, centrate, **sopra la testa** (mai sul viso). Nomi degli esercizi in inglese, il resto in **italiano**.
 - Finale: "RIPETI PER N ROUND" + "ripetizioni e maggiori info nella didascalia", poi "SALVA E PROVALO".
 - Niente nome Instagram e niente audio (la musica la mette il proprietario su Instagram).
+
+## Video di confronto (giusto vs sbagliato)
+Split screen: sinistra giusto (linee verdi), destra sbagliato (linee rosse), con rallentatore 0,5x e linee del corpo.
+Strumenti: `pose.py` (posizioni del corpo) e `confronto_split.py` (montaggio). Scritte con lo stesso stile, etichette
+"CHI LO SA FARE" (verde) e "CHI IMPROVVISA" (rosso). Tecnica ed errori dello swing: `swing_hardstyle.md`.

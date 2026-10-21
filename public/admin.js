@@ -365,6 +365,15 @@ function settingsView() {
       ${st.welcomeVideo ? `<video src="${esc(st.welcomeVideo)}" controls playsinline style="width:180px;border-radius:10px;background:#000"></video><div><button class="sbtn danger" data-act="welcome-rm" style="margin-top:6px">Togli il video</button></div>` : ''}
       <div class="f" style="margin-top:8px"><label>…oppure un link (YouTube, Vimeo)</label><input type="text" data-set="welcomeUrl" value="${esc(st.welcomeUrl || '')}" placeholder="https://…"></div>
       <div class="muted small">Compare in Oggi a chi non l'ha ancora visto: sparisce quando lo guarda fino in fondo o lo chiude con ✕, e si può rivedere dal Profilo. Il video si attiva appena finisce di caricare. Se ne carichi uno nuovo, ricompare a tutti.</div></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Email automatiche (dalla tua Gmail)</label>
+      ${!S.mail ? '<div class="muted small">Carico…</div>' : `
+      <div class="muted small">${S.mail.configured ? `Partono da <b>${esc(S.mail.from)}</b> · oggi inviate ${S.mail.today} su ${S.mail.cap} al giorno` : 'Da collegare: su Render aggiungi GMAIL_USER e GMAIL_APP_PASSWORD (la "password per le app" di Google).'}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
+        <span class="muted small">Email della prova (2° giorno, 4° giorno, ultimo giorno) ogni mattina alle <select id="mhour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === S.mail.hour ? 'selected' : ''}>${h}:00</option>`).join('')}</select></span>
+        <button class="sbtn" data-act="mail-test" ${S.mail.configured ? '' : 'disabled'}>Manda un'email di prova a me</button>
+        <button class="sbtn" data-act="mail-run" ${S.mail.configured ? '' : 'disabled'}>Invia ora quelle di oggi</button></div>
+      ${S.mail.campaigns.length ? `<div class="lbl2" style="margin-top:10px">Invii</div>${S.mail.campaigns.slice(-6).reverse().map((c) => `<div class="muted small">${esc(c.label)} · ${c.sent}/${c.total} inviate${c.failed ? ` · ${c.failed} errori` : ''}${c.done ? '' : ' · in corso'}</div>`).join('')}` : ''}
+      ${S.mail.log.length ? `<div class="lbl2" style="margin-top:10px">Ultimi invii automatici</div>${S.mail.log.slice(0, 5).map((l) => `<div class="muted small">${new Date(l.date).toLocaleString('it-IT')} · ${l.kind === 'prova' ? 'prova' : esc(l.label || '')}: ${l.sent} inviate${l.failed ? `, ${l.failed} errori${l.error ? ` (${esc(l.error)})` : ''}` : ''}${l.left ? `, ${l.left} rimandate a domani` : ''}</div>`).join('')}` : ''}`}</div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
     <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
     <div class="f"><label>Logo (PNG trasparente, versione bianca per sfondo scuro)</label><input type="file" accept="image/*" data-upload="logo">
@@ -573,6 +582,11 @@ function softRender() {
 
 root.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'mhour') {
+    await call('PUT', '/api/admin/settings', { trialMailHour: Number(t.value) });
+    S.settings.trialMailHour = S.mail.hour = Number(t.value);
+    return toast(`Email della prova ogni mattina alle ${t.value}:00`);
+  }
   if (t.id === 'khour') {
     await call('PUT', '/api/admin/settings', { kalosHour: Number(t.value) });
     S.settings.kalosHour = S.kalos.hour = Number(t.value);
@@ -622,6 +636,7 @@ root.addEventListener('click', async (e) => {
     if (t.dataset.tab) {
       S.tab = t.dataset.tab;
       if (S.tab === 'kalos') { S.kalos = null; render(); S.kalos = await call('GET', '/api/admin/kalos'); }
+      if (S.tab === 'settings') { S.mail = null; render(); S.mail = await call('GET', '/api/admin/mail').catch(() => null); }
       return render();
     }
     if (t.dataset.ex) { S.exId = t.dataset.ex; render(); return window.scrollTo(0, 0); }
@@ -681,6 +696,8 @@ root.addEventListener('click', async (e) => {
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
       case 'kalos-f': S.kf = t.dataset.f; break;
+      case 'mail-test': try { await call('POST', '/api/admin/mail/test'); toast('Email di prova inviata: controlla la tua casella'); } catch (err) { toast(err.message, true); } return;
+      case 'mail-run': { const r = await call('POST', '/api/admin/mail/run'); toast(r.log ? `Inviate ${r.log.sent}${r.log.failed ? `, ${r.log.failed} errori` : ''}` : 'Niente da inviare'); S.mail = await call('GET', '/api/admin/mail'); break; }
       case 'kalos-run': {
         S.kalos.running = true; render();
         try { const r = await call('POST', '/api/admin/kalos/run'); toast(r.ok ? `Letti ${r.total} clienti da Kalos` : `Errore: ${r.error}`, !r.ok); } catch (err) { toast(err.message, true); }

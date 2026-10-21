@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { fetchLowTicketClients } = require('./kalos');
 const mails = require('./mails');
+const mailer = require('./mailer');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
@@ -837,19 +838,97 @@ admin.post('/upload', upload.single('file'), async (req, res) => {
 // Le spedisce da Gmail un'attività programmata con un token che vale SOLO per queste due chiamate.
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://un-member.onrender.com';
 const mailAuth = (req, res, next) => (db.mailToken && req.get('x-mail-token') === db.mailToken) || isAdmin(req) ? next() : res.status(401).json({ error: 'Token non valido' });
-app.get('/api/mail/trial-due', mailAuth, (req, res) => {
+function trialDue() {
   const t = today(), days = Math.max(1, Number(db.settings.trialDays) || 7);
-  res.json(db.users.filter((u) => inTrial(u) && !u.community?.banned).map((u) => {
+  return db.users.filter((u) => inTrial(u) && !u.community?.banned).map((u) => {
     const st = mails.dueStage(u, t, days);
     return st && { userId: u.id, stage: st.key, day: st.day, to: u.email, ...mails.render(st.key, mails.firstName(u.name), PUBLIC_URL) };
-  }).filter(Boolean));
-});
+  }).filter(Boolean);
+}
+app.get('/api/mail/trial-due', mailAuth, (req, res) => res.json(trialDue()));
 app.post('/api/mail/trial-sent', mailAuth, express.json(), (req, res) => {
   const u = db.users.find((x) => x.id === req.body?.userId);
   if (!u || !['d2', 'd4', 'last'].includes(req.body?.stage)) return res.status(400).json({ error: 'Dati non validi' });
   (u.trialMails ||= {})[req.body.stage] = today();
   save();
   res.json({ ok: true });
+});
+// ---- invio diretto dall'app (Gmail del coach), senza Claude --------------------------------
+// Gmail normale: ~500 destinatari al giorno. Tengo un margine: oltre DAILY_CAP il resto parte il giorno dopo.
+const DAILY_CAP = Number(process.env.MAIL_DAILY_CAP) || 450;
+const romeToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+function canSendToday() {
+  const d = romeToday();
+  if (db.mailDay?.date !== d) db.mailDay = { date: d, count: 0 };
+  return db.mailDay.count < DAILY_CAP;
+}
+async function sendOne(m) {
+  await mailer.send(m);
+  db.mailDay.count++;
+}
+const logMail = (entry) => { (db.mailLog ||= []).unshift({ date: new Date().toISOString(), ...entry }); db.mailLog.length = Math.min(db.mailLog.length, 60); };
+let mailBusy = false;
+async function runTrialMails() {
+  const due = trialDue(); let sent = 0, failed = 0, lastErr = '';
+  for (const m of due) {
+    if (!canSendToday()) break;
+    try { await sendOne(m); const u = db.users.find((x) => x.id === m.userId); (u.trialMails ||= {})[m.stage] = today(); sent++; } catch (e) { failed++; lastErr = e.message; }
+  }
+  logMail({ kind: 'prova', sent, failed, left: trialDue().length, error: lastErr });
+  save();
+}
+// campagne (es. un evento): una email personalizzata con {nome} a un elenco, una volta sola per indirizzo
+async function runCampaigns() {
+  for (const c of Object.values(db.campaigns || {})) {
+    if (c.done) continue;
+    for (const r of c.recipients) {
+      if (r.sent || r.error) continue;
+      if (!canSendToday()) return save();
+      const fill = (x) => {
+        if (r.name) return String(x || '').replace(/\{nome\}/gi, r.name);
+        const t = String(x || '').replace(/,?[ \t]*\{nome\}[ \t]*,?[ \t]*/gi, ' ').replace(/ +([!?.,])/g, '$1').replace(/^ +| +$/gm, '');
+        return t.charAt(0).toUpperCase() + t.slice(1);
+      };
+      try { await sendOne({ to: r.email, subject: fill(c.subject), body: fill(c.body), htmlBody: fill(c.htmlBody) }); r.sent = new Date().toISOString(); } catch (e) { r.error = e.message; }
+      save();
+    }
+    c.done = new Date().toISOString();
+    logMail({ kind: 'campagna', label: c.label, sent: c.recipients.filter((r) => r.sent).length, failed: c.recipients.filter((r) => r.error).length });
+    save();
+  }
+}
+async function mailTick(force) {
+  if (mailBusy || !mailer.configured()) return;
+  mailBusy = true;
+  try {
+    await runCampaigns();
+    const n = romeNow(), hour = Number(db.settings.trialMailHour ?? 10);
+    if (force || (n.hour >= hour && db.lastTrialMails !== n.date)) { db.lastTrialMails = n.date; await runTrialMails(); }
+  } finally { mailBusy = false; }
+}
+setInterval(() => mailTick().catch(() => {}), 5 * 60 * 1000);
+admin.get('/mail', (req, res) => res.json({ configured: mailer.configured(), from: process.env.GMAIL_USER || '', hour: Number(db.settings.trialMailHour ?? 10), today: db.mailDay?.date === romeToday() ? db.mailDay.count : 0, cap: DAILY_CAP, log: db.mailLog || [],
+  campaigns: Object.entries(db.campaigns || {}).map(([id, c]) => ({ id, label: c.label, subject: c.subject, created: c.created, done: c.done || '', total: c.recipients.length, sent: c.recipients.filter((r) => r.sent).length, failed: c.recipients.filter((r) => r.error).length })) }));
+admin.post('/mail/test', async (req, res) => {
+  try { await mailer.send({ to: process.env.GMAIL_USER, subject: 'Prova invio dall\'app UN-MEMBER ✅', body: 'Se leggi questa email, l\'app riesce a spedire dalla tua Gmail.', htmlBody: '<p>Se leggi questa email, l\'app riesce a spedire dalla tua Gmail. ✅</p>' }); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+admin.post('/mail/run', async (req, res) => { await mailTick(true); res.json({ ok: true, log: (db.mailLog || [])[0] || null }); });
+// nuova campagna: { label, subject, body, htmlBody, recipients: [{ email, name }] } — salta chi l'ha già ricevuta con la stessa etichetta
+admin.post('/campaign', (req, res) => {
+  const b = req.body || {};
+  const label = String(b.label || '').trim().slice(0, 80);
+  if (!label || !b.subject || !(b.body || b.htmlBody)) return res.status(400).json({ error: 'Servono etichetta, oggetto e testo' });
+  db.campaigns ||= {};
+  const already = new Set(Object.values(db.campaigns).filter((c) => c.label === label).flatMap((c) => c.recipients.filter((r) => r.sent).map((r) => r.email)));
+  const seen = new Set();
+  const recipients = (Array.isArray(b.recipients) ? b.recipients : []).map((r) => ({ email: String(r.email || '').trim().toLowerCase(), name: String(r.name || '').trim() }))
+    .filter((r) => /^\S+@\S+\.\S+$/.test(r.email) && !already.has(r.email) && !seen.has(r.email) && seen.add(r.email));
+  if (!recipients.length) return res.status(400).json({ error: 'Nessun destinatario nuovo' });
+  const id = newId();
+  db.campaigns[id] = { label, subject: String(b.subject), body: String(b.body || ''), htmlBody: String(b.htmlBody || ''), created: new Date().toISOString(), recipients };
+  save();
+  mailTick().catch(() => {});
+  res.json({ id, total: recipients.length, skipped: (b.recipients || []).length - recipients.length });
 });
 admin.post('/mail-token', (req, res) => {
   if (!db.mailToken || req.body?.renew) { db.mailToken = crypto.randomBytes(24).toString('base64url'); save(); }

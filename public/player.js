@@ -296,7 +296,7 @@ function renderVideo(s) {
   P.root.innerHTML = `<div class="player">
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
-      <div class="ttl"><small>${esc(s.phase)}</small>${esc(s.block)}</div>
+      <div class="ttl">${s.pause && s.nextBlock && s.nextBlock !== s.block ? `<small>Recupero · poi ${esc(s.nextPhase || s.phase)}</small>${esc(s.nextBlock)}` : `<small>${esc(s.phase)}</small>${esc(s.block)}`}</div>
       <span class="icon" style="visibility:hidden"></span>
     </div>
     <div class="p-scroll">
@@ -371,7 +371,7 @@ function render() {
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
-      <div class="ttl"><small>${esc(s.phase)}</small>${esc(s.block)}</div>
+      <div class="ttl">${s.pause && s.nextBlock && s.nextBlock !== s.block ? `<small>Recupero · poi ${esc(s.nextPhase || s.phase)}</small>${esc(s.nextBlock)}` : `<small>${esc(s.phase)}</small>${esc(s.block)}`}</div>
       <button class="icon" data-act="full" aria-label="${P.full ? 'Riduci il video' : 'Video a tutto schermo'}">${P.full ? '⤡' : '⤢'}</button>
       <button class="icon ${P.voice ? 'on' : ''}" data-act="voice" aria-label="Voce">${P.voice ? '🔊' : '🔈'}</button>
     </div>

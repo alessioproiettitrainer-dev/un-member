@@ -143,7 +143,7 @@ export function buildSteps(workout) {
       if (!blockSteps.length) return;
       // dopo una pausa non serve anche il "preparati": la pausa annuncia già il blocco che arriva
       const prev = steps.at(-1);
-      if (prev?.pause) Object.assign(prev, { summary: blockSummary(b), nextBlock: base.block });
+      if (prev?.pause) Object.assign(prev, { summary: blockSummary(b), nextBlock: base.block, nextPhase: base.phase });
       else steps.push({ ...base, kind: 'timed', dur: GET_READY, items: blockSteps[0].items, label: 'PREPARATI', rest: true, ready: true, summary: blockSummary(b) });
       steps.push(...blockSteps);
       if (Number(b.restAfter) > 0) pause(base, Number(b.restAfter));
@@ -152,7 +152,7 @@ export function buildSteps(workout) {
   while (steps.at(-1)?.pause) steps.pop(); // niente pausa a fine allenamento
   steps.forEach((s, i) => {
     s.index = i;
-    if (s.pause) { const nx = steps.slice(i + 1).find((x) => !x.pause && x.items.length); s.items = nx ? nx.items : []; if (!s.nextBlock && nx) { s.nextBlock = nx.block; s.summary = nx.summary || ''; } }
+    if (s.pause) { const nx = steps.slice(i + 1).find((x) => !x.pause && x.items.length); s.items = nx ? nx.items : []; if (!s.nextBlock && nx) { s.nextBlock = nx.block; s.nextPhase = nx.phase; s.summary = nx.summary || ''; } }
   });
   return steps.filter((s) => !s.pause || s.items.length);
 }

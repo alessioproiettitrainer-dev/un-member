@@ -13,6 +13,10 @@ Quando ti chiedo di montare, modificare, sottotitolare o fare grafiche per un vi
 - **yt-dlp** per scaricare Reel di riferimento (serve `www.instagram.com` tra gli Allowed domains dell'ambiente).
 - **faster-whisper** (modello `large-v3`, lingua `it`) per trascrivere con i tempi delle parole; **MediaPipe** per seguire il corpo
   (es. muscoli illuminati sugli esercizi).
+- **Watch** (skill `watch`, pacchetto `watch-skill`) per analizzare un video di riferimento (cosa si dice, cosa si vede,
+  ordine dei passaggi) e trasformare un metodo/tutorial in una skill. Con `GEMINI_API_KEY` (Google AI Studio, gratis)
+  capisce meglio audio e immagini: la chiave va nei secret dell'ambiente, **mai incollata in chat**; serve anche
+  `generativelanguage.googleapis.com` negli Allowed domains. Senza chiave lavora in locale (sottotitoli + Whisper).
 - Script già pronti in `tools/video/`: `uncoach_edit.py` (sottotitoli + grafiche, 5 versioni), `yap.py` (stile yapping),
   `muscles.py` (muscoli coinvolti sopra il corpo).
 
@@ -88,3 +92,11 @@ profilo Instagram con CTA "comment STUDIO". Per me: giallo → arancione `#FF6A0
 | Vertigo | dolly zoom (sfondo che si allarga mentre io resto fermo) | momento "wow", rivelazione |
 | Cover story | titolo enorme serif tipo copertina di rivista | apertura di una serie, titolo forte |
 | Glass type | testo su vetro smerigliato/trasparente | citazioni, frasi chiave eleganti |
+
+Fonte 3: Reel sulla skill "Watch" (@promptalluso), copia vista il 21/10 (caricata in chat).
+Formato "tutorial a passi" pulito: parla in camera, sottotitoli 1-2 parole bianchi bold al centro con la parola chiave in
+**corsivo serif** (es. "detto,", "immagini.", "esempi,"); hook in alto bianco bold + riga in corsivo serif ("(ora fa il
+lavoro al posto tuo)"); card bianche stile app a metà-basso che mostrano ogni passo con etichetta scura "1 · Installa…",
+"2 · …"; piccole icone (logo/app) che compaiono sopra la testa; outro scurito con icona Instagram e chip "Commenta VIDEO".
+Per me: card bianche con etichetta arancione, corsivo serif solo per le parole chiave, utile per "3 passi per…" e
+spiegare la app/membership.

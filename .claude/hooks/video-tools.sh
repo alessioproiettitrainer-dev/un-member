@@ -13,7 +13,12 @@ hyperframes skills < /dev/null >>"$LOG" 2>&1
 {
   command -v ffmpeg >/dev/null || (apt-get update -qq && apt-get install -y -qq ffmpeg)
   apt-get install -y -qq libgles2 libegl1 >/dev/null 2>&1 || true   # needed by MediaPipe pose tracking
-  pip install -q -U yt-dlp faster-whisper fonttools opencv-python-headless pillow mediapipe 2>&1 | grep -v WARNING
+  pip install -q -U yt-dlp faster-whisper fonttools opencv-python-headless pillow mediapipe 'watch-skill[standard]' 2>&1 | grep -v WARNING
+  # Watch skill (github.com/oxbshw/watch-skill, reviewed 21/10): lets Claude analyse a video; Gemini key via env GEMINI_API_KEY
+  if [ ! -d "$HOME/.claude/skills/watch" ]; then
+    (cd /tmp && rm -rf watch-skill && git clone -q --depth 1 https://github.com/oxbshw/watch-skill.git \
+      && mkdir -p "$HOME/.claude/skills" && cp -r watch-skill/skills/* "$HOME/.claude/skills/")
+  fi
   # GSAP for HyperFrames from npm (cdn.jsdelivr.net may be blocked by the network policy)
   mkdir -p "$HOME/.cache/video-tools"
   if [ ! -f "$HOME/.cache/video-tools/gsap.min.js" ]; then

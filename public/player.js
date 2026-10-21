@@ -95,7 +95,7 @@ function enterStep(i) {
   if (i >= P.steps.length) return finish();
   P.idx = Math.max(0, i);
   const s = P.steps[P.idx];
-  P.focus = 0; P.lastBeep = null; P.lastTick = performance.now();
+  P.focus = 0; P.lastBeep = null; P.warn15 = false; P.lastTick = performance.now();
   if (s.kind === 'timed') { P.remaining = s.dur; P.endAt = performance.now() + s.dur * 1000; }
   if (s.kind === 'stopwatch') { P.swAcc = 0; P.swStart = performance.now(); }
   P.g = guided(s) ? { i: 0, round: 0, t: 0, rep: 0, finished: false, rounds: Number(s.counter) || 0 } : null;
@@ -116,8 +116,14 @@ function advanceGuide() {
   const s = P.steps[P.idx], g = P.g;
   g.i++; g.t = 0; g.rep = 0;
   // EMOM: un solo "Fatto" per tutto il minuto, il tempo che resta è recupero
-  if (s.emom) { g.i = s.items.length - 1; g.finished = true; beep(990, 120); const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready), ni = nx && !nx.video && nx.items[0];
-    say(`${pick(['Fatto! Recupera.', 'Bravo, ora recupero.'])}${ni ? ` Poi: ${exSay(ni)}.` : ''}`); return render(); }
+  // EMOM: "Fatto" lo preme il membro, al suo ritmo; il minuto intanto va avanti.
+  // Con più esercizi nello stesso minuto si passa al successivo; dopo l'ultimo il tempo che resta è recupero.
+  if (s.emom) {
+    if (g.i < s.items.length) { P.focus = g.i; beep(1200, 40, 0.06); render(); return say(`${exSay(s.items[g.i])}.`); }
+    g.i = s.items.length - 1; g.finished = true; g.doneIn = Math.max(1, Math.round(s.dur - P.remaining)); beep(990, 120);
+    const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready), ni = nx && !nx.video && nx.items[0];
+    say(`${pick(['Fatto', 'Bravo', 'Ottimo'])} in ${g.doneIn} secondi! Recupera.${ni ? ` Poi: ${exSay(ni)}.` : ''}`); return render();
+  }
   if (g.i >= s.items.length) {
     g.i = 0; g.round++;
     if (s.amrap) P.amrap[s.block] = g.round;
@@ -139,6 +145,12 @@ function tick() {
     if (P.running) P.remaining = Math.max(0, (P.endAt - now) / 1000);
     const whole = Math.ceil(P.remaining);
     if (P.running && whole <= 3 && whole >= 1 && P.lastBeep !== whole) { P.lastBeep = whole; beep(660, 120); }
+    // EMOM: avviso 15 secondi prima che scatti il minuto successivo
+    if (P.running && s.emom && s.dur > 25 && P.remaining <= 15 && !P.warn15) {
+      P.warn15 = true; beep(880, 160);
+      const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready), ni = nx && !nx.video && nx.items[0];
+      say(P.g?.finished ? `Quindici secondi.${ni ? ` Preparati: ${exSay(ni)}.` : ''}` : 'Ultimi quindici secondi!');
+    }
     if (P.running && P.remaining <= 0) {
       beep(1046, 400);
       if (s.amrap) return askScore(s, 'amrap', amrapCounts(s));
@@ -153,12 +165,9 @@ function tick() {
     // a ripetizioni: il video gira in loop e si va avanti solo con "Fatto"; a tempo (es. 30s) parte il conto alla rovescia
     const pace = paceOf(s.items[P.g.i]);
     if (s.emom) {
-      // EMOM: ogni esercizio dura le sue ripetizioni (rip × secondi per rip); finita la sequenza parte da solo il recupero
+      // EMOM a ripetizioni: il video gira in loop finché il membro preme "Fatto"; a tempo (es. 20s) va avanti da solo
       P.g.t += dt;
-      if (P.g.t >= pace.dur) {
-        if (P.g.i < s.items.length - 1) { P.g.i++; P.g.t = 0; P.focus = P.g.i; beep(1200, 40, 0.06); render(); return say(`${exSay(s.items[P.g.i])}.`); }
-        return advanceGuide();
-      }
+      if (!pace.reps && P.g.t >= pace.dur) return advanceGuide();
     } else if (!pace.reps) {
       P.g.t += dt;
       if (P.g.t >= pace.dur) return advanceGuide();
@@ -240,7 +249,7 @@ function updateClock() {
   const cur = P.root.querySelector('.bar i.cur');
   if (cur && s.kind === 'timed') cur.style.setProperty('--p', `${(1 - P.remaining / s.dur) * 100}%`);
   const gb = P.root.querySelector('.gbar i');
-  if (gb && P.g) gb.style.width = `${Math.min(100, (P.g.t / paceOf(s.items[P.g.i]).dur) * 100)}%`;
+  if (gb && P.g && !P.g.finished) gb.style.width = `${Math.min(100, (P.g.t / paceOf(s.items[P.g.i]).dur) * 100)}%`;
 }
 
 function updateRep(pace) {
@@ -342,13 +351,13 @@ function render() {
   if (g) {
     const pace = paceOf(focusItem);
     now = emomRest
-      ? `<div class="lab rest-lab">${esc(s.label)} fatto ✓</div><div class="reps">Recupero</div>${upNext ? nextUp(upNext) : '<div class="note">Ultimo minuto finito!</div>'}`
+      ? `<div class="lab rest-lab">${esc(s.label)} fatto${g.doneIn ? ` in ${g.doneIn}s` : ''} ✓</div><div class="reps">Recupero</div>${upNext ? nextUp(upNext) : '<div class="note">Ultimo minuto finito!</div>'}`
       : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
       : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
          <div class="repline"><span class="repnow" id="rep">${pace.reps ? esc(focusItem.reps) : fmt(Math.ceil(pace.dur - g.t))}</span><span class="reptot">${pace.reps ? 'rip' : 'tempo'}</span></div>
          <div class="name">${esc(fe.name)}</div>
-         ${s.emom ? '<div class="gbar"><i></i></div><div class="note donehint">Finite le ripetizioni parte da solo il recupero (se finisci prima premi FATTO)</div>' : pace.reps ? '<div class="note donehint">Premi FATTO quando hai finito le ripetizioni</div>' : '<div class="gbar"><i></i></div>'}
+         ${s.emom ? (pace.reps ? `<div class="note donehint">Premi FATTO quando hai finito${items.length > 1 && g.i < items.length - 1 ? ': passi al prossimo esercizio' : ''}.${s.dur === 60 ? ' Il minuto va avanti comunque.' : ' Il tempo va avanti comunque.'}</div>` : '<div class="gbar"><i></i></div>') : pace.reps ? '<div class="note donehint">Premi FATTO quando hai finito le ripetizioni</div>' : '<div class="gbar"><i></i></div>'}
          ${items.length < 2 ? '' : `<div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === g.i ? 'sel' : k < g.i ? 'past' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`}`;
   } else if (items.length > 1) {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === P.focus ? 'sel' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;

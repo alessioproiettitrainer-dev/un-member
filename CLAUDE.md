@@ -33,29 +33,33 @@ ci sta, chiedimelo prima con una domanda breve. Prima di usarne uno, scarica il 
 su Drive, se c'è) e guardalo: la descrizione qui sotto va completata la prima volta che lo vedi.
 
 Fonte 1: https://www.instagram.com/reel/DekNPnCiNW5/ (Andreas Massouras, "20 video effects Claude can create").
-Elenco preso dalla didascalia; il video non era scaricabile (`*.cdninstagram.com` bloccato): appena si può, guardalo e
-aggiusta le descrizioni. Strumenti: FFmpeg (filtri) per gli effetti sul girato, HyperFrames/GSAP per testo e transizioni,
+Copia del video vista il 21/10 (caricata da me in chat). Il Reel è anche un **formato** riutilizzabile:
+- parla in camera, in alto titolo in due box rossi ("20 video effects / Claude can create");
+- ai lati del viso una lista numerata in due colonne (1-10 / 11-20), la voce corrente evidenziata in un box colorato;
+- la demo di ogni effetto in una card con angoli arrotondati al centro-basso, con un pallino numerato in alto a sinistra;
+- parte bassa sfocata; outro scurito con CTA grande "Comment EFFECTS" in box e icona Instagram.
+Per me: stesso schema con arancione `#FF6A00` al posto del rosso (es. "5 esercizi per…", "3 errori…") e CTA "Commenta 7". Strumenti: FFmpeg (filtri) per gli effetti sul girato, HyperFrames/GSAP per testo e transizioni,
 MediaPipe / rimozione sfondo (`hyperframes remove-background`) dove serve separare il soggetto.
 
 | Effetto | Cosa fa | Come | Quando usarlo nei miei video |
 |---|---|---|---|
 | Crash zoom | zoom a scatto rapido sul viso/oggetto | scale+crop animati (FFmpeg `zoompan` o keyframes HyperFrames) | punchline, numero importante, "commenta 7" |
-| Text behind | scritta dietro al soggetto | maschera del soggetto (remove-background) + testo tra sfondo e soggetto | titolo/hook dell'esercizio |
-| Flash cut | lampo bianco/arancione di 2-3 frame al taglio | overlay colore con fade brevissimo | cambio esercizio, jump cut d'impatto |
-| Thermal cam | look termocamera (falsi colori) | `format=gray` + `lut`/`pseudocolor` | far vedere "dove brucia" un muscolo |
+| Text behind | scritta enorme (nel Reel "CLAUDE" rossa) dietro al soggetto | maschera del soggetto (remove-background) + testo tra sfondo e soggetto | titolo/hook dell'esercizio |
+| Flash cut | silhouette piena colorata del soggetto (rossa nel Reel) per pochi frame al taglio | overlay colore con fade brevissimo | cambio esercizio, jump cut d'impatto |
+| Thermal cam | termocamera: soggetto giallo/arancio su fondo viola-blu | `format=gray` + `lut`/`pseudocolor` | far vedere "dove brucia" un muscolo |
 | Whip pan | transizione a frusta con motion blur | traslazione veloce + `tmix`/blur direzionale | passaggio tra due clip/esercizi |
 | Freeze frame | fermo immagine con testo/frecce | `tpad=stop_mode=clone` o frame ripetuto | spiegare la posizione corretta |
 | Slit-scan | distorsione temporale a strisce | ogni riga/colonna da un frame diverso (script numpy) | intro creativa, movimento fluido |
 | VHS rewind | riavvolgimento stile VHS | `reverse` + rumore, scanlines, aberrazione cromatica | "rivediamolo", rifare un errore |
 | Screen push | la nuova clip spinge fuori la vecchia | due layer traslati (`xfade=slideleft` o GSAP) | sequenza di esercizi in un circuito |
-| X-ray | effetto raggi X sul corpo | negativo + contrasto + glow (+ muscoli evidenziati, `tools/video/muscles.py`) | muscoli coinvolti |
-| Iris wipe | cerchio che si apre/chiude | maschera circolare animata (`geq`/GSAP clip-path) | inizio/fine video, focus su un dettaglio |
-| Film burn | bruciatura pellicola calda | overlay arancione/luce additivo con fade | transizione "emozionale", outro |
+| X-ray | negativo azzurro-bianco luminoso, tipo radiografia | negativo + contrasto + glow (+ muscoli evidenziati, `tools/video/muscles.py`) | muscoli coinvolti |
+| Iris wipe | tutto nero tranne un cerchio sul viso che si apre/chiude | maschera circolare animata (`geq`/GSAP clip-path) | inizio/fine video, focus su un dettaglio |
+| Film burn | lampo di luce calda giallo-arancio che brucia l'immagine | overlay arancione/luce additivo con fade | transizione "emozionale", outro |
 | Wigglegram | effetto stereo che oscilla | 2-3 frame vicini alternati in loop + leggero shift | posa finale, foto/progressi |
 | Glitch slice | strisce orizzontali spostate | `crop`/`overlay` a fette + RGB shift | hook, cambio argomento netto |
 | Barrel roll | rotazione a 360° in transizione | `rotate` animato + zoom | transizione energica tra due clip |
-| Night vision | visione notturna verde | `colorchannelmixer` verde + rumore + vignetta | contenuti "allenamento all'alba/notte", ironici |
-| Ratio switch | cambio formato (16:9 ↔ 9:16) a schermo | crop/pad animati | prima/dopo, "zoom out" sul contesto |
+| Night vision | verde fosforo con vignetta circolare (binocolo) | `colorchannelmixer` verde + rumore + vignetta | contenuti "allenamento all'alba/notte", ironici |
+| Ratio switch | bande nere che stringono il formato (letterbox) | crop/pad animati | prima/dopo, "zoom out" sul contesto |
 | Datamosh | pixel che "colano" tra due clip | rimozione I-frame (ffmpeg + bitstream) o simulazione con blend a blocchi | transizione molto stilizzata, da usare raramente |
 | Fisheye | lente grandangolo bombata | `lenscorrection` / `v360` | momenti comici, primo piano |
-| Pixel reveal | immagine che si rivela da pixel grossi | `scale` down/up animato (`neighbor`) | svelare risultato, esercizio "segreto" |
+| Pixel reveal | mosaico a pixel grossi che si risolve nell'immagine | `scale` down/up animato (`neighbor`) | svelare risultato, esercizio "segreto" |

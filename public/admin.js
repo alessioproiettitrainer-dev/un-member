@@ -211,7 +211,7 @@ function usersView() {
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><input type="text" id="uq" placeholder="Cerca nome o email (es. quella del pagamento Stripe)" value="${esc(S.uq)}" style="flex:1;min-width:220px">
         ${filters.map(([k, l]) => `<button class="sbtn ${S.uf === k ? 'acc' : ''}" data-uf="${k}">${l} ${counts[k] || 0}</button>`).join('')}</div>
       ${list.map((u) => { const [st, label] = userStatus(u); const open = S.openU[u.id]; return `<div class="urow">
-        <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · ${u.workouts} allenamenti</div></div>
+        <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · ${u.workouts} allenamenti${Object.keys(u.trialMails || {}).length ? ` · email prova: ${[['d2', '2° giorno'], ['d4', '4° giorno'], ['last', 'ultimo giorno']].filter(([k]) => u.trialMails[k]).map(([, l]) => l).join(', ')} ✓` : ''}</div></div>
           <span class="st ${st}">${label}${u.accessUntil ? ` · ${fmtDate(u.accessUntil)}` : ''}</span></div>
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><span class="muted small">Aggiungi accesso:</span>
           ${[1, 3, 6, 12].map((m) => `<button class="sbtn acc" data-grant="${m}" data-id="${u.id}">+${m === 12 ? '1 anno' : m + (m === 1 ? ' mese' : ' mesi')}</button>`).join('')}

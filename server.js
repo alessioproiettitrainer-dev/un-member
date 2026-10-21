@@ -4,6 +4,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { fetchLowTicketClients } = require('./kalos');
+const mails = require('./mails');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
@@ -613,7 +614,7 @@ crud('challenges', () => ({ title: 'Nuova challenge', description: '', unit: 'ri
 
 admin.get('/users', (req, res) => res.json(db.users.map((u) => ({
   id: u.id, name: u.name, email: u.email, joined: u.joined, workouts: u.history.length,
-  lastWorkout: u.history.at(-1)?.date || '', accessUntil: u.accessUntil || '', active: hasAccess(u), trialUntil: u.trialUntil || '', trial: inTrial(u),
+  lastWorkout: u.history.at(-1)?.date || '', accessUntil: u.accessUntil || '', active: hasAccess(u), trialUntil: u.trialUntil || '', trial: inTrial(u), trialMails: u.trialMails || {},
   accessLog: (u.accessLog || []).slice(-5), nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) },
   profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays },
   weight: u.weights.at(-1)?.kg || '',
@@ -830,6 +831,29 @@ admin.post('/upload', upload.single('file'), async (req, res) => {
     }
   }
   res.json({ url: '/uploads/' + req.file.filename });
+});
+
+// ---- email automatiche della prova ----------------------------------------------------------
+// Le spedisce da Gmail un'attività programmata con un token che vale SOLO per queste due chiamate.
+const PUBLIC_URL = process.env.PUBLIC_URL || 'https://un-member.onrender.com';
+const mailAuth = (req, res, next) => (db.mailToken && req.get('x-mail-token') === db.mailToken) || isAdmin(req) ? next() : res.status(401).json({ error: 'Token non valido' });
+app.get('/api/mail/trial-due', mailAuth, (req, res) => {
+  const t = today(), days = Math.max(1, Number(db.settings.trialDays) || 7);
+  res.json(db.users.filter((u) => inTrial(u) && !u.community?.banned).map((u) => {
+    const st = mails.dueStage(u, t, days);
+    return st && { userId: u.id, stage: st.key, day: st.day, to: u.email, ...mails.render(st.key, mails.firstName(u.name), PUBLIC_URL) };
+  }).filter(Boolean));
+});
+app.post('/api/mail/trial-sent', mailAuth, express.json(), (req, res) => {
+  const u = db.users.find((x) => x.id === req.body?.userId);
+  if (!u || !['d2', 'd4', 'last'].includes(req.body?.stage)) return res.status(400).json({ error: 'Dati non validi' });
+  (u.trialMails ||= {})[req.body.stage] = today();
+  save();
+  res.json({ ok: true });
+});
+admin.post('/mail-token', (req, res) => {
+  if (!db.mailToken || req.body?.renew) { db.mailToken = crypto.randomBytes(24).toString('base64url'); save(); }
+  res.json({ token: db.mailToken });
 });
 
 app.use('/api/admin', admin);

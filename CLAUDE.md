@@ -100,3 +100,16 @@ lavoro al posto tuo)"); card bianche stile app a metà-basso che mostrano ogni p
 "2 · …"; piccole icone (logo/app) che compaiono sopra la testa; outro scurito con icona Instagram e chip "Commenta VIDEO".
 Per me: card bianche con etichetta arancione, corsivo serif solo per le parole chiave, utile per "3 passi per…" e
 spiegare la app/membership.
+
+Fonte 4: Reel "Effect of the Day" (@corbinsylk), copia vista il 21/10 (caricata in chat), solo musica.
+Formato: registrazione dello schermo dell'app Claude in cui scrive un comando (`/match-cut`, `/shutter-strike`…) e subito
+dopo il risultato a tutto schermo; finale con griglia "Effect of the Day – 20 effects" e CTA "Comment STACK".
+
+| Effetto | Cosa fa | Quando usarlo nei miei video |
+|---|---|---|
+| Match cut | pagina di testo che scorre, una parola evidenziata in un box colorato resta ferma mentre il testo cambia | frase chiave/parola tormentone ("costanza"), aprire un tema |
+| Shutter strike | scatti fotografici: foto/card che compaiono con flash e si impilano come polaroid | mostrare più esercizi o clienti in sequenza veloce |
+| Screen push digital | testo enorme a pixel/LED su fondo scuro che scorre ("All in one prompt") | hook, numeri ("100%"), slogan |
+| Liquid glass graph | card di vetro smerigliato con grafico che sale e percentuale che conta (69%) | progressi, forza/carichi che salgono, % di miglioramento |
+| Pixel drop | particelle/pixel che cadono e riempiono un riquadro, parola sotto ("detail") | costruire un risultato "un pezzo alla volta", costanza |
+| Over-the-shoulder zoom | zoom leggero mentre accanto alla spalla spuntano card "prima/dopo" con cifre ($3.200 → $32.000) | prima/dopo (kg, misure, ripetizioni), risultati clienti |

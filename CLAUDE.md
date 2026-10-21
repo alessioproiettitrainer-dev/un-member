@@ -6,3 +6,4 @@
 - Clienti Kalos ↔ app: si collegano **solo per email identica**, mai per nome.
 - Segreti (ADMIN_KEY, credenziali Kalos e Gmail) solo nelle variabili d'ambiente di Render, mai nel codice: il repository è pubblico.
 - Email a gruppi di persone (eventi, inviti): crea una campagna con `POST /api/admin/campaign` (`label`, `subject`, `body`, `htmlBody`, `recipients: [{email, name}]`, `{nome}` nel testo). La stessa etichetta non rimanda mai a chi l'ha già ricevuta. Mostra sempre il testo al proprietario prima di inviare.
+- Video workout girati in casa: segui `video/README.md` (LUT, script `video/monta_workout.py`, regole di stile). Il proprietario manda il link Drive + esercizi e ripetizioni; tu trovi i punti delle 2 ripetizioni, scrivi lo schema JSON e mandi il video finito.

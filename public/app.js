@@ -125,6 +125,8 @@ async function route() {
     location.replace('#/'); return;
   }
   if (parts[0] === 'login' || parts[0] === 'register') return authView(parts[0], ls.get('wantTrial', false));
+  if (parts[0] === 'forgot') return forgotView();
+  if (parts[0] === 'reset' && parts[1]) return resetView(parts[1]);
   if (!ME) {
     try { ME = await api('/api/me'); } catch { return; }
   }
@@ -164,11 +166,45 @@ function authView(mode, trial = false) {
       <label>Password<input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" minlength="6" required></label>
       <button class="btn primary block">${reg ? 'Iscriviti' : 'Entra'}</button>
     </form>
+    ${reg ? '' : '<div class="small" style="text-align:center;margin-top:14px"><a href="#/forgot">Password dimenticata?</a></div>'}
     <div class="muted small" style="text-align:center;margin-top:16px">${reg ? 'Hai già un account? <a href="#/login">Accedi</a>' : 'Non hai un account? <a href="#/register">Iscriviti</a>'}</div></div>`;
   $app.querySelector('form').onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
     try { ME = await api(`/api/auth/${reg ? 'register' : 'login'}`, 'POST', f); location.hash = '#/'; } catch (err) { toast(err.message, true); }
+  };
+}
+
+function forgotView() {
+  $app.innerHTML = `<div class="wrap auth">${brand(34)}
+    <form class="card form" style="margin-top:26px">
+      <div class="h2" style="margin-top:0">Password dimenticata</div>
+      <div class="muted small">Scrivi l'email con cui ti sei iscritto: ti mandiamo un link per sceglierne una nuova.</div>
+      <label>Email<input name="email" type="email" autocomplete="email" required></label>
+      <button class="btn primary block">Mandami il link</button>
+    </form>
+    <div class="muted small" style="text-align:center;margin-top:16px"><a href="#/login">Torna ad accedere</a></div></div>`;
+  $app.querySelector('form').onsubmit = async (e) => {
+    e.preventDefault();
+    const email = new FormData(e.target).get('email');
+    try { await api('/api/auth/forgot', 'POST', { email }); } catch { /* la risposta è sempre la stessa */ }
+    e.target.outerHTML = `<div class="card"><div class="h2" style="margin-top:0">Controlla la tua email 📬</div><div class="muted">Se <b>${esc(email)}</b> è iscritta, tra un minuto ti arriva il link per la nuova password (guarda anche nello spam). Il link vale 1 ora.</div>
+      ${SETTINGS.supportEmail ? `<div class="muted small" style="margin-top:10px">Non arriva? Scrivi a <b>${esc(SETTINGS.supportEmail)}</b></div>` : ''}</div>`;
+  };
+}
+function resetView(token) {
+  $app.innerHTML = `<div class="wrap auth">${brand(34)}
+    <form class="card form" style="margin-top:26px">
+      <div class="h2" style="margin-top:0">Nuova password</div>
+      <label>Nuova password<input name="password" type="password" autocomplete="new-password" minlength="6" required></label>
+      <label>Ripetila<input name="password2" type="password" autocomplete="new-password" minlength="6" required></label>
+      <button class="btn primary block">Salva e entra</button>
+    </form></div>`;
+  $app.querySelector('form').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    if (f.password !== f.password2) return toast('Le due password non coincidono', true);
+    try { ME = await api('/api/auth/reset', 'POST', { token, password: f.password }); toast('Password cambiata: bentornato!'); location.hash = '#/'; } catch (err) { toast(err.message, true); }
   };
 }
 

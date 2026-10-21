@@ -217,6 +217,7 @@ function usersView() {
           ${[1, 3, 6, 12].map((m) => `<button class="sbtn acc" data-grant="${m}" data-id="${u.id}">+${m === 12 ? '1 anno' : m + (m === 1 ? ' mese' : ' mesi')}</button>`).join('')}
           ${u.accessUntil ? `<button class="sbtn ghost danger" data-act="revoke" data-id="${u.id}">Revoca</button>` : ''}
           <button class="sbtn" data-act="u-open" data-id="${u.id}">${open ? 'Chiudi' : 'Nutrizione & storico'}</button>
+          <button class="sbtn ghost" data-act="u-reset" data-id="${u.id}" title="Link per scegliere una nuova password, da mandare su WhatsApp">🔑 Link password</button>
           ${S.role === 'owner' ? `<button class="sbtn ghost danger" data-act="u-del" data-id="${u.id}">Elimina</button>` : ''}</div>
         ${open ? userDetail(u) : ''}</div>`; }).join('') || '<div class="muted">Nessun membro trovato.</div>'}
     </div>
@@ -751,6 +752,11 @@ root.addEventListener('click', async (e) => {
       }
       case 'plan-add': (S.settings.plans ||= []).push({ title: '', price: '', period: 'al mese', note: '', url: '', best: false }); break;
       case 'kalos-f': S.kf = t.dataset.f; break;
+      case 'u-reset': {
+        const { link } = await call('POST', `/api/admin/users/${t.dataset.id}/reset-link`);
+        try { await navigator.clipboard.writeText(link); toast('Link copiato (vale 1 ora): mandalo al cliente'); } catch { prompt('Link per la nuova password (vale 1 ora):', link); }
+        return;
+      }
       case 'mail-send': {
         const d = S.md, rec = mailRecipients();
         if (!d.label.trim() || !d.subject.trim() || !d.text.trim()) return toast('Scrivi nome dell\'invio, oggetto e testo', true);

@@ -152,6 +152,47 @@ app.post('/api/auth/login', (req, res) => {
   startSession(res, u.id);
   res.json(publicUser(u));
 });
+// ---- password dimenticata: link via email (dalla Gmail del coach), valido 1 ora, si usa una volta --------
+const RESET_URL = () => process.env.PUBLIC_URL || 'https://un-member.onrender.com';
+const sha = (t) => crypto.createHash('sha256').update(t).digest('hex');
+function resetLink(u) {
+  const token = crypto.randomBytes(24).toString('base64url');
+  db.resets ||= {};
+  const now = Date.now();
+  for (const [k, r] of Object.entries(db.resets)) if (r.exp < now) delete db.resets[k];
+  db.resets[sha(token)] = { userId: u.id, exp: now + 60 * 60 * 1000 };
+  save();
+  return `${RESET_URL()}/#/reset/${token}`;
+}
+app.post('/api/auth/forgot', async (req, res) => {
+  const u = db.users.find((x) => x.email === String(req.body?.email || '').trim().toLowerCase());
+  // risposta sempre uguale: non si scopre se un'email è iscritta
+  res.json({ ok: true });
+  if (!u || u.id === 'admin-preview' || !mailer.configured()) return;
+  const recent = Object.values(db.resets || {}).filter((r) => r.userId === u.id && r.exp > Date.now()).length;
+  if (recent >= 3) return;
+  const link = resetLink(u), name = String(u.name || '').trim().split(/\s+/)[0];
+  const btn = `<p style="margin:22px 0"><a href="${link}" style="background:#ff7a00;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 22px;border-radius:10px;display:inline-block">Scegli la nuova password</a></p>`;
+  mailer.send({
+    to: u.email,
+    subject: 'Recupera la tua password 🔑',
+    body: `Ciao${name ? ` ${name}` : ''}!\n\nHai chiesto di cambiare la password dell'app ${db.settings.appName || ''}. Apri questo link e scegline una nuova (vale 1 ora):\n${link}\n\nSe non sei stato tu, ignora questa email: la password resta quella di prima.`,
+    htmlBody: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px"><p>Ciao${name ? ` ${name}` : ''}!</p><p>Hai chiesto di cambiare la password dell'app ${db.settings.appName || ''}. Premi il tasto e scegline una nuova: il link vale 1 ora.</p>${btn}<p style="color:#777;font-size:13px">Se non sei stato tu, ignora questa email: la password resta quella di prima.</p></div>`,
+  }).catch(() => {});
+});
+app.post('/api/auth/reset', (req, res) => {
+  const r = db.resets?.[sha(String(req.body?.token || ''))];
+  if (!r || r.exp < Date.now()) return res.status(400).json({ error: 'Il link è scaduto o già usato: richiedine uno nuovo' });
+  const pw = String(req.body?.password || '');
+  if (pw.length < 6) return res.status(400).json({ error: 'La password deve avere almeno 6 caratteri' });
+  const u = db.users.find((x) => x.id === r.userId);
+  if (!u) return res.status(400).json({ error: 'Account non trovato' });
+  u.password = hashPassword(pw);
+  for (const [k, x] of Object.entries(db.resets)) if (x.userId === u.id) delete db.resets[k];
+  for (const [k, x] of Object.entries(db.sessions)) if (x.userId === u.id) delete db.sessions[k]; // esce dagli altri dispositivi
+  startSession(res, u.id);
+  res.json(publicUser(u));
+});
 app.post('/api/auth/logout', (req, res) => {
   delete db.sessions[cookies(req).sid];
   save();
@@ -633,6 +674,12 @@ admin.post('/users/:id/access', (req, res) => {
   }
   save();
   res.json({ accessUntil: u.accessUntil, active: hasAccess(u), accessLog: u.accessLog.slice(-5) });
+});
+// link per la nuova password da mandare a mano (es. su WhatsApp) se l'email non arriva
+admin.post('/users/:id/reset-link', (req, res) => {
+  const u = db.users.find((x) => x.id === req.params.id);
+  if (!u) return res.status(404).end();
+  res.json({ link: resetLink(u) });
 });
 admin.put('/users/:id/nutrition', (req, res) => {
   const u = db.users.find((x) => x.id === req.params.id);

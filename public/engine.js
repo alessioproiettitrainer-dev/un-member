@@ -27,12 +27,12 @@ export function blockSummary(b) {
     case 'emom': {
       const ev = Number(b.every) || 60, r = emomRounds(b), tot = Math.round((emomIntervals(b) * ev) / 60 * 10) / 10;
       const lad = Number(b.ladderStep) || (b.items || []).some((it) => Number(it.ladderStep));
-      return `EMOM ${r} round · ${String(tot).replace('.', ',')} min${ev !== 60 ? ` · ogni ${ev}s` : ''}${lad ? ` · ladder${b.ladderUpDown ? ' su e giù' : ''}` : ''}`;
+      return `EMOM ${r} round · ${String(tot).replace('.', ',')} min${ev !== 60 ? ` · ogni ${ev}s` : ''}${b.restSlot ? ' · recupero a fine giro' : ''}${lad ? ` · ladder${b.ladderUpDown ? ` su e giù (punta ${b.ladderPeak === 'single' ? 'singola' : 'doppia'})` : ''}` : ''}`;
     }
     case 'amrap': return `AMRAP ${b.cap || 0} min`;
     case 'fortime': return `AFAP · ${b.rounds || 1} round${b.cap ? ` · cap ${b.cap} min` : ''}`;
     case 'intervals': return `${b.rounds || 1} round · ${b.work || 0}s lavoro / ${b.rest || 0}s recupero`;
-    case 'ladder': { const f = Number(b.from) || 1, t = Number(b.to) || 10; return `Ladder ${f}→${t}${b.updown ? `→${f}` : ''}${b.rest ? ` · ${b.rest}s recupero` : ''}`; }
+    case 'ladder': { const f = Number(b.from) || 1, t = Number(b.to) || 10; return `Ladder ${f}→${t}${b.updown ? `→${f}${b.peak === 'double' ? ' (punta doppia)' : ''}` : ''}${b.rest ? ` · ${b.rest}s recupero` : ''}`; }
     case 'video': return `Video${b.minutes ? ` · ${b.minutes} min` : ''}`;
     case 'rest': return `Pausa ${Number(b.seconds) || 0}s`;
     case 'sets': return `${b.rounds || 1} serie${b.rest ? ` · ${b.rest}s recupero` : ''}`;
@@ -53,7 +53,8 @@ function shiftReps(text, delta) {
 
 // EMOM: un round = un giro di tutti gli esercizi (quelli "con sopra" stanno nello stesso intervallo).
 // Intervalli totali = round × intervalli per giro; i blocchi vecchi (minuti totali) restano come erano.
-export const emomSlotCount = (b) => Math.max(1, emomSlots(b.items || []).length);
+// con "recupero a fine giro" ogni giro ha un intervallo in più, tutto di recupero
+export const emomSlotCount = (b) => Math.max(1, emomSlots(b.items || []).length) + (b.restSlot ? 1 : 0);
 export const emomRounds = (b) => Math.max(1, Number(b.rounds) || Math.round(emomIntervals(b) / emomSlotCount(b)));
 export const emomIntervals = (b) => (Number(b.rounds) ? Number(b.rounds) * emomSlotCount(b) : Math.max(1, Math.round(((Number(b.minutes) || 1) * 60) / (Number(b.every) || 60))));
 function emomSlots(items) {
@@ -87,13 +88,20 @@ export function buildSteps(workout) {
         const every = Number(b.every) || 60;
         const n = emomIntervals(b);
         const slots = emomSlots(items);
-        const giri = Math.ceil(n / slots.length);
+        const cyc = emomSlotCount(b);
+        const giri = Math.ceil(n / cyc);
+        const peak = Math.floor(giri / 2);
         for (let k = 0; k < n; k++) {
+          const pos = k % cyc;
+          if (pos === slots.length) { // intervallo di recupero a fine giro: mostra l'esercizio che arriva
+            blockSteps.push({ ...base, kind: 'timed', dur: every, rest: true, pause: true, items: [], label: 'RECUPERO', counter: `${k + 1}/${n}`, counterLabel: every === 60 ? 'MINUTI' : 'INTERVALLI' });
+            continue;
+          }
           // EMOM ladder: a ogni giro completo le ripetizioni salgono del passo dell'esercizio (o di quello del blocco);
-          // "su e giù": salgono fino a metà e poi tornano indietro (es. 10 min: 1-2-3-4-5-5-4-3-2-1)
-          const giro = Math.floor(k / slots.length);
-          const lvl = b.ladderUpDown ? (giro < Math.ceil(giri / 2) ? giro : giri - 1 - giro) : giro;
-          const its = slots[k % slots.length].map((it) => { const st = it.ladderStep !== undefined && it.ladderStep !== '' ? Number(it.ladderStep) : Number(b.ladderStep) || 0; return st ? { ...it, reps: shiftReps(it.reps, st * lvl) } : it; });
+          // "su e giù": salgono fino a metà e poi tornano indietro. Punta doppia: 1-2-3-4-5-5-4-3-2-1; singola: 1-2-3-4-5-4-3-2-1
+          const giro = Math.floor(k / cyc);
+          const lvl = !b.ladderUpDown ? giro : b.ladderPeak === 'single' ? Math.max(0, giro <= peak ? giro : 2 * peak - giro) : (giro < Math.ceil(giri / 2) ? giro : giri - 1 - giro);
+          const its = slots[pos].map((it) => { const st = it.ladderStep !== undefined && it.ladderStep !== '' ? Number(it.ladderStep) : Number(b.ladderStep) || 0; return st ? { ...it, reps: shiftReps(it.reps, st * lvl) } : it; });
           blockSteps.push({ ...base, kind: 'timed', dur: every, items: its, emom: true, label: every === 60 ? `MINUTO ${k + 1}` : `INTERVALLO ${k + 1}`, counter: `${k + 1}/${n}`, counterLabel: every === 60 ? 'MINUTI' : 'INTERVALLI' });
         }
       } else if (b.type === 'ladder') {
@@ -101,7 +109,8 @@ export function buildSteps(workout) {
         const f = Math.max(1, Number(b.from) || 1), t = Math.max(1, Number(b.to) || 10), st = Math.max(1, Math.abs(Number(b.step) || 1));
         const rungs = [];
         if (f <= t) for (let r = f; r <= t; r += st) rungs.push(r); else for (let r = f; r >= t; r -= st) rungs.push(r);
-        if (b.updown) rungs.push(...rungs.slice(0, -1).reverse());
+        // ritorno: punta singola 2-4-6-8-10-8-6-4-2, punta doppia 2-4-6-8-10-10-8-6-4-2
+        if (b.updown) rungs.push(...(b.peak === 'double' ? rungs.slice() : rungs.slice(0, -1)).reverse());
         rungs.forEach((r, i) => {
           blockSteps.push({ ...base, kind: 'manual', ladder: true, firstRung: i === 0, lastRung: i === rungs.length - 1, items: items.map((it) => ({ ...it, reps: String(r) })), label: `GRADINO ${i + 1} · ${r} RIP`, counter: `${i + 1}/${rungs.length}`, counterLabel: 'GRADINI' });
           if ((Number(b.rest) || 0) > 0 && i < rungs.length - 1) blockSteps.push({ ...base, kind: 'timed', dur: Number(b.rest), rest: true, items: [items[0]], label: 'RECUPERO', counter: `${i + 1}/${rungs.length}`, counterLabel: 'GRADINI' });

@@ -521,9 +521,12 @@ function blockEditor(b, P) {
     emom: num(P, 'every', b.every, 'Ogni (secondi)', '60') + `<div class="f"><label>Round</label><input type="number" min="1" data-b="${P}.rounds" value="${esc(b.rounds || emomRounds(b))}">
         <div class="muted small">${emomRounds(b)} round × ${emomSlotCount(b)} ${emomSlotCount(b) === 1 ? 'intervallo' : 'intervalli'} = <b>${String(Math.round((emomIntervals(b) * (Number(b.every) || 60)) / 6) / 10).replace('.', ',')} min</b></div></div>`
       + `<div class="f"><label>Ladder: rip in più a ogni giro (tutti)</label><input type="number" data-b="${P}.ladderStep" value="${esc(b.ladderStep ?? '')}" placeholder="0 = sempre uguali"></div>`
-      + `<div class="f"><label>Andamento ladder</label><label class="chk"><input type="checkbox" data-b="${P}.ladderUpDown" ${b.ladderUpDown ? 'checked' : ''}> Sale fino a metà, poi scende</label></div>`,
+      + `<div class="f"><label>Andamento ladder</label><label class="chk"><input type="checkbox" data-b="${P}.ladderUpDown" ${b.ladderUpDown ? 'checked' : ''}> Sale fino a metà, poi scende</label>
+          ${b.ladderUpDown ? `<select data-b="${P}.ladderPeak" style="margin-top:6px"><option value="double" ${b.ladderPeak !== 'single' ? 'selected' : ''}>Punta doppia (1-2-3-3-2-1)</option><option value="single" ${b.ladderPeak === 'single' ? 'selected' : ''}>Punta singola (1-2-3-2-1)</option></select>` : ''}</div>`
+      + `<div class="f"><label>Recupero a fine giro</label><label class="chk"><input type="checkbox" data-b="${P}.restSlot" ${b.restSlot ? 'checked' : ''}> Dopo l'ultimo esercizio, un intervallo intero di recupero</label><div class="muted small">es. 2 esercizi + 1 minuto di recupero, poi si ricomincia</div></div>`,
     ladder: num(P, 'from', b.from, 'Da (rip)') + num(P, 'to', b.to, 'A (rip)') + num(P, 'step', b.step, 'Salto', '1') + num(P, 'rest', b.rest, 'Recupero tra gradini (s)')
-      + `<div class="f"><label>Andata e ritorno</label><label class="chk"><input type="checkbox" data-b="${P}.updown" ${b.updown ? 'checked' : ''}> es. 1→10→1</label></div>`,
+      + `<div class="f"><label>Andata e ritorno</label><label class="chk"><input type="checkbox" data-b="${P}.updown" ${b.updown ? 'checked' : ''}> es. 1→10→1</label>
+          ${b.updown ? `<select data-b="${P}.peak" style="margin-top:6px"><option value="single" ${b.peak !== 'double' ? 'selected' : ''}>Punta singola (…8-10-8…)</option><option value="double" ${b.peak === 'double' ? 'selected' : ''}>Punta doppia (…8-10-10-8…)</option></select>` : ''}</div>`,
     amrap: num(P, 'cap', b.cap, 'Durata (minuti)'),
     fortime: num(P, 'rounds', b.rounds, 'Round') + num(P, 'cap', b.cap, 'Time cap (min, opz.)'),
     intervals: num(P, 'rounds', b.rounds, 'Round') + num(P, 'work', b.work, 'Lavoro (s)') + num(P, 'rest', b.rest, 'Recupero (s)') + num(P, 'restRounds', b.restRounds, 'Recupero tra round (s)'),
@@ -580,7 +583,7 @@ root.addEventListener('input', (e) => {
     const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : Number(t.value)) : t.value;
     setPath(S.draft, t.dataset.b, v);
     S.dirty = true;
-    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /^(startDate|endDate|weeks)$/.test(t.dataset.b) || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url|ladderStep|ladderUpDown|from|to|step|updown|seconds|restAfter)$/.test(t.dataset.b)) softRender();
+    if (t.tagName === 'SELECT' || t.type === 'checkbox' || /^(startDate|endDate|weeks)$/.test(t.dataset.b) || /\.(minutes|every|cap|rounds|work|rest|restRounds|week|url|ladderStep|ladderUpDown|ladderPeak|restSlot|peak|from|to|step|updown|seconds|restAfter)$/.test(t.dataset.b)) softRender();
   }
   if (t.dataset.exf) {
     const ex = S.exercises.find((x) => x.id === S.exId);

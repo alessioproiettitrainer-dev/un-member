@@ -1,5 +1,11 @@
 # Uncoach – note per Claude
 
+## Chi sono
+Fitness coach e personal trainer con **oltre 14 anni di esperienza**, "The Unconventional Coach" (Uncoach).
+Mi occupo soprattutto di **kettlebell, calisthenics e mobilità**, con un approccio **health first** (prima la salute).
+Sono non convenzionale: uso attrezzi come **TRX, clave (clubbell), kettlebell**, oltre al corpo libero.
+Tono dei contenuti: diretto, pratico, tecnica e salute prima dell'estetica; niente promesse miracolose.
+
 ## Montaggio video
 
 Quando ti chiedo di montare, modificare, sottotitolare o fare grafiche per un video, usa sempre questi strumenti
@@ -25,11 +31,25 @@ Video da Google Drive: scaricali con
 (il connettore Drive accetta solo file sotto i 10 MB).
 
 ### Stile Uncoach
-- Font **Montserrat Black**; colori **bianco, arancione `#FF6A00`, nero**; niente logo.
+- Font **Montserrat Black**; colori **bianco e nero con un pizzico di arancione `#FF6A00`** (l'arancione solo come accento:
+  parola chiave, barra, pallino, non come colore di sfondo dominante); niente logo. Eccezioni solo se le chiedo (es. blu/bianco).
+- Look pulito e "da coach": grafiche che spiegano (tecnica giusta/sbagliata, muscoli, numeri) prima di quelle decorative.
 - Mai tagliare il video se non lo chiedo; nello stile yapping invece togli pause e ripetizioni.
 - CTA abituale: **"Commenta 7"** per una settimana gratis del programma/membership (solo se ha senso nel video).
 - Muscoli e benefici di un esercizio: verificali sulla variante che faccio (es. in piedi vs sdraiato) prima di scriverli.
 - Contenuti di altri creator solo come riferimento di stile, non da ripubblicare.
+
+### Come lavoriamo: scelte prima del montaggio finale
+Ogni volta che monto un video **non consegnare subito una versione sola**: proponimi delle scelte e decido io.
+1. Prepara una **review board**: un Artifact con le opzioni in griglia (2-4 varianti per gruppo: hook/titolo, stile
+   sottotitoli, effetti/transizioni dalla libreria, grafiche, CTA), ognuna con un'anteprima (clip corta o fotogramma)
+   e i pulsanti **Tieni / Scarta / Nota**, più un pulsante **Invia** che rimanda a Claude le mie scelte.
+   Se l'Artifact non è disponibile, usa una domanda a scelta multipla con le anteprime.
+2. Monta solo con quello che ho tenuto, applicando le note; poi un secondo giro se serve.
+3. **Quello che confermo diventa regola**: aggiungilo a "Regole confermate" qui sotto, così la volta dopo è già il default.
+
+### Regole confermate
+(vuoto per ora: si riempie con le scelte che confermo nelle review)
 
 ### Libreria effetti di riferimento
 Effetti che mi piacciono. Quando montiamo un video e uno di questi può servire, usalo; se non è chiaro se
@@ -113,3 +133,19 @@ dopo il risultato a tutto schermo; finale con griglia "Effect of the Day – 20 
 | Liquid glass graph | card di vetro smerigliato con grafico che sale e percentuale che conta (69%) | progressi, forza/carichi che salgono, % di miglioramento |
 | Pixel drop | particelle/pixel che cadono e riempiono un riquadro, parola sotto ("detail") | costruire un risultato "un pezzo alla volta", costanza |
 | Over-the-shoulder zoom | zoom leggero mentre accanto alla spalla spuntano card "prima/dopo" con cifre ($3.200 → $32.000) | prima/dopo (kg, misure, ripetizioni), risultati clienti |
+
+Fonte 5: Reel "15 video effects Claude can create" (@corbinsylk). Formato: lui tiene in mano un telefono davanti al busto
+e nello schermo scorre la demo di ogni effetto, nome a sinistra; titolo "EFFECT of the day" con sticker; CTA follow.
+Effetti in più: cinematic grade (prima/dopo colore), person pop-out (soggetto che esce da una card), image collage,
+chat drop (messaggi che cadono), Apple UI keycards, dynamic checklist, velocity line graph, product demo, freebie doc
+(documento/guida in regalo), cursor tracker, pixelated screen close-up.
+Per me: il telefono in mano con la demo = mostrare la app/il programma; freebie doc = guida gratuita con "Commenta 7".
+
+Fonte 6: Reel kettlebell swing (@daryaffe), solo musica — **formato da usare spesso**: stesso esercizio alternato
+sbagliato/giusto a ritmo, in alto icona ✗ rossa "HIP DOWN" / ✓ verde "HIPS BACK", e sul corpo **linee disegnate**
+(schiena e angolo d'anca, verde quando è corretto). Per me: ✗/✓ con etichette brevi in italiano, linee bianche/arancioni
+tracciate con MediaPipe sul corpo; ideale per errori tecnici con kettlebell, calisthenics, TRX, clave.
+
+Fonte 7: Reel "review board" (@vadham) — il flusso descritto in "Come lavoriamo": Claude crea un artifact con tutte le
+animazioni/grafiche/transizioni/suoni del brand, scorro, tengo, scarto, lascio note, invio; Claude rifà il giro e
+scrive come regole quello che confermo.

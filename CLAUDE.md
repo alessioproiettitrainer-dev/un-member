@@ -26,3 +26,12 @@ Video da Google Drive: scaricali con
 - CTA abituale: **"Commenta 7"** per una settimana gratis del programma/membership (solo se ha senso nel video).
 - Muscoli e benefici di un esercizio: verificali sulla variante che faccio (es. in piedi vs sdraiato) prima di scriverli.
 - Contenuti di altri creator solo come riferimento di stile, non da ripubblicare.
+
+### Libreria effetti di riferimento
+Effetti che mi piacciono. Quando montiamo un video e uno di questi può servire, usalo; se non è chiaro se
+ci sta, chiedimelo prima con una domanda breve. Prima di usarne uno, scarica il Reel con yt-dlp (o dalla copia
+su Drive, se c'è) e guardalo: la descrizione qui sotto va completata la prima volta che lo vedi.
+
+| # | Riferimento | Effetti | Quando usarlo |
+|---|---|---|---|
+| 1 | https://www.instagram.com/reel/DekNPnCiNW5/ | da analizzare (Instagram non era raggiungibile quando l'ho salvato) | da definire dopo averlo visto |

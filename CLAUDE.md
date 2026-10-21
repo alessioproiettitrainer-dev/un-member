@@ -49,7 +49,16 @@ Ogni volta che monto un video **non consegnare subito una versione sola**: propo
 3. **Quello che confermo diventa regola**: aggiungilo a "Regole confermate" qui sotto, così la volta dopo è già il default.
 
 ### Regole confermate
-(vuoto per ora: si riempie con le scelte che confermo nelle review)
+Confermate il 21/10 sul video "home gym, 5 attrezzi" (scelte dalle 5 varianti):
+- **Sottotitoli piccoli vicino alla bocca** (stile yapping), 1-3 parole, parole chiave in arancione.
+- **Zoom in/out** a servizio del parlato: scatto sull'hook, piccolo punch a ogni nuovo punto, allargamento sul riepilogo,
+  spinta lenta sulla CTA.
+- **Punti chiave in chip arancione** quando li nomino ("Tutto il corpo", "Opzionale"…).
+- **Riepilogo finale in fila** di tutti gli elementi (attrezzi/esercizi) con 2-3 parole chiave.
+- Per liste di attrezzi/esercizi piace lo **scaffale numerato** in basso che si riempie (gli oggetti cadono negli slot).
+- Hook con **frase forte barrata** (es. "Non buttare più i ~~soldi~~").
+- Oggetti/attrezzi sempre **scontornati**, mai dentro riquadri.
+- Scartato per ora: flash bianco al cambio.
 
 ### Libreria effetti di riferimento
 Effetti che mi piacciono. Quando montiamo un video e uno di questi può servire, usalo; se non è chiaro se

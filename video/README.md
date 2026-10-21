@@ -34,3 +34,9 @@ Schema (`schema.json`):
 Split screen: sinistra giusto (linee verdi), destra sbagliato (linee rosse), con rallentatore 0,5x e linee del corpo.
 Strumenti: `pose.py` (posizioni del corpo) e `confronto_split.py` (montaggio). Scritte con lo stesso stile, etichette
 "CHI LO SA FARE" (verde) e "CHI IMPROVVISA" (rosso). Tecnica ed errori dello swing: `swing_hardstyle.md`.
+
+### Variante "clone" (maschera, senza divisorio)
+Con il telefono fermo si uniscono le due registrazioni nella stessa inquadratura: ogni lato prende la registrazione in cui
+il proprietario stava da quella parte, con un confine sfumato che segue i corpi (`confronto_clone.py`).
+Varianti: 1 rallentatore con linee, 2 fermo immagine con linee (partenza, fondo, alto), 3 pulita con scritte a tempo.
+Scritte bianche come nei video workout, etichette sopra ciascuna persona.

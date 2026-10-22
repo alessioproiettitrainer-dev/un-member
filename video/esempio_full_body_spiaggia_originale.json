@@ -1,0 +1,54 @@
+{
+  "intro": {
+    "piccolo": "20 MIN  ·  A CORPO LIBERO",
+    "grande": "FULL BODY WORKOUT",
+    "durata": 2.4
+  },
+  "clip": [
+    {
+      "da": 10.5,
+      "a": 17.5,
+      "piccolo": "1/6",
+      "grande": "5 x PULL UP"
+    },
+    {
+      "da": 20.6,
+      "a": 25.4,
+      "piccolo": "2/6",
+      "grande": "5 x LEG RAISE"
+    },
+    {
+      "da": 38.3,
+      "a": 41.2,
+      "piccolo": "3/6",
+      "grande": "10 x PUSH UP"
+    },
+    {
+      "da": 47.0,
+      "a": 50.0,
+      "piccolo": "4/6",
+      "grande": "20 x MOUNTAIN CLIMBER"
+    },
+    {
+      "da": 58.0,
+      "a": 61.1,
+      "piccolo": "5/6",
+      "grande": "15 x SQUAT"
+    },
+    {
+      "da": 80.8,
+      "a": 84.0,
+      "piccolo": "6/6",
+      "grande": "30 x REVERSE LUNGE"
+    },
+    {
+      "da": 117.5,
+      "a": 123.5,
+      "grande": "RIPETI PER 20 MINUTI",
+      "sotto": "più giri possibili = full body completo",
+      "finale": "COMMENTA “7”",
+      "finale_sotto": "e ricevi 1 settimana gratis della membership"
+    }
+  ],
+  "colore": "null"
+}

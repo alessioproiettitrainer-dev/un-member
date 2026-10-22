@@ -53,6 +53,8 @@ Serve mediapipe: `RILIEVO_PY=<python con mediapipe> POSE_MODEL=<pose_landmarker_
 Esempio: `esempio_full_body_spiaggia_rilievo.json`.
 
 ## Colore naturale per l'aperto (`"colore"`)
-Al posto della LUT si può dare una catena di filtri ffmpeg in `"colore"`. Per la spiaggia (preferita dal proprietario):
+Al posto della LUT si può dare una catena di filtri ffmpeg in `"colore"`. Per la spiaggia:
 contrasto a S, pelle leggermente calda, saturazione +8%, "clarity" (unsharp ampio) per la definizione muscolare.
 Esempio: `esempio_full_body_spiaggia_naturale.json`, con CTA finale "COMMENTA “7”" (1 settimana gratis della membership).
+**Preferenza del proprietario per i video all'aperto: colore originale della clip** (`"colore": "null"`, esempio
+`esempio_full_body_spiaggia_originale.json`). La luminosità la regola lui in ripresa.

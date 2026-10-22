@@ -38,6 +38,11 @@ def main(src, schema_path, out):
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(c['da']), '-t', str(c['a'] - c['da']),
                         '-i', src, '-an', '-vf', vf, '-c:v', 'libx264', '-crf', '14', '-preset', 'fast', p],
                        check=True)
+        if schema.get('rilievo'):  # persona più luminosa, sfondo più scuro (serve mediapipe, vedi README)
+            q = p.replace('.mp4', '_r.mp4')
+            subprocess.run([os.environ.get('RILIEVO_PY', sys.executable), os.path.join(QUI, 'rilievo.py'), p, q,
+                            os.environ['POSE_MODEL'], *map(str, schema['rilievo'])], check=True, stderr=subprocess.DEVNULL)
+            p = q
         parti.append(p)
     # 2) tempi delle clip nel video finale
     tempi, t = [], 0

@@ -46,3 +46,8 @@ Usare `UN_Workout_Look_Rec709.cube` (stesso look, per video normali), con `"lut"
 `"vignette": "PI/6"` nello schema. Esempio: `esempio_full_body_spiaggia.json`. Nel finale si può aggiungere `finale_sotto`.
 CTA consigliata: salvare e condividere contano più dei like ("SALVALO E PROVALO", "fammi sapere nei commenti",
 "mandalo a chi si allena con te"). Il titolo deve agganciare nei primi 3 secondi.
+
+## Persona in risalto (`"rilievo": [1.12, 0.78]`)
+Schiarisce la persona (x1.12) e scurisce lo sfondo (x0.78) con una maschera MediaPipe dal bordo sfumato (`rilievo.py`).
+Serve mediapipe: `RILIEVO_PY=<python con mediapipe> POSE_MODEL=<pose_landmarker_heavy.task> python3 video/monta_workout.py ...`.
+Esempio: `esempio_full_body_spiaggia_rilievo.json`.

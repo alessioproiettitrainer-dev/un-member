@@ -40,3 +40,9 @@ Con il telefono fermo si uniscono le due registrazioni nella stessa inquadratura
 il proprietario stava da quella parte, con un confine sfumato che segue i corpi (`confronto_clone.py`).
 Varianti: 1 rallentatore con linee, 2 fermo immagine con linee (partenza, fondo, alto), 3 pulita con scritte a tempo.
 Scritte bianche come nei video workout, etichette sopra ciascuna persona.
+
+## Video girati senza Log (es. all'aperto)
+Usare `UN_Workout_Look_Rec709.cube` (stesso look, per video normali), con `"lut": "UN_Workout_Look_Rec709.cube"` e
+`"vignette": "PI/6"` nello schema. Esempio: `esempio_full_body_spiaggia.json`. Nel finale si può aggiungere `finale_sotto`.
+CTA consigliata: salvare e condividere contano più dei like ("SALVALO E PROVALO", "fammi sapere nei commenti",
+"mandalo a chi si allena con te"). Il titolo deve agganciare nei primi 3 secondi.

@@ -27,13 +27,14 @@ def scritta(testo, s, e, y, size, font):
 
 def main(src, schema_path, out):
     schema = json.load(open(schema_path))
+    lut = os.path.join(QUI, schema.get('lut', 'UN_Workout_Look.cube'))
     tmp = tempfile.mkdtemp()
     # 1) ogni clip a parte (il 4K tutto insieme esaurisce la memoria)
     parti = []
     for i, c in enumerate(schema['clip']):
         p = os.path.join(tmp, f'part{i}.mp4')
         vf = (f"fps=30,crop=1728:3072:{c.get('x', 216)}:{c.get('y', 576)},scale=1080:1920:flags=lanczos,"
-              f"lut3d={LUT},vignette=PI/5,format=yuv420p")
+              f"lut3d={lut},vignette={schema.get('vignette', 'PI/5')},format=yuv420p")
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(c['da']), '-t', str(c['a'] - c['da']),
                         '-i', src, '-an', '-vf', vf, '-c:v', 'libx264', '-crf', '14', '-preset', 'fast', p],
                        check=True)
@@ -62,6 +63,8 @@ def main(src, schema_path, out):
             if c.get('sotto'):
                 voci.append(scritta(c['sotto'], s + 0.1, meta, BY + 80, 30, SEMI))
             voci.append(scritta(c['finale'], meta + 0.1, totale + 1, BY, 56, BOLD))
+            if c.get('finale_sotto'):
+                voci.append(scritta(c['finale_sotto'], meta + 0.1, totale + 1, BY + 80, 30, SEMI))
             continue
         if c.get('piccolo'):
             voci.append(scritta(c['piccolo'], s, e, SY, 30, SEMI))

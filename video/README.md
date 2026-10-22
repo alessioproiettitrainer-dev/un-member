@@ -51,3 +51,8 @@ CTA consigliata: salvare e condividere contano più dei like ("SALVALO E PROVALO
 Schiarisce la persona (x1.12) e scurisce lo sfondo (x0.78) con una maschera MediaPipe dal bordo sfumato (`rilievo.py`).
 Serve mediapipe: `RILIEVO_PY=<python con mediapipe> POSE_MODEL=<pose_landmarker_heavy.task> python3 video/monta_workout.py ...`.
 Esempio: `esempio_full_body_spiaggia_rilievo.json`.
+
+## Colore naturale per l'aperto (`"colore"`)
+Al posto della LUT si può dare una catena di filtri ffmpeg in `"colore"`. Per la spiaggia (preferita dal proprietario):
+contrasto a S, pelle leggermente calda, saturazione +8%, "clarity" (unsharp ampio) per la definizione muscolare.
+Esempio: `esempio_full_body_spiaggia_naturale.json`, con CTA finale "COMMENTA “7”" (1 settimana gratis della membership).

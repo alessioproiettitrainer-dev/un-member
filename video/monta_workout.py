@@ -33,8 +33,9 @@ def main(src, schema_path, out):
     parti = []
     for i, c in enumerate(schema['clip']):
         p = os.path.join(tmp, f'part{i}.mp4')
+        colore = schema.get('colore') or f"lut3d={lut},vignette={schema.get('vignette', 'PI/5')}"  # 'colore' = filtri ffmpeg al posto della LUT
         vf = (f"fps=30,crop=1728:3072:{c.get('x', 216)}:{c.get('y', 576)},scale=1080:1920:flags=lanczos,"
-              f"lut3d={lut},vignette={schema.get('vignette', 'PI/5')},format=yuv420p")
+              f"{colore},format=yuv420p")
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(c['da']), '-t', str(c['a'] - c['da']),
                         '-i', src, '-an', '-vf', vf, '-c:v', 'libx264', '-crf', '14', '-preset', 'fast', p],
                        check=True)

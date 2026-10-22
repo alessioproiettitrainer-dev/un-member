@@ -89,6 +89,12 @@ function exOf(id) {
   return P.p.exercises[chosen] || P.p.exercises[id] || { name: 'Esercizio', id };
 }
 const paceOf = (it) => itemPace(it, exOf(it.exerciseId));
+// EMOM: quanti secondi prima della fine compare il prossimo esercizio (15, meno negli intervalli corti)
+const emomSoon = (s) => (s.dur >= 30 ? 15 : Math.max(5, Math.round(s.dur / 3)));
+function nextItemAfter() {
+  const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready);
+  return nx && !nx.video ? nx.items[0] : null;
+}
 const guided = (s) => s.amrap || s.kind === 'stopwatch' || s.emom;
 
 function enterStep(i) {
@@ -145,12 +151,7 @@ function tick() {
     if (P.running) P.remaining = Math.max(0, (P.endAt - now) / 1000);
     const whole = Math.ceil(P.remaining);
     if (P.running && whole <= 3 && whole >= 1 && P.lastBeep !== whole) { P.lastBeep = whole; beep(660, 120); }
-    // EMOM: avviso 15 secondi prima che scatti il minuto successivo
-    if (P.running && s.emom && s.dur > 25 && P.remaining <= 15 && !P.warn15) {
-      P.warn15 = true; beep(880, 160);
-      const nx = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready), ni = nx && !nx.video && nx.items[0];
-      say(P.g?.finished ? `Quindici secondi.${ni ? ` Preparati: ${exSay(ni)}.` : ''}` : 'Ultimi quindici secondi!');
-    }
+
     if (P.running && P.remaining <= 0) {
       beep(1046, 400);
       if (s.amrap) return askScore(s, 'amrap', amrapCounts(s));
@@ -165,9 +166,19 @@ function tick() {
     // a ripetizioni: il video gira in loop e si va avanti solo con "Fatto"; a tempo (es. 30s) parte il conto alla rovescia
     const pace = paceOf(s.items[P.g.i]);
     if (s.emom) {
-      // EMOM a ripetizioni: il video gira in loop finché il membro preme "Fatto"; a tempo (es. 20s) va avanti da solo
+      // EMOM: niente "Fatto". Gli esercizi dell'intervallo girano in loop, ognuno per il suo tempo (rip × secondi per rip);
+      // a ~15 secondi dalla fine si passa all'anteprima del prossimo esercizio
+      if (P.remaining <= emomSoon(s)) {
+        P.g.finished = true; beep(880, 160);
+        const ni = nextItemAfter();
+        say(ni ? `Prossimo esercizio tra ${Math.ceil(P.remaining)} secondi: ${exSay(ni)}.` : 'Ultimi secondi!');
+        return render();
+      }
       P.g.t += dt;
-      if (!pace.reps && P.g.t >= pace.dur) return advanceGuide();
+      if (P.g.t >= pace.dur) {
+        P.g.i = (P.g.i + 1) % s.items.length; P.g.t = 0; P.focus = P.g.i;
+        if (s.items.length > 1) { beep(1200, 40, 0.06); render(); return say(`${exSay(s.items[P.g.i])}.`); }
+      }
     } else if (!pace.reps) {
       P.g.t += dt;
       if (P.g.t >= pace.dur) return advanceGuide();
@@ -248,6 +259,8 @@ function updateClock() {
   const s = P.steps[P.idx];
   const cur = P.root.querySelector('.bar i.cur');
   if (cur && s.kind === 'timed') cur.style.setProperty('--p', `${(1 - P.remaining / s.dur) * 100}%`);
+  const so = document.getElementById('soon');
+  if (so) so.textContent = Math.max(0, Math.ceil(P.remaining));
   const gb = P.root.querySelector('.gbar i');
   if (gb && P.g && !P.g.finished) gb.style.width = `${Math.min(100, (P.g.t / paceOf(s.items[P.g.i]).dur) * 100)}%`;
 }
@@ -315,6 +328,7 @@ function controls() {
   const pause = (wide) => `<button class="btn ${wide ? 'primary' : 'sq'}" data-act="pause" aria-label="Pausa">${P.running ? (wide ? '❚❚ Pausa' : '❚❚') : wide ? '▶ Riprendi' : '▶'}</button>`;
   if (s.kind === 'manual') return `<button class="btn sq" data-act="prev">⏮</button><button class="btn primary" data-act="next">✓ Fatto</button><button class="btn sq" data-act="next">⏭</button>`;
   if (s.kind === 'stopwatch') return `<button class="btn sq" data-act="prev">⏮</button>${pause(false)}${P.g && !P.g.finished ? '<button class="btn" data-act="gnext">Fatto ›</button>' : ''}<button class="btn primary" data-act="done">✓ Fine</button>`;
+  if (P.g && s.emom) return `<button class="btn sq" data-act="prev">⏮</button>${pause(true)}<button class="btn sq" data-act="next">⏭</button>`;
   if (P.g) return `<button class="btn sq" data-act="prev">⏮</button>${pause(!!P.g.finished)}${P.g.finished ? '' : '<button class="btn primary" data-act="gnext">Fatto ›</button>'}<button class="btn sq" data-act="next">⏭</button>`;
   return `<button class="btn sq" data-act="prev">⏮</button>${pause(true)}<button class="btn sq" data-act="next">⏭</button>`;
 }
@@ -338,8 +352,8 @@ function render() {
   const bs = P.steps.filter((x) => x.blockKey === s.blockKey && !x.ready && !x.rest);
   const pos = bs.indexOf(s);
   const nextE = next && !next.video && exOf(next.items[0].exerciseId);
-  const mode = s.ready ? 'ready' : s.rest || emomRest ? 'rest' : '';
-  const badge = mode === 'rest' ? '<span class="vbadge">Recupero · prossimo esercizio</span>' : '';
+  const mode = s.ready ? 'ready' : emomRest ? 'soon' : s.rest ? 'rest' : '';
+  const badge = mode === 'rest' ? '<span class="vbadge">Recupero · prossimo esercizio</span>' : mode === 'soon' ? '<span class="vbadge soon">Prossimo esercizio</span>' : '';
 
   let right;
   if (s.amrap) right = `<div class="tile"><div class="big">${g ? g.round : P.amrap[s.block] || 0}</div><div class="lbl">Round fatti</div></div>`;
@@ -351,13 +365,18 @@ function render() {
   if (g) {
     const pace = paceOf(focusItem);
     now = emomRest
-      ? `<div class="lab rest-lab">${esc(s.label)} fatto${g.doneIn ? ` in ${g.doneIn}s` : ''} ✓</div><div class="reps">Recupero</div>${upNext ? nextUp(upNext) : '<div class="note">Ultimo minuto finito!</div>'}`
+      ? (() => {
+          const after = P.steps[P.idx + 1], restFirst = after?.rest && !after.ready;
+          const nxs = next && !next.video ? next.items : [];
+          return `<div class="lab soon-lab">${restFirst ? 'Recupero' : 'Prossimo esercizio'} tra <span id="soon">${Math.ceil(P.remaining)}</span> secondi</div>
+            ${nxs.length ? `<div class="soonlist">${restFirst ? '<span>Poi</span>' : ''}${nxs.map((it) => `<b>${esc(it.reps || (it.time ? it.time + 's' : ''))} ${esc(exOf(it.exerciseId).name)}</b>`).join('')}</div>` : '<div class="note">Ultimi secondi del blocco!</div>'}`;
+        })()
       : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
       : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
          <div class="repline"><span class="repnow" id="rep">${pace.reps ? esc(focusItem.reps) : fmt(Math.ceil(pace.dur - g.t))}</span><span class="reptot">${pace.reps ? 'rip' : 'tempo'}</span></div>
          <div class="name">${esc(fe.name)}</div>
-         ${s.emom ? (pace.reps ? `<div class="note donehint">Premi FATTO quando hai finito${items.length > 1 && g.i < items.length - 1 ? ': passi al prossimo esercizio' : ''}.${s.dur === 60 ? ' Il minuto va avanti comunque.' : ' Il tempo va avanti comunque.'}</div>` : '<div class="gbar"><i></i></div>') : pace.reps ? '<div class="note donehint">Premi FATTO quando hai finito le ripetizioni</div>' : '<div class="gbar"><i></i></div>'}
+         ${s.emom ? `<div class="gbar"><i></i></div>${items.length > 1 ? '<div class="note donehint">Gli esercizi si alternano da soli, in loop</div>' : ''}` : pace.reps ? '<div class="note donehint">Premi FATTO quando hai finito le ripetizioni</div>' : '<div class="gbar"><i></i></div>'}
          ${items.length < 2 ? '' : `<div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === g.i ? 'sel' : k < g.i ? 'past' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`}`;
   } else if (items.length > 1) {
     now = `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="circuit">${items.map((it, k) => `<button data-focus="${k}" class="${k === P.focus ? 'sel' : ''}"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></button>`).join('')}</div>`;
@@ -367,7 +386,7 @@ function render() {
       : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 
-  P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : ''}">
+  P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>

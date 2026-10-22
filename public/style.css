@@ -8,6 +8,7 @@
   --accent: #ff7a00;
   --accent-ink: #1a0c00;
   --rest: #3aa0ff;
+  --soon: #35d07f;
   --ok: #3ccf7a;
   --radius: 18px;
   font-family: 'Montserrat', system-ui, sans-serif;
@@ -400,3 +401,12 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .fpick input { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .fcalc { margin: 10px 0; font-size: 15px; }
 .fcalc b { color: var(--accent); font-size: 20px; }
+
+/* EMOM: ultimi secondi dell'intervallo, si guarda già il prossimo esercizio */
+.now .lab.soon-lab { color: var(--soon); font-size: 15px; }
+.soonlist { display: grid; gap: 4px; margin-top: 6px; }
+.soonlist span { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+.soonlist b { font-size: 22px; font-weight: 900; text-transform: uppercase; }
+.vbadge.soon { background: var(--soon); color: #032312; }
+.player.soon .video.sq { box-shadow: 0 0 0 3px var(--soon); }
+.tile.soon .big { color: var(--soon); }

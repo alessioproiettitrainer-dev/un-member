@@ -387,7 +387,11 @@ async function workoutView(pid, wid) {
       <div class="bl"><div style="font-weight:800">${esc(b.title || '')} <span class="muted small">${esc(blockSummary(b))}</span></div>
       ${b.type === 'video' ? '<div class="ex"><div class="thumb" style="display:grid;place-items:center">▶</div><div>Video da seguire</div></div>' : ''}
       ${(b.items || []).map((it) => `<button class="ex" data-demo="${esc(it.exerciseId)}">${thumb(ex(it.exerciseId))}<div style="flex:1"><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b> ${esc(ex(it.exerciseId).name)}</div><span class="demo-go">▶</span></button>`).join('')}</div>`).join('')).join('')}</div>
-    <div style="height:16px"></div><a class="btn primary block" href="#/play/${pid}/${wid}">▶ Inizia allenamento</a>`);
+    <div style="height:16px"></div><a class="btn primary block" href="#/play/${pid}/${wid}">▶ Inizia allenamento</a>
+    ${(() => { const last = ME.history.filter((h) => h.workoutId === wid && h.programId === p.id).at(-1); return last ? `<div class="muted small" style="text-align:center;margin-top:10px">✓ L'hai già fatto ${new Date(last.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</div>` : ''; })()}
+    <button class="btn block" style="margin-top:10px" id="markdone">✓ Segna come fatto</button>
+    <div class="muted small" style="text-align:center;margin-top:6px">Ti sei allenato seguendo la scheda senza il player? Segnalo qui, anche in un giorno passato.</div>`);
+  document.getElementById('markdone').onclick = () => markDone(p, w);
   // tocca un esercizio: si apre la sua demo in loop con la descrizione
   $app.querySelectorAll('[data-demo]').forEach((b) => (b.onclick = () => {
     const e = ex(b.dataset.demo), emb = !e.video && embedUrl(e.videoUrl, { loop: true });
@@ -403,6 +407,34 @@ async function workoutView(pid, wid) {
   if (rs) rs.onclick = () => { for (const id of mySubs) delete subs[id]; try { localStorage.setItem('subs', JSON.stringify(subs)); } catch {} toast('Esercizi originali ripristinati'); workoutView(pid, wid); };
 }
 const thumb = (e) => (e.video ? `<video class="thumb" src="${esc(e.video)}#t=0.5" muted playsinline preload="metadata"></video>` : '<div class="thumb"></div>');
+
+// "Segna come fatto": allenamento fatto per conto suo (anche ieri o lunedì), finisce nel calendario e nello storico
+function markDone(p, w) {
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(Date.now() - i * DAY); return { iso: iso(d), label: i === 0 ? 'Oggi' : i === 1 ? 'Ieri' : d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric' }) }; });
+  const m = document.createElement('div');
+  m.className = 'tutmodal introsheet';
+  let pick = days[0].iso;
+  const draw = () => {
+    m.innerHTML = `<div class="sc-box"><div class="h1" style="font-size:24px;margin-top:0">Quando l'hai <em>fatto?</em></div>
+      <div class="muted" style="margin-bottom:12px">${esc(w.title)} · ${esc(p.title)}</div>
+      <div class="daychips">${days.map((d) => `<button data-day="${d.iso}" class="${d.iso === pick ? 'on' : ''}">${esc(d.label)}</button>`).join('')}</div>
+      <div class="row" style="gap:8px;margin-top:16px"><button class="btn" style="flex:1" data-cancel>Annulla</button><button class="btn primary" style="flex:1" data-save>✓ Salva</button></div></div>`;
+  };
+  draw();
+  m.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-day]');
+    if (b) { pick = b.dataset.day; return draw(); }
+    if (e.target === m || e.target.closest('[data-cancel]')) return m.remove();
+    if (e.target.closest('[data-save]')) {
+      try {
+        ME.history.push(await api('/api/me/workouts', 'POST', { programId: p.id, programTitle: p.title, workoutId: w.id, workoutTitle: w.title, seconds: 0, results: {}, scores: [], manual: true, date: pick }));
+        ME.history.sort((a, b2) => a.date.localeCompare(b2.date));
+        m.remove(); toast('Segnato come fatto 💪'); location.hash = '#/';
+      } catch (err) { toast(err.message, true); }
+    }
+  });
+  document.body.append(m);
+}
 
 async function playView(pid, wid) {
   const p = await getProgram(pid);

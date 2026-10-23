@@ -432,3 +432,8 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .introsheet .intro-warn { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--accent); font-size: 14px; }
 .tutmodal.introsheet { position: fixed; z-index: 60; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
 .introsheet .sc-box { text-align: left; }
+
+/* scelta del giorno per "Segna come fatto" */
+.daychips { display: flex; flex-wrap: wrap; gap: 8px; }
+.daychips button { padding: 10px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--card-2, #1c1c20); color: var(--text, #fff); font-weight: 800; text-transform: capitalize; }
+.daychips button.on { background: var(--accent); color: var(--accent-ink, #1a0c00); border-color: var(--accent); }

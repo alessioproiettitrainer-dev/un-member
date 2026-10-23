@@ -362,7 +362,11 @@ me.post('/workouts', (req, res) => {
   const clean = (Array.isArray(scores) ? scores : []).slice(0, 20).map((x) => (x.type === 'amrap'
     ? { key: String(x.key), block: String(x.block || ''), type: 'amrap', rounds: Math.max(0, Math.round(+x.rounds || 0)), reps: Math.max(0, Math.round(+x.reps || 0)) }
     : { key: String(x.key), block: String(x.block || ''), type: 'fortime', seconds: Math.max(0, Math.round(+x.seconds || 0)), capped: !!x.capped }));
-  const h = { id: newId(), programId, programTitle, workoutId, workoutTitle, seconds: Number(seconds) || 0, results: results || {}, scores: clean, date: new Date().toISOString() };
+  // "Segna come fatto" (allenamento fatto per conto suo, anche in un giorno passato): data scelta, al massimo 14 giorni fa
+  const d = String(req.body?.date || '');
+  const okDay = /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= today() && d >= new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+  const when = okDay && d !== today() ? `${d}T12:00:00.000Z` : new Date().toISOString();
+  const h = { id: newId(), programId, programTitle, workoutId, workoutTitle, seconds: Number(seconds) || 0, results: results || {}, scores: clean, date: when, ...(req.body?.manual ? { manual: true } : {}) };
   req.user.history.push(h);
   save();
   res.json(h);

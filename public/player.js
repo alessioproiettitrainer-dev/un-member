@@ -391,10 +391,13 @@ function render() {
   }
 
   // "Dopo": il prossimo esercizio in una riga sopra il video, mentre si lavora (nel recupero c'è già l'anteprima)
-  const after = s.ready || s.rest || emomRest ? null
-    : g && !s.emom && items.length > 1 && g.i < items.length - 1 ? `${items[g.i + 1].reps || (items[g.i + 1].time ? items[g.i + 1].time + 's' : '')} ${exOf(items[g.i + 1].exerciseId).name}`
-    : next ? nextLabel(next) : '';
-  const afterPill = after ? `<div class="afterpill"><span>Dopo</span>${esc(after.trim())}</div>` : '';
+  const afterIt = s.ready || s.rest || emomRest ? null
+    : g && !s.emom && items.length > 1 && g.i < items.length - 1 ? items[g.i + 1]
+    : next && !next.video ? next.items[0] : null;
+  const after = afterIt ? `${afterIt.reps || (afterIt.time ? afterIt.time + 's' : '')} ${exOf(afterIt.exerciseId).name}` : next?.video && !s.rest && !s.ready ? nextLabel(next) : '';
+  // anteprima: un fotogramma fermo del video dell'esercizio dopo (non parte, così non appesantisce il telefono)
+  const afterVid = afterIt && (exOf(afterIt.exerciseId).videoBox || exOf(afterIt.exerciseId).video);
+  const afterPill = after ? `<div class="afterpill">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : ''}<div class="atxt"><span>Dopo</span><b>${esc(after.trim())}</b></div></div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
   P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}

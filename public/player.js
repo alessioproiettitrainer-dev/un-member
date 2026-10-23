@@ -171,8 +171,10 @@ function tick() {
       // a ~15 secondi dalla fine si passa all'anteprima del prossimo esercizio
       if (P.remaining <= emomSoon(s)) {
         P.g.finished = true; beep(880, 160);
-        const ni = nextItemAfter();
-        say(ni ? `Prossimo esercizio tra ${Math.ceil(P.remaining)} secondi: ${exSay(ni)}.` : 'Ultimi secondi!');
+        const ni = nextItemAfter(), after = P.steps[P.idx + 1], sec = Math.ceil(P.remaining);
+        // se dopo c'è un intervallo (o una pausa) di recupero, si annuncia quello e non l'esercizio che viene dopo
+        say(after?.rest && !after.ready ? `Tra ${sec} secondi recupero completo${after.dur ? `, ${Math.round(after.dur)} secondi` : ''}.`
+          : ni ? `Prossimo esercizio tra ${sec} secondi: ${exSay(ni)}.` : 'Ultimi secondi!');
         return render();
       }
       P.g.t += dt;
@@ -372,7 +374,7 @@ function render() {
       ? (() => {
           const after = P.steps[P.idx + 1], restFirst = after?.rest && !after.ready;
           const nxs = next && !next.video ? next.items : [];
-          return `<div class="lab soon-lab">${restFirst ? 'Recupero' : 'Prossimo esercizio'} tra <span id="soon">${Math.ceil(P.remaining)}</span> secondi</div>
+          return `<div class="lab soon-lab">${restFirst ? 'Recupero completo' : 'Prossimo esercizio'} tra <span id="soon">${Math.ceil(P.remaining)}</span> secondi</div>
             ${nxs.length ? `<div class="soonlist">${restFirst ? '<span>Poi</span>' : ''}${nxs.map((it) => `<b>${esc(it.reps || (it.time ? it.time + 's' : ''))} ${esc(exOf(it.exerciseId).name)}</b>`).join('')}</div>` : '<div class="note">Ultimi secondi del blocco!</div>'}`;
         })()
       : g.finished

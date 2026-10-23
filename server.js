@@ -36,6 +36,8 @@ function load() {
   return { ...structuredClone(EMPTY), ...d, settings: { ...EMPTY.settings, ...(d.settings || {}) } };
 }
 let db = load();
+// giorni di attività per chi c'era già prima del monitoraggio: i giorni in cui si è allenato
+for (const u of db.users) if (!u.activeDays && u.history?.length) u.activeDays = [...new Set(u.history.map((h) => String(h.date).slice(0, 10)))].sort().slice(-120);
 function save() {
   const tmp = DATA_FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
@@ -63,7 +65,10 @@ function trialWeek(p) {
   return 1;
 }
 // L'accesso si somma: se è ancora attivo, i mesi partono dalla scadenza attuale.
+// chi era in prova e riceve il primo abbonamento = convertito (per il contatore "prove → abbonati")
+const markConversion = (u) => { if (u.trialStart && !(u.accessLog || []).length && !u.convertedFromTrial) u.convertedFromTrial = today(); };
 function grant(u, months, by) {
+  markConversion(u);
   const from = hasAccess(u) ? u.accessUntil : today();
   u.accessUntil = addMonths(from, months);
   (u.accessLog ||= []).push({ date: new Date().toISOString(), months, by, until: u.accessUntil });
@@ -71,6 +76,7 @@ function grant(u, months, by) {
 // accesso fino a una data precisa (sincronizzazione col gestionale): non accorcia mai un accesso più lungo
 function grantUntil(u, until, by) {
   if (!until || (u.accessUntil && u.accessUntil >= until)) return false;
+  markConversion(u);
   u.accessUntil = until;
   (u.accessLog ||= []).push({ date: new Date().toISOString(), months: 0, by, until });
   return true;
@@ -104,8 +110,24 @@ const isAdmin = (req) => req.get('x-admin-key') === ADMIN_KEY;
 const staffOf = (req) => { const s = db.staffSessions[req.get('x-staff-token') || '']; return s && db.staff.find((x) => x.id === s.staffId); };
 function currentUser(req) {
   const s = db.sessions[cookies(req).sid];
-  return s && db.users.find((u) => u.id === s.userId);
+  const u = s && db.users.find((x) => x.id === s.userId);
+  if (u) touch(u);
+  return u;
 }
+// Attività dei membri: ultimo accesso, numero di accessi (pausa di 30 min = nuovo accesso) e giorni in cui sono entrati.
+// Si salva al massimo una volta al minuto, per non scrivere il file a ogni richiesta.
+let activityDirty = false;
+function touch(u) {
+  const now = Date.now(), last = u.lastSeen ? Date.parse(u.lastSeen) : 0;
+  if (now - last < 60 * 1000) return;
+  if (now - last > 30 * 60 * 1000) u.visits = (u.visits || 0) + 1;
+  u.lastSeen = new Date(now).toISOString();
+  const d = new Date(now).toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+  u.activeDays ||= [];
+  if (u.activeDays.at(-1) !== d) { u.activeDays.push(d); if (u.activeDays.length > 120) u.activeDays.shift(); }
+  activityDirty = true;
+}
+setInterval(() => { if (activityDirty) { activityDirty = false; save(); } }, 60 * 1000);
 function member(req, res, next) {
   req.user = currentUser(req);
   if (req.user || isAdmin(req)) return next();
@@ -665,6 +687,9 @@ admin.get('/users', (req, res) => res.json(db.users.map((u) => ({
   accessLog: (u.accessLog || []).slice(-5), nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) },
   profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays },
   weight: u.weights.at(-1)?.kg || '',
+  lastSeen: u.lastSeen || '', visits: u.visits || 0, convertedFromTrial: u.convertedFromTrial || '', trialStart: u.trialStart || '',
+  days7: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10)).length,
+  days30: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10)).length,
 }))));
 admin.post('/users/:id/access', (req, res) => {
   const u = db.users.find((x) => x.id === req.params.id);

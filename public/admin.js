@@ -199,20 +199,43 @@ function userStatus(u) {
   if (d <= 7) return ['soon', `Scade tra ${d} g`];
   return ['ok', 'Attivo'];
 }
+// ultimo accesso in parole semplici
+function seenText(iso) {
+  if (!iso) return 'Ultimo accesso: nessun dato';
+  const ms = Date.now() - Date.parse(iso), min = Math.round(ms / 60000);
+  if (min < 5) return 'Online adesso';
+  if (min < 60) return `Visto ${min} min fa`;
+  const d = new Date(iso), today = new Date(), y = new Date(Date.now() - 864e5);
+  const hh = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === today.toDateString()) return `Visto oggi alle ${hh}`;
+  if (d.toDateString() === y.toDateString()) return `Visto ieri alle ${hh}`;
+  return `Visto ${Math.round(ms / 864e5)} giorni fa`;
+}
+const seenClass = (u) => { const ms = u.lastSeen ? Date.now() - Date.parse(u.lastSeen) : Infinity; return ms < 5 * 60e3 ? 'st ok' : ms < 2 * 864e5 ? '' : 'muted'; };
+function activitySummary() {
+  const now = Date.now(), d = (u, ms) => u.lastSeen && now - Date.parse(u.lastSeen) < ms;
+  const online = S.users.filter((u) => d(u, 5 * 60e3)).length, today = S.users.filter((u) => u.lastSeen && new Date(u.lastSeen).toDateString() === new Date().toDateString()).length;
+  const week = S.users.filter((u) => d(u, 7 * 864e5)).length, trials = S.users.filter((u) => u.trialStart).length, conv = S.users.filter((u) => u.convertedFromTrial).length;
+  const tile = (n, l) => `<div style="flex:1;min-width:120px;background:var(--card-2,#1c1c20);border-radius:12px;padding:10px 12px"><div style="font-size:24px;font-weight:900">${n}</div><div class="muted small">${l}</div></div>`;
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso')}${tile(today, 'Entrati oggi')}${tile(week, 'Entrati negli ultimi 7 giorni')}${tile(`${conv}/${trials}`, 'Prove → abbonati')}</div>`;
+}
 function usersView() {
   const q = S.uq.toLowerCase();
   const counts = { all: S.users.length };
-  for (const u of S.users) { const k = userStatus(u)[0]; counts[k] = (counts[k] || 0) + 1; }
-  const list = S.users.filter((u) => (S.uf === 'all' || userStatus(u)[0] === S.uf) && (!q || u.name.toLowerCase().includes(q) || u.email.includes(q)))
+  for (const u of S.users) { const k = userStatus(u)[0]; counts[k] = (counts[k] || 0) + 1; if ((u.active || u.trial) && (!u.lastSeen || Date.now() - Date.parse(u.lastSeen) > 3 * 864e5)) counts.idle = (counts.idle || 0) + 1; }
+  const idle = (u) => !u.lastSeen || Date.now() - Date.parse(u.lastSeen) > 3 * 864e5;
+  const list = S.users.filter((u) => (S.uf === 'all' || (S.uf === 'idle' ? idle(u) && (u.active || u.trial) : userStatus(u)[0] === S.uf)) && (!q || u.name.toLowerCase().includes(q) || u.email.includes(q)))
     .sort((a, b) => (a.accessUntil || '').localeCompare(b.accessUntil || ''));
-  const filters = [['all', 'Tutti'], ['trial', 'In prova'], ['pending', 'In attesa'], ['soon', 'In scadenza'], ['expired', 'Scaduti'], ['ok', 'Attivi']];
+  const filters = [['all', 'Tutti'], ['trial', 'In prova'], ['pending', 'In attesa'], ['soon', 'In scadenza'], ['expired', 'Scaduti'], ['ok', 'Attivi'], ['idle', 'Spariti da 3+ giorni']];
   const pend = Object.entries(S.pending);
   return `<div class="cols two">
     <div class="panel">
+      ${activitySummary()}
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><input type="text" id="uq" placeholder="Cerca nome o email (es. quella del pagamento Stripe)" value="${esc(S.uq)}" style="flex:1;min-width:220px">
         ${filters.map(([k, l]) => `<button class="sbtn ${S.uf === k ? 'acc' : ''}" data-uf="${k}">${l} ${counts[k] || 0}</button>`).join('')}</div>
       ${list.map((u) => { const [st, label] = userStatus(u); const open = S.openU[u.id]; return `<div class="urow">
-        <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · ${u.workouts} allenamenti${Object.keys(u.trialMails || {}).length ? ` · email prova: ${[['d2', '2° giorno'], ['d4', '4° giorno'], ['last', 'ultimo giorno']].filter(([k]) => u.trialMails[k]).map(([, l]) => l).join(', ')} ✓` : ''}</div></div>
+        <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · ${u.workouts} allenamenti${u.lastWorkout ? ` (ultimo ${fmtDate(String(u.lastWorkout).slice(0, 10))})` : ''}</div>
+          <div class="small" style="margin-top:2px"><span class="${seenClass(u)}">● ${esc(seenText(u.lastSeen))}</span>${u.lastSeen ? ` <span class="muted">· ${u.visits} ${u.visits === 1 ? 'accesso' : 'accessi'} · attivo ${u.days7}/7 giorni, ${u.days30}/30</span>` : ''}${u.convertedFromTrial ? ` <span class="st ok">dalla prova all'abbonamento ✓</span>` : ''}</div><div class="muted small">${Object.keys(u.trialMails || {}).length ? `Email prova: ${[['d2', '2° giorno'], ['d4', '4° giorno'], ['last', 'ultimo giorno']].filter(([k]) => u.trialMails[k]).map(([, l]) => l).join(', ')} ✓` : ''}</div></div>
           <span class="st ${st}">${label}${u.accessUntil ? ` · ${fmtDate(u.accessUntil)}` : ''}</span></div>
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><span class="muted small">Aggiungi accesso:</span>
           ${[1, 3, 6, 12].map((m) => `<button class="sbtn acc" data-grant="${m}" data-id="${u.id}">+${m === 12 ? '1 anno' : m + (m === 1 ? ' mese' : ' mesi')}</button>`).join('')}

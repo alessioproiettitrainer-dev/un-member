@@ -397,7 +397,7 @@ function render() {
   const after = afterIt ? `${afterIt.reps || (afterIt.time ? afterIt.time + 's' : '')} ${exOf(afterIt.exerciseId).name}` : next?.video && !s.rest && !s.ready ? nextLabel(next) : '';
   // anteprima: un fotogramma fermo del video dell'esercizio dopo (non parte, così non appesantisce il telefono)
   const afterVid = afterIt && (exOf(afterIt.exerciseId).videoBox || exOf(afterIt.exerciseId).video);
-  const afterPill = after ? `<div class="afterpill">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : ''}<div class="atxt"><span>Dopo</span><b>${esc(after.trim())}</b></div></div>` : '';
+  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt"><span>Dopo</span><b>${esc(after.trim())}</b></div></div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
   P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
@@ -421,8 +421,8 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video && !IOS ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}${afterPill}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
-      ${P.full ? afterPill : ''}
+      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video && !IOS ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
+      ${afterPill}
 
     </div>
     <div class="p-ctrl">${controls()}</div>

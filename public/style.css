@@ -414,13 +414,18 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 /* iPhone in risparmio energetico: i video non partono da soli */
 .tapplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 14px 20px; border-radius: 99px; border: 0; background: var(--accent); color: var(--accent-ink, #1a0c00); font-weight: 900; font-size: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
 
-/* "Dopo: prossimo esercizio" in una riga sopra il video, senza togliere spazio */
-.afterpill { position: absolute; left: 10px; bottom: 10px; right: 56px; z-index: 2; display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 14px; background: rgba(10, 10, 12, .74); backdrop-filter: blur(6px); color: #fff; }
-.video .afterpill video.athumb, .afterpill video.athumb { position: static; inset: auto; width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: #222; flex: none; }
-.afterpill .atxt { display: grid; min-width: 0; padding-right: 6px; }
-.afterpill .atxt span { color: var(--accent); font-size: 11px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; }
-.afterpill .atxt b { font-size: 14px; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player.full .afterpill { position: fixed; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); width: auto; }
+/* "Dopo": il prossimo esercizio in un riquadro sotto il video, su nero (come nelle app di allenamento) */
+.nextcard { flex: none; display: flex; gap: 12px; align-items: center; padding: 8px; border-radius: 14px; background: #000; border: 1px solid var(--line); }
+.nextcard .athumb, .nextcard video.athumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #1a1a1d; flex: none; }
+.nextcard .atxt { display: grid; min-width: 0; }
+.nextcard .atxt span { color: var(--accent); font-size: 11px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; }
+.nextcard .atxt b { font-size: 15px; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* schermo intero: il video si ferma più in alto e sotto, sopra i comandi, c'è il riquadro "Dopo" */
+.player.full .bgvid { bottom: calc(78px + 84px + env(safe-area-inset-bottom)); }
+.player.full .nextcard { position: fixed; z-index: 2; left: max(16px, calc(50% - 264px)); right: max(16px, calc(50% - 264px)); bottom: calc(78px + 10px + env(safe-area-inset-bottom)); border-color: transparent; }
+/* nel recupero niente sfondo sfocato: nero pulito */
+.player.resting .video.sq video.blurbg, .player.soon .video.sq video.blurbg { display: none; }
+.player.resting .video.sq, .player.soon .video.sq { background: #000; }
 
 /* prima visita di Allenamenti: da dove partire */
 .introsheet .intro-opt { background: var(--card-2, #1c1c20); border-radius: 14px; padding: 12px 14px; margin-top: 10px; display: grid; gap: 4px; }

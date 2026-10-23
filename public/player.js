@@ -66,6 +66,7 @@ export function stopPlayer() {
   clearInterval(P.timer);
   P.wake?.release?.().catch(() => {});
   window.speechSynthesis?.cancel?.();
+  for (const v of [...(P.vcache || []), ...P.root.querySelectorAll('video')]) { v.pause(); v.removeAttribute('src'); v.load(); } // libera i video
   P = null;
 }
 
@@ -386,6 +387,7 @@ function render() {
       : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 
+  const oldVideos = [...P.root.querySelectorAll('video')];
   P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
     <div class="p-top">
@@ -414,7 +416,27 @@ function render() {
     </div>
     <div class="p-ctrl">${controls()}</div>
   </div>`;
+  keepVideos(oldVideos);
   updateClock();
+}
+// Rimette al loro posto i video che erano già caricati e in riproduzione (stesso file, stesso ruolo):
+// così a ogni cambio schermata il telefono non riscarica e ridecodifica tutto da capo, che sui telefoni
+// meno potenti (soprattutto iPhone) faceva bloccare il player.
+function keepVideos(old) {
+  const cache = (P.vcache ||= []);
+  const pool = old.filter((v) => v.src).concat(cache);
+  for (const nv of P.root.querySelectorAll('video')) {
+    const i = pool.findIndex((v) => v.src === nv.src && v.className === nv.className);
+    if (i < 0) continue;
+    const ov = pool.splice(i, 1)[0];
+    const ci = cache.indexOf(ov); if (ci >= 0) cache.splice(ci, 1);
+    nv.replaceWith(ov);
+    if (ov.paused) ov.play().catch(() => {});
+  }
+  // i video tolti dallo schermo restano pronti in memoria (gli ultimi 6): nell'EMOM che alterna gli esercizi
+  // si rimettono senza ricaricarli; quelli più vecchi si liberano davvero
+  for (const v of pool) if (!cache.includes(v)) { v.pause(); cache.push(v); }
+  while (cache.length > 6) { const v = cache.shift(); v.removeAttribute('src'); v.load(); }
 }
 
 const t_ex = (ev) => ev.target.closest('[data-ex]').dataset.ex;

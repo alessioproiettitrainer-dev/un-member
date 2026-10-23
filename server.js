@@ -226,6 +226,15 @@ app.post('/api/auth/logout', (req, res) => {
 
 // ---- contenuti per i membri -------------------------------------------------
 app.get('/api/settings', (req, res) => res.json(db.settings));
+// registro degli errori dei telefoni (ultimi 300), per capire i problemi segnalati dai clienti
+app.post('/api/log', express.text({ type: '*/*', limit: '4kb' }), (req, res) => {
+  let b = req.body && typeof req.body === 'object' ? req.body : {}; if (typeof req.body === 'string') try { b = JSON.parse(req.body); } catch {}
+  const u = currentUser(req);
+  (db.clientLogs ||= []).push({ at: new Date().toISOString(), user: u?.name || '', msg: String(b.msg || '').slice(0, 500), page: String(b.page || '').slice(0, 80), ua: String(req.get('user-agent') || '').slice(0, 160) });
+  if (db.clientLogs.length > 300) db.clientLogs.splice(0, db.clientLogs.length - 300);
+  activityDirty = true;
+  res.status(204).end();
+});
 
 const addWeeks = (d, w) => new Date(new Date(d).getTime() + w * 7 * 864e5).toISOString().slice(0, 10);
 // fine del ciclo (giorno dopo l'ultimo): la data scelta nel pannello, altrimenti inizio + settimane
@@ -848,6 +857,7 @@ admin.post('/kalos/invited', (req, res) => {
   save();
   res.json({ marked: n });
 });
+admin.get('/logs', (req, res) => res.json((db.clientLogs || []).slice(-100).reverse()));
 admin.post('/kalos/run', async (req, res) => {
   if (!kalosConfigured()) return res.status(400).json({ error: 'Mancano KALOS_EMAIL e KALOS_PASSWORD su Render' });
   try { res.json(await runKalos(`Kalos (${req.who})`)); } catch (e) { res.status(409).json({ error: e.message }); }

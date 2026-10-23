@@ -1020,6 +1020,10 @@ async function chatView(room) {
 // ---- avvio -------------------------------------------------------------------
 (async () => {
   try {
+    // errori del telefono del cliente → registro nel server, per capire i blocchi che ci segnalano
+    const report = (msg) => { try { navigator.sendBeacon?.('/api/log', new Blob([JSON.stringify({ msg: String(msg).slice(0, 500), page: location.hash.slice(0, 80) })], { type: 'application/json' })); } catch {} };
+    window.addEventListener('error', (e) => report(`${e.message} @ ${e.filename?.split('/').pop()}:${e.lineno}`));
+    window.addEventListener('unhandledrejection', (e) => report(`promise: ${e.reason?.message || e.reason}`));
     SETTINGS = await (await fetch('/api/settings')).json();
     setPace(SETTINGS.paceFactor);
     document.title = SETTINGS.appName;

@@ -390,6 +390,11 @@ function render() {
       : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
   }
 
+  // "Dopo": il prossimo esercizio in una riga sopra il video, mentre si lavora (nel recupero c'è già l'anteprima)
+  const after = s.ready || s.rest || emomRest ? null
+    : g && !s.emom && items.length > 1 && g.i < items.length - 1 ? `${items[g.i + 1].reps || (items[g.i + 1].time ? items[g.i + 1].time + 's' : '')} ${exOf(items[g.i + 1].exerciseId).name}`
+    : next ? nextLabel(next) : '';
+  const afterPill = after ? `<div class="afterpill"><span>Dopo</span>${esc(after.trim())}</div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
   P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
@@ -413,9 +418,9 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video && !IOS ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
-      ${next && !s.ready && !s.rest && !emomRest ? `<div class="next">${nextE?.video ? (IOS ? `<video src="${esc(nextE.video)}#t=0.5" muted playsinline preload="metadata"></video>` : `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>`) : '<div class="ph"></div>'}
-        <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
+      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video && !IOS ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}${afterPill}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
+      ${P.full ? afterPill : ''}
+
     </div>
     <div class="p-ctrl">${controls()}</div>
   </div>`;

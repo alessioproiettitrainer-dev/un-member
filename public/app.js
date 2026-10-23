@@ -320,6 +320,26 @@ async function trainView() {
     ${base.length ? `<div class="h2">Programmi base</div>${base.map((p) => programCard(p, mine(p))).join('')}` : ''}
 
     ${!list.length ? '<div class="empty">Nessun programma pubblicato per ora.</div>' : ''}`);
+  if (SETTINGS.trainIntro !== false && !ME.seen?.trainIntro && ME.id !== 'admin-preview') trainIntro(base, current);
+}
+// Prima visita di Allenamenti: da dove partire (una volta sola per account)
+function trainIntro(base, current) {
+  const m = document.createElement('div');
+  m.className = 'tutmodal introsheet';
+  const firstBase = base[0];
+  m.innerHTML = `<div class="sc-box">
+    <div class="h1" style="font-size:26px;margin-top:0">Da dove <em>partire?</em></div>
+    <div class="intro-opt"><b>🟢 Sei nuovo o hai iniziato da poco?</b>
+      <div class="muted">Parti dai <b>Kettlebell Base</b>: prima il <b>Volume 1</b>, poi il 2 e il 3. Ogni volume è un po' più difficile del precedente, così impari bene la tecnica e cresci passo dopo passo.</div></div>
+    <div class="intro-opt"><b>🔥 Sei già intermedio o avanzato?</b>
+      <div class="muted">Puoi allenarti con il <b>ciclo del mese</b>, quello in corso.</div></div>
+    <div class="intro-warn">⚠️ Se sei nuovo, <b>non partire dal ciclo in corso</b>: è pensato per chi ha già esperienza e rischi di non riuscire a stare al passo.</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px">
+      ${firstBase ? `<a class="btn primary" style="flex:1" href="#/p/${firstBase.id}" data-close>Inizio dal Volume 1</a>` : ''}
+      <button class="btn" style="flex:1" data-close>Ho capito</button></div></div>`;
+  const close = () => { m.remove(); ME.seen = { ...(ME.seen || {}), trainIntro: true }; api('/api/me/seen', 'POST', { key: 'trainIntro' }).catch(() => {}); };
+  m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-close]')) close(); });
+  document.body.append(m);
 }
 
 async function programView(pid) {

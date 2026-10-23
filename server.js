@@ -20,7 +20,7 @@ fs.mkdirSync(PRIVATE, { recursive: true });
 
 // ---- storage: un file JSON, scritto in modo atomico ------------------------
 const EMPTY = {
-  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, dripWeeks: true, welcomeTitle: 'Guarda il video di benvenuto', welcomeVideo: '', welcomeUrl: '', shopLabel: '',
+  settings: { appName: 'UN-MEMBER', logo: '', tagline: 'Allenati ovunque.', shopUrl: '', supportEmail: '', trialEnabled: false, trialDays: 7, dripWeeks: true, trainIntro: true, welcomeTitle: 'Guarda il video di benvenuto', welcomeVideo: '', welcomeUrl: '', shopLabel: '',
     plans: [
       { title: 'Solo allenamenti', price: '30 €', period: 'al mese', note: '', url: '', best: false },
       { title: 'Allenamenti + alimentazione', price: '56 €', period: 'al mese', note: 'Con il piano alimentare del nutrizionista', url: '', best: true },
@@ -319,6 +319,12 @@ me.use((req, res, next) => {
 });
 me.get('/', (req, res) => res.json(publicUser(req.user)));
 // video di benvenuto: si ricorda quale video ha già guardato (o chiuso); se cambia il video, ricompare
+// messaggi da mostrare una volta sola (es. "da dove partire" alla prima visita di Allenamenti)
+me.post('/seen', (req, res) => {
+  const k = String(req.body?.key || '').replace(/[^\w-]/g, '').slice(0, 40);
+  if (k) { (req.user.seen ||= {})[k] = today(); save(); }
+  res.json({ ok: true });
+});
 me.put('/welcome', (req, res) => {
   req.user.welcomeSeen = String(req.body?.seen || '').slice(0, 500);
   save();

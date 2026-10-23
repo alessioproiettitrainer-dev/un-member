@@ -413,3 +413,14 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 
 /* iPhone in risparmio energetico: i video non partono da soli */
 .tapplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 14px 20px; border-radius: 99px; border: 0; background: var(--accent); color: var(--accent-ink, #1a0c00); font-weight: 900; font-size: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+
+/* "Dopo: prossimo esercizio" in una riga sopra il video, senza togliere spazio */
+.afterpill { position: absolute; left: 10px; bottom: 10px; right: 56px; z-index: 2; display: flex; gap: 8px; align-items: center; padding: 7px 12px; border-radius: 12px; background: rgba(10, 10, 12, .72); backdrop-filter: blur(6px); color: #fff; font-weight: 800; font-size: 13px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.afterpill span { color: var(--accent); font-size: 11px; letter-spacing: .6px; flex: none; }
+.player.full .afterpill { position: fixed; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); width: auto; }
+
+/* prima visita di Allenamenti: da dove partire */
+.introsheet .intro-opt { background: var(--card-2, #1c1c20); border-radius: 14px; padding: 12px 14px; margin-top: 10px; display: grid; gap: 4px; }
+.introsheet .intro-warn { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--accent); font-size: 14px; }
+.tutmodal.introsheet { position: fixed; z-index: 60; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+.introsheet .sc-box { text-align: left; }

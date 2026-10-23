@@ -1,8 +1,24 @@
 # Note per Claude
 
-- Parla in italiano con il proprietario (coach, non programmatore): spiegazioni semplici, passi concreti.
+- Parla in italiano con il proprietario (Alessio, coach, non programmatore): spiegazioni semplici, passi concreti.
 - **Risparmio di utilizzo di Claude**: quando un lavoro ripetitivo può girare dentro l'app (server su Render) invece che in una sessione o attività programmata di Claude, proponilo sempre e dillo esplicitamente. Esempi già fatti: lettura giornaliera da Kalos (`kalos.js`), email della prova e campagne inviate dall'app via Gmail (`mailer.js`, `mails.js`).
 - Kalos (gestionale esterno, non nostro): **solo lettura**, mai modificare, mai aprire chat o schede. Il collegamento fa solo login + lista low ticket.
 - Clienti Kalos ↔ app: si collegano **solo per email identica**, mai per nome.
 - Segreti (ADMIN_KEY, credenziali Kalos e Gmail) solo nelle variabili d'ambiente di Render, mai nel codice: il repository è pubblico.
 - Email a gruppi di persone (eventi, inviti): crea una campagna con `POST /api/admin/campaign` (`label`, `subject`, `body`, `htmlBody`, `recipients: [{email, name}]`, `{nome}` nel testo). La stessa etichetta non rimanda mai a chi l'ha già ricevuta. Mostra sempre il testo al proprietario prima di inviare.
+
+## Com'è fatta l'app
+- Online su https://un-member.onrender.com (pannello: `/admin`). Ogni push su `main` viene pubblicato da Render in 2-3 minuti. Copia del codice anche in `/home/user/kettlebell-app` se presente.
+- Node + Express, dati in `data/db.json` (disco di Render). Frontend in `public/` (`app.js`, `player.js` = player degli allenamenti, `engine.js` = calcolo degli step, `admin.js` = pannello).
+- Chiamate al server vero dalla sessione: `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node -e "fetch(...)"` con header `x-admin-key` (chiedi la chiave al proprietario, non scriverla nei file).
+- Test in locale: `ADMIN_KEY=test123 PORT=3000 node server.js`; Playwright in `/opt/node22/lib/node_modules/playwright/index.mjs` (Chromium headless non riproduce H.264: per i video usa copie .webm).
+
+## Decisioni già prese (non rimetterle in discussione)
+- EMOM: niente tasto "Fatto"; gli esercizi dell'intervallo girano in loop (rip × secondi per rip × "Ritmo delle ripetizioni" in Impostazioni); a 15 s dalla fine anteprima verde del prossimo, o "Recupero completo" se dopo c'è l'intervallo di recupero.
+- Player: riquadro "Dopo" con immagine sotto il video (anche a schermo intero); su iPhone un solo video alla volta e tasto "Tocca per avviare il video" se il risparmio energetico blocca l'autoplay; nel recupero niente sfocato, nero.
+- Prova gratuita 7 giorni: parte da sola all'iscrizione (una per email). Email automatiche dall'app: 2° giorno, 4° giorno, ultimo giorno (con piani e link consulenza Calendly da Impostazioni).
+- Kettlebell Base Vol.1-3 per i nuovi, ciclo del mese per intermedi/avanzati (popup alla prima visita di Allenamenti).
+
+## Lavoro in arrivo: rifare tutti i video
+- Lista nel Word "Video da registrare" (150 esercizi esistenti + 44 nuovi con 1/2 kettlebell + 30 TRX alla porta).
+- Alessio gira in 4K orizzontale con Sony, un video lungo per sessione: dice il nome dell'esercizio, batte le mani, poi 3-4 ripetizioni. Va fatto: trascrizione audio, abbinamento nomi, scelta delle ripetizioni più pulite (7-10 s, loop), ritaglio 4:5 (`videoBox`) e 9:16 (`video`) centrato sul movimento, compressione 1080, sostituzione negli esercizi esistenti (i workout restano), misura dei secondi per ripetizione. Lavorare un file alla volta (spazio disco limitato). Prima una prova con 3-4 esercizi.

@@ -902,7 +902,7 @@ function trialDue() {
   const t = today(), days = Math.max(1, Number(db.settings.trialDays) || 7);
   return db.users.filter((u) => inTrial(u) && !u.community?.banned).map((u) => {
     const st = mails.dueStage(u, t, days);
-    return st && { userId: u.id, stage: st.key, day: st.day, to: u.email, ...mails.render(st.key, mails.firstName(u.name), PUBLIC_URL) };
+    return st && { userId: u.id, stage: st.key, day: st.day, to: u.email, ...mails.render(st.key, mails.firstName(u.name), PUBLIC_URL, db.settings) };
   }).filter(Boolean);
 }
 app.get('/api/mail/trial-due', mailAuth, (req, res) => res.json(trialDue()));

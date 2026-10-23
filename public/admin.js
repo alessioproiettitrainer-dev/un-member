@@ -428,6 +428,10 @@ function settingsView() {
         <button class="sbtn" data-act="mail-run" ${S.mail.configured ? '' : 'disabled'}>Invia ora quelle di oggi</button></div>
       ${S.mail.campaigns.length ? `<div class="lbl2" style="margin-top:10px">Invii</div>${S.mail.campaigns.slice(-6).reverse().map((c) => `<div class="muted small">${esc(c.label)} · ${c.sent}/${c.total} inviate${c.failed ? ` · ${c.failed} errori` : ''}${c.done ? '' : ' · in corso'}</div>`).join('')}` : ''}
       ${S.mail.log.length ? `<div class="lbl2" style="margin-top:10px">Ultimi invii automatici</div>${S.mail.log.slice(0, 5).map((l) => `<div class="muted small">${new Date(l.date).toLocaleString('it-IT')} · ${l.kind === 'prova' ? 'prova' : esc(l.label || '')}: ${l.sent} inviate${l.failed ? `, ${l.failed} errori${l.error ? ` (${esc(l.error)})` : ''}` : ''}${l.left ? `, ${l.left} rimandate a domani` : ''}</div>`).join('')}` : ''}`}</div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Consulenza gratuita (servizio personalizzato)</label>
+      <div class="grid2"><div class="f" style="margin:0"><label>Link per prenotare la call</label><input type="text" data-set="consultUrl" value="${esc(st.consultUrl || '')}" placeholder="es. https://calendly.com/…"></div>
+        <div class="f" style="margin:0"><label>Scritta del tasto</label><input type="text" data-set="consultLabel" value="${esc(st.consultLabel || '')}" placeholder="Prenota la consulenza gratuita"></div></div>
+      <div class="muted small">Compare nell'email dell'ultimo giorno di prova, sotto i piani. Ricordati di salvare.</div></div>
     <div class="f"><label>Email di assistenza</label><input type="text" data-set="supportEmail" value="${esc(st.supportEmail)}"></div>
     <div class="f"><label>Regole della community (le accetta chi entra)</label><textarea data-set="communityRules" rows="4">${esc(st.communityRules)}</textarea></div>
     <div class="f"><label>Logo (PNG trasparente, versione bianca per sfondo scuro)</label><input type="file" accept="image/*" data-upload="logo">

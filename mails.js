@@ -12,7 +12,7 @@ const firstName = (name) => {
   return n ? n[0].toUpperCase() + n.slice(1).toLowerCase() : '';
 };
 
-function render(key, name, url) {
+function render(key, name, url, settings = {}) {
   const ciao = name ? `Ciao ${name}!` : 'Ciao!';
   const btn = (t) => `<p style="margin:22px 0"><a href="${url}" style="background:#ff7a00;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 22px;border-radius:10px;display:inline-block">${t}</a></p>`;
   const wrap = (html) => `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px">${html}</div>`;
@@ -42,20 +42,27 @@ function render(key, name, url) {
       ],
     },
     last: {
-      subject: `${name ? `${name}, ultimo` : 'Ultimo'} giorno: mi dici la tua? 🙏`,
+      subject: `${name ? `${name}, com'è` : 'Com\'è'} andata la settimana di prova? 🙏`,
       paras: [
         ciao,
-        'Oggi è l\'ultimo giorno della tua settimana di prova. Spero che sia andata alla grande!',
-        'Ti chiedo solo <b>una cosa, 30 secondi</b>: rispondi a questa email con<br>1️⃣ cosa ti è piaciuto di più<br>2️⃣ cosa cambieresti<br>3️⃣ da 1 a 10, quanto la consiglieresti a un amico',
-        'È davvero il feedback che mi serve per decidere se lanciare questa versione per tutti.',
-        'Se vuoi continuare ad allenarti con l\'app, trovi i piani nella sezione <b>Profilo → Abbonamento</b>.',
-        '__BTN__Apri l\'app',
+        'Oggi è l\'ultimo giorno della tua settimana di prova: <b>com\'è andata? Ti è piaciuta?</b> Rispondimi anche solo con due righe: cosa ti è piaciuto, cosa cambieresti. Lo leggo io personalmente ed è il feedback che mi serve per migliorarla.',
+        '<b>Vuoi continuare ad allenarti con l\'app?</b> Scegli il piano che fa per te:',
+        '__PLANS__',
+        ...(settings.consultUrl ? ['<b>Preferisci un percorso su misura?</b> Se vuoi un servizio personalizzato, prenota una <b>consulenza gratuita</b> con il mio collaboratore: insieme capite qual è la soluzione giusta per te.', '__CONSULT__'] : []),
         'Grazie di cuore, ci vediamo dentro!<br>Alessio',
       ],
     },
   }[key];
-  const html = wrap(T.paras.map((p) => (p.startsWith('__BTN__') ? btn(p.slice(7)) : `<p>${p}</p>`)).join(''));
-  const body = T.paras.map((p) => (p.startsWith('__BTN__') ? `${p.slice(7)}: ${url}` : p.replace(/<br>/g, '\n').replace(/<[^>]+>/g, ''))).join('\n\n');
+  const plans = (settings.plans || []).filter((x) => x.url);
+  const esc = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const plansHtml = plans.map((x) => `<div style="border:1px solid ${x.best ? '#ff7a00' : '#e3e3e3'};border-radius:12px;padding:12px 14px;margin:8px 0"><b>${esc(x.title)}</b>${x.best ? ' <span style="color:#ff7a00;font-size:12px;font-weight:bold">· consigliato</span>' : ''}<br><span style="font-size:18px;font-weight:bold">${esc(x.price)}</span> <span style="color:#777">${esc(x.period)}</span>${x.note ? `<br><span style="color:#777;font-size:13px">${esc(x.note)}</span>` : ''}<br><a href="${esc(x.url)}" style="display:inline-block;margin-top:8px;background:${x.best ? '#ff7a00' : '#1a1a1a'};color:#ffffff;text-decoration:none;font-weight:bold;padding:9px 16px;border-radius:9px">Scegli questo piano</a></div>`).join('');
+  const consult = settings.consultUrl ? `<p style="margin:18px 0"><a href="${esc(settings.consultUrl)}" style="background:#1a1a1a;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 22px;border-radius:10px;display:inline-block">${esc(settings.consultLabel || 'Prenota la consulenza gratuita')}</a></p>` : '';
+  const part = (p) => (p === '__PLANS__' ? plansHtml || btn('Scegli il tuo piano') : p === '__CONSULT__' ? consult : p.startsWith('__BTN__') ? btn(p.slice(7)) : `<p>${p}</p>`);
+  const html = wrap(T.paras.map(part).join(''));
+  const text = (p) => (p === '__PLANS__' ? (plans.length ? plans.map((x) => `• ${x.title}: ${x.price} ${x.period} → ${x.url}`).join('\n') : `Scegli il tuo piano: ${url}/#/abbonati`)
+    : p === '__CONSULT__' ? `${settings.consultLabel || 'Prenota la consulenza gratuita'}: ${settings.consultUrl}`
+    : p.startsWith('__BTN__') ? `${p.slice(7)}: ${url}` : p.replace(/<br>/g, '\n').replace(/<[^>]+>/g, ''));
+  const body = T.paras.map(text).join('\n\n');
   return { subject: T.subject, body, htmlBody: html };
 }
 

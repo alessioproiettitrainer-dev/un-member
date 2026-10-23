@@ -295,6 +295,9 @@ function variantButtons(item) {
     <button ${i < steps.length - 1 ? `data-sub="${steps[i + 1]}"` : 'disabled'}>↑ Più difficile</button></div>`;
 }
 
+// Su iPhone/iPad gira un solo video alla volta: niente sfondo sfocato duplicato e anteprima del prossimo ferma
+// (tre video insieme fanno scattare i modelli meno recenti).
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function videoEl(e) {
   if (e.video) return `<video src="${esc(e.video)}" autoplay muted loop playsinline preload="auto"></video>`;
   const emb = embedUrl(e.videoUrl, { loop: true });
@@ -410,14 +413,31 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
-      ${next && !s.ready && !s.rest && !emomRest ? `<div class="next">${nextE?.video ? `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>` : '<div class="ph"></div>'}
+      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video && !IOS ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
+      ${next && !s.ready && !s.rest && !emomRest ? `<div class="next">${nextE?.video ? (IOS ? `<video src="${esc(nextE.video)}#t=0.5" muted playsinline preload="metadata"></video>` : `<video src="${esc(nextE.video)}" autoplay muted loop playsinline></video>`) : '<div class="ph"></div>'}
         <div><div class="k">DOPO${next.ready ? ` · ${esc(next.block)}` : ''}</div><div class="v">${esc(nextLabel(next))}</div></div></div>` : ''}
     </div>
     <div class="p-ctrl">${controls()}</div>
   </div>`;
   keepVideos(oldVideos);
+  checkAutoplay();
   updateClock();
+}
+// Con il risparmio energetico l'iPhone non fa partire i video da soli: sembra tutto bloccato.
+// Se succede, compare un tasto: un tocco e i video ripartono (e da lì in poi vanno da soli).
+function checkAutoplay() {
+  const v = P.root.querySelector('.video video:not(.blurbg), .bgvid video');
+  if (!v) return;
+  if (P.videoTapped) { for (const x of P.root.querySelectorAll('video[autoplay]')) x.play().catch(() => {}); return; } // dopo il tocco li avvia l'app
+  const p = v.play?.();
+  if (!p?.catch) return;
+  p.catch(() => {
+    if (P.root.querySelector('.tapplay')) return;
+    const b = document.createElement('button');
+    b.className = 'tapplay'; b.textContent = '▶ Tocca per avviare il video';
+    b.onclick = (ev) => { ev.stopPropagation(); P.videoTapped = true; for (const x of P.root.querySelectorAll('video[autoplay]')) x.play().catch(() => {}); b.remove(); };
+    (v.closest('.video') || v.parentElement).append(b);
+  });
 }
 // Rimette al loro posto i video che erano già caricati e in riproduzione (stesso file, stesso ruolo):
 // così a ogni cambio schermata il telefono non riscarica e ridecodifica tutto da capo, che sui telefoni

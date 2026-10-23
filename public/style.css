@@ -410,3 +410,6 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .vbadge.soon { background: var(--soon); color: #032312; }
 .player.soon .video.sq { box-shadow: 0 0 0 3px var(--soon); }
 .tile.soon .big { color: var(--soon); }
+
+/* iPhone in risparmio energetico: i video non partono da soli */
+.tapplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; padding: 14px 20px; border-radius: 99px; border: 0; background: var(--accent); color: var(--accent-ink, #1a0c00); font-weight: 900; font-size: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }

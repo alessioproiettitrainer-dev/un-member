@@ -15,7 +15,7 @@ for (const it of plan) {
   const fd = new FormData(); fd.append('file', new Blob([fs.readFileSync(it.file)], { type: 'video/mp4' }), 'clip.mp4');
   let up; for (let t = 0; t < 5 && !up; t++) { const r = await fetch(B + '/api/admin/upload?raw=1', { method: 'POST', headers: H, body: fd }); try { up = JSON.parse(await r.text()); } catch { await new Promise((s) => setTimeout(s, 8000)); } }
   if (!ex) ex = await api('POST', '/api/admin/exercises', { name: it.name, category: it.category || '' });
-  const upd = { ...ex, video: up.url, videoBox: up.url, ...(it.secPerRep !== undefined ? { secPerRep: it.secPerRep } : {}), ...(it.repsInVideo !== undefined ? { repsInVideo: it.repsInVideo } : {}) };
+  const upd = { ...ex, ...(it.rename ? { name: it.rename } : {}), video: up.url, videoBox: up.url, ...(it.secPerRep !== undefined ? { secPerRep: it.secPerRep } : {}), ...(it.repsInVideo !== undefined ? { repsInVideo: it.repsInVideo } : {}) };
   const saved = await api('PUT', `/api/admin/exercises/${ex.id}`, upd);
   console.log(it.id ? 'SOSTITUITO' : 'NUOVO', saved.id, saved.name, saved.video, saved.secPerRep ?? '', up.after);
 }

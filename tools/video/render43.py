@@ -17,5 +17,9 @@ for p in json.load(open(PICK)):
     y=max(0,min(FH-h,int(y1-0.88*h)))
     if p.get('crop'): w,h,x,y=p['crop']
     vf=f"crop={w}:{h}:{x}:{y},scale=1280:960:flags=lanczos,{LIGHT}"
-    subprocess.run(['ffmpeg','-v','error','-y','-ss',str(p['start']),'-t',f"{p['end']-p['start']:.2f}",'-i',SRC,'-vf',vf]+ENC+[f"{OUT}/{p['name']}.mp4"],check=True)
+    # loop senza scatto: la clip parte da start+D e negli ultimi D secondi sfuma nei primi D (fine e inizio coincidono)
+    L=p['end']-p['start']; D=0.3
+    fc=(f"[0]{vf},split=3[a][b][c];[a]trim={D}:{L},setpts=PTS-STARTPTS[mid];[b]trim={L}:{L+D},setpts=PTS-STARTPTS[t];"
+        f"[c]trim=0:{D},setpts=PTS-STARTPTS[h];[t][h]xfade=transition=fade:duration={D-0.01:.2f}:offset=0[x];[mid][x]concat=n=2:v=1:a=0")
+    subprocess.run(['ffmpeg','-v','error','-y','-ss',str(p['start']),'-t',f"{L+D+0.1:.2f}",'-i',SRC,'-filter_complex',fc]+ENC+[f"{OUT}/{p['name']}.mp4"],check=True)
     print(p['name'],w,h,x,y,flush=True)

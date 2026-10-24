@@ -424,6 +424,9 @@ function settingsView() {
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Ritmo delle ripetizioni (EMOM e giri guidati)</label>
       <select id="pace">${[[1, 'Come nei video demo'], [1.15, '+15% più lento'], [1.25, '+25% più lento'], [1.35, '+35% più lento'], [1.5, '+50% più lento']].map(([v, l]) => `<option value="${v}" ${Number(st.paceFactor || 1) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <div class="muted small">Vale per tutti gli esercizi a ripetizioni: es. 10 swing da 1 secondo durano 10 s "come nei video", 12,5 s con +25%. I video demo sono eseguiti a ritmo pulito; chi si allena con il peso e la fatica va più piano. Si applica subito, senza toccare i workout.</div></div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Zoom dei video degli esercizi</label>
+      <select id="vzoom">${[[1, 'Nessuno (inquadratura intera)'], [1.1, '+10%'], [1.2, '+20%'], [1.3, '+30%'], [1.4, '+40%']].map(([v, l]) => `<option value="${v}" ${Number(st.videoZoom || 1.2) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <div class="muted small">Ingrandisce i video orizzontali nel riquadro del player e nella scheda esercizio, tenendo i piedi in basso. Non tocca i file: si cambia quando vuoi.</div></div>
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Sblocco graduale delle settimane</label>
       <label class="chk"><input type="checkbox" data-set="dripWeeks" ${st.dripWeeks !== false ? 'checked' : ''}> Programmi base: una settimana nuova ogni 7 giorni da quando il membro inizia</label>
       <div class="muted small">Così chi si abbona un mese non può vedere (e fotografare) tutto il programma il primo giorno. Nei cicli si vedono sempre le settimane passate e quella in corso, mai quelle future.</div></div>
@@ -671,6 +674,11 @@ function softRender() {
 
 root.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'vzoom') {
+    await call('PUT', '/api/admin/settings', { videoZoom: Number(t.value) });
+    S.settings.videoZoom = Number(t.value);
+    return toast(Number(t.value) === 1 ? 'Video senza zoom' : `Video ingranditi del ${Math.round((Number(t.value) - 1) * 100)}%`);
+  }
   if (t.id === 'pace') {
     await call('PUT', '/api/admin/settings', { paceFactor: Number(t.value) });
     S.settings.paceFactor = Number(t.value); setPace(S.settings.paceFactor);

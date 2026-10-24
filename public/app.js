@@ -398,7 +398,7 @@ async function workoutView(pid, wid) {
     const m = document.createElement('div');
     m.className = 'demosheet';
     m.innerHTML = `<div class="card"><div class="row between"><div class="h2" style="margin:0">${esc(e.name)}</div><button class="icon" data-close aria-label="Chiudi">✕</button></div>
-      <div class="demovid">${e.videoBox || e.video ? `<video src="${esc(e.videoBox || e.video)}" autoplay muted loop playsinline></video>` : emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : '<div class="muted" style="padding:40px;text-align:center">Video non ancora caricato</div>'}</div>
+      <div class="demovid">${e.videoBox || e.video ? `<video src="${esc(e.videoBox || e.video)}" autoplay muted loop playsinline onloadedmetadata="this.classList.toggle('land', this.videoWidth / this.videoHeight > 1.2)"></video>` : emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : '<div class="muted" style="padding:40px;text-align:center">Video non ancora caricato</div>'}</div>
       ${e.cues ? `<div class="muted" style="margin-top:10px">${esc(e.cues)}</div>` : ''}</div>`;
     m.onclick = (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) m.remove(); };
     document.body.append(m);
@@ -1078,6 +1078,7 @@ async function chatView(room) {
     window.addEventListener('unhandledrejection', (e) => report(`promise: ${e.reason?.message || e.reason}`));
     SETTINGS = await (await fetch('/api/settings')).json();
     setPace(SETTINGS.paceFactor);
+    document.documentElement.style.setProperty('--vzoom', SETTINGS.videoZoom || 1.2);
     document.title = SETTINGS.appName;
   } catch {}
   route();

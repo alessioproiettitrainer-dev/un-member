@@ -458,3 +458,5 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .nextcard .athumb, .nextcard video.athumb { width: 84px; height: 63px; }
 .nextcard .atxt span { color: var(--text, #fff); font-size: 13px; }
 .nextcard .atxt b { color: var(--muted); font-weight: 700; text-transform: none; font-size: 15px; }
+/* zoom dei video orizzontali (Impostazioni → Zoom dei video): ingrandisce tenendo i piedi in basso */
+.player .video.sq video.land, .demovid video.land { transform: scale(var(--vzoom, 1.2)); transform-origin: 50% 78%; }

@@ -423,7 +423,7 @@ function render() {
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
       <div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : videoEl(fe)}${badge}</div>
-      ${afterPill ? `<div class="nexthead">Dopo</div>${afterPill}` : ''}
+      ${afterPill ? `<div class="nexthead">Dopo</div>${afterPill}` : '<div class="nexthead" style="visibility:hidden">Dopo</div><div class="nextcard" style="visibility:hidden"><div class="athumb"></div></div>'}
 
     </div>
     <div class="p-ctrl">${controls()}</div>
@@ -466,7 +466,8 @@ function keepVideos(old) {
   const cache = (P.vcache ||= []);
   const pool = old.filter((v) => v.src).concat(cache);
   for (const nv of P.root.querySelectorAll('video')) {
-    const i = pool.findIndex((v) => v.src === nv.src && v.className === nv.className);
+    const cls = (v) => v.className.replace(/\bland\b/, '').trim(); // 'land' lo aggiunge fitVideos dopo: non conta
+    const i = pool.findIndex((v) => v.src === nv.src && cls(v) === cls(nv));
     if (i < 0) continue;
     const ov = pool.splice(i, 1)[0];
     const ci = cache.indexOf(ov); if (ci >= 0) cache.splice(ci, 1);

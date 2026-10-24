@@ -921,14 +921,15 @@ function compressVideo(src, keepAudio = false) {
     if (!FFMPEG) return resolve(null);
     const out = src.replace(/\.[^.]+$/, '') + '-720.mp4';
     const { execFile } = require('child_process');
-    execFile(FFMPEG, ['-y', '-i', src, '-vf', "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'", '-r', '30',
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', ...(keepAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']), '-movflags', '+faststart', out],
+    execFile(FFMPEG, ['-y', '-threads', '2', '-i', src, '-vf', "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'", '-r', '30',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', ...(keepAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']), '-threads', '2', '-movflags', '+faststart', out],
     { timeout: 10 * 60 * 1000 }, (err) => resolve(err ? null : out));
   });
 }
 admin.post('/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Carica un video o un\'immagine' });
-  if (/^video\//.test(req.file.mimetype)) {
+  // ?raw=1: clip già preparate e compresse (es. i nuovi video degli esercizi), si salvano così come sono
+  if (/^video\//.test(req.file.mimetype) && !(req.query.raw === '1' && req.file.size < 15 * 1024 * 1024)) {
     const before = req.file.size;
     const out = await compressVideo(req.file.path, req.query.audio === '1'); // le demo senza audio, il video di benvenuto con la voce
     if (out) {

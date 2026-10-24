@@ -22,3 +22,6 @@
 ## Lavoro in arrivo: rifare tutti i video
 - Lista nel Word "Video da registrare" (150 esercizi esistenti + 44 nuovi con 1/2 kettlebell + 30 TRX alla porta).
 - Alessio gira in 4K orizzontale con Sony, un video lungo per sessione: dice il nome dell'esercizio, batte le mani, poi 3-4 ripetizioni. Va fatto: trascrizione audio, abbinamento nomi, scelta delle ripetizioni più pulite (7-10 s, loop), ritaglio 4:5 (`videoBox`) e 9:16 (`video`) centrato sul movimento, compressione 1080, sostituzione negli esercizi esistenti (i workout restano), misura dei secondi per ripetizione. Lavorare un file alla volta (spazio disco limitato). Prima una prova con 3-4 esercizi.
+- Luce: applica a TUTTE le clip la stessa correzione (più esposizione/luminosità, ombre schiarite): Alessio deve vedersi bene (viso, tatuaggi), lo sfondo può venire più chiaro/bruciato, non importa. Lui non batte sempre le mani: usa il nome detto (trascrizione) + inizio del movimento.
+- Inquadratura: nel 4K orizzontale il 9:16 prende ~1/3 centrale, il 4:5 poco meno di metà; si usa tutta l'altezza.
+- File grandi da Drive: il connettore Drive passa i file in base64 nel contesto (inutilizzabile per video). Farsi condividere il file "chiunque abbia il link" e scaricarlo con curl/gdown. Le clip finite si scaricano dall'app (pannello), non si caricano su Drive dal connettore.

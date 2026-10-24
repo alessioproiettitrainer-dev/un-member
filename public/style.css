@@ -497,3 +497,12 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .player .subnote button { padding: 4px 8px; font-size: 11px; }
 .player .circuit button.sel { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
 .player .circuit b { min-width: 0; }
+/* più spazio al video: niente frasi di aiuto ripetute, numeri più compatti */
+.player .now .donehint { display: none; }
+.player .repline { margin-top: 0; }
+.player .now .repnow, .player:not(.full) .now .repnow { font-size: 30px; }
+.player .reptot { font-size: 13px; }
+.player .now:has(.circuit) .note:not(.donehint) { display: none; }
+.player .now .subs { margin-top: 4px; }
+/* il video si vede sempre intero (mai piedi o testa tagliati), anche quando il riquadro è più basso */
+.player .video.sq video, .player .video.sq video.land { object-fit: contain; transform: none; }

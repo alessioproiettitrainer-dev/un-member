@@ -460,3 +460,30 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .nextcard .atxt b { color: var(--muted); font-weight: 700; text-transform: none; font-size: 15px; }
 /* zoom dei video orizzontali (Impostazioni → Zoom dei video): ingrandisce tenendo i piedi in basso */
 .player .video.sq video.land, .demovid video.land { transform: scale(var(--vzoom, 1.2)); transform-origin: 50% 78%; }
+/* Player che sta tutto nello schermo (senza scorrere) su qualsiasi telefono: il video prende lo spazio che resta */
+.player .p-scroll { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding-bottom: 8px; }
+.player .p-scroll > * { flex: none; }
+.player .timer { padding: 6px 12px; border-left-width: 4px; }
+.player .timer .big { font-size: 38px; }
+.player .timer .tinfo b { font-size: 17px; }
+.player .timer small { font-size: 9px; }
+.player .bar { margin: 2px 0; }
+.player .now { padding: 2px 2px 0; }
+.player .now .lab { font-size: 10px; }
+.player .now .reps { font-size: 20px; margin-top: 0; }
+.player .now .name { font-size: 15px; margin-top: 0; }
+.player .repnow { font-size: 34px; }
+.player .now .note { font-size: 12px; margin-top: 2px; -webkit-line-clamp: 1; }
+.player .now .subs { margin-top: 4px; }
+.player .now .subs button { padding: 4px 8px; font-size: 10px; }
+.player .upnext { padding: 6px 10px; margin-top: 4px; }
+.player .p-scroll > .video.sq { flex: 1 1 auto; aspect-ratio: auto; min-height: 140px; max-height: calc((100vw - 32px) * 0.75); height: auto; }
+.player .video.sq video { position: absolute; inset: 0; width: 100%; height: 100%; }
+.player .video.sq video.land { object-fit: cover; }
+.player .nexthead { font-size: 12px; margin-top: 2px; color: var(--muted); letter-spacing: .6px; }
+.player .nextcard { padding: 6px; gap: 10px; }
+.player .nextcard .athumb, .player .nextcard video.athumb { width: 64px; height: 48px; border-radius: 8px; }
+.player .nextcard .atxt span { font-size: 12px; }
+.player .nextcard .atxt b { font-size: 14px; }
+.player .p-ctrl { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.player .p-ctrl .btn { min-height: 48px; }

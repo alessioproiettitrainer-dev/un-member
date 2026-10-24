@@ -359,7 +359,7 @@ function render() {
   const pos = bs.indexOf(s);
   const nextE = next && !next.video && exOf(next.items[0].exerciseId);
   const mode = s.ready ? 'ready' : emomRest ? 'soon' : s.rest ? 'rest' : '';
-  const badge = mode === 'rest' ? '<span class="vbadge">Recupero · prossimo esercizio</span>' : mode === 'soon' ? '<span class="vbadge soon">Prossimo esercizio</span>' : '';
+  const badge = ''; // niente etichetta sul video: è già scritto sopra (recupero / prossimo esercizio)
 
   // riquadro del timer come in KBMH: a sinistra giro/round, a destra il tempo
   let info;

@@ -15,6 +15,7 @@ for p in json.load(open(PICK)):
     w,h=int(w)//2*2,int(h)//2*2
     x=max(0,min(FW-w,int((x0+x1)/2-w/2)))
     y=max(0,min(FH-h,int(y1-0.88*h)))
+    if p.get('crop'): w,h,x,y=p['crop']
     vf=f"crop={w}:{h}:{x}:{y},scale=1280:960:flags=lanczos,{LIGHT}"
     subprocess.run(['ffmpeg','-v','error','-y','-ss',str(p['start']),'-t',f"{p['end']-p['start']:.2f}",'-i',SRC,'-vf',vf]+ENC+[f"{OUT}/{p['name']}.mp4"],check=True)
     print(p['name'],w,h,x,y,flush=True)

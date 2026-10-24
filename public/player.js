@@ -77,7 +77,7 @@ export async function startPlayer(root, program, workout, opts) {
   P = {
     root, p: program, w: workout, steps, opts, idx: 0, running: true, endAt: 0, swStart: 0, swAcc: 0, remaining: 0,
     started: Date.now(), ladderStart: {}, focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
-    subs: store.get('subs', {}), voice: store.get('voice', true), full: store.get('fullVideo', false),
+    subs: store.get('subs', {}), voice: store.get('voice', true), full: false,
   };
   try { P.wake = await navigator.wakeLock?.request('screen'); } catch {}
   root.addEventListener('click', onClick);
@@ -244,7 +244,7 @@ function togglePause() {
   P.lastTick = performance.now();
   if (s.kind === 'timed' && P.running) P.endAt = performance.now() + P.remaining * 1000;
   if (s.kind === 'stopwatch') { if (P.running) P.swStart = performance.now(); else P.swAcc += (performance.now() - P.swStart) / 1000; }
-  P.root.querySelectorAll('.video video, .bgvid video').forEach((v) => (P.running ? v.play().catch(() => {}) : v.pause()));
+  P.root.querySelectorAll('.video video').forEach((v) => (P.running ? v.play().catch(() => {}) : v.pause()));
   renderControls();
 }
 
@@ -361,11 +361,12 @@ function render() {
   const mode = s.ready ? 'ready' : emomRest ? 'soon' : s.rest ? 'rest' : '';
   const badge = mode === 'rest' ? '<span class="vbadge">Recupero · prossimo esercizio</span>' : mode === 'soon' ? '<span class="vbadge soon">Prossimo esercizio</span>' : '';
 
-  let right;
-  if (s.amrap) right = `<div class="tile"><div class="big">${g ? g.round : P.amrap[s.block] || 0}</div><div class="lbl">Round fatti</div></div>`;
-  else if (s.kind === 'stopwatch') right = `<div class="tile"><div class="big">${g ? `${Math.min(g.round + 1, g.rounds || g.round + 1)}/${esc(s.counter)}` : esc(s.counter)}</div><div class="lbl">Round</div></div>`;
-  else if (s.ready) right = `<div class="tile"><div class="big" style="font-size:22px;padding:8px 0">${esc(s.summary || '')}</div><div class="lbl">${esc(s.block)}</div></div>`;
-  else right = `<div class="tile"><div class="big">${esc(s.counter || '')}</div><div class="lbl">${esc(s.counterLabel || '')}</div></div>`;
+  // riquadro del timer come in KBMH: a sinistra giro/round, a destra il tempo
+  let info;
+  if (s.amrap) info = [g ? g.round : P.amrap[s.block] || 0, 'Round fatti'];
+  else if (s.kind === 'stopwatch') info = [g ? `${Math.min(g.round + 1, g.rounds || g.round + 1)}/${s.counter}` : s.counter, 'Round'];
+  else if (s.ready) info = [s.summary || '', s.block];
+  else info = [s.counter || '', s.counterLabel || ''];
 
   let now;
   if (g) {
@@ -399,20 +400,18 @@ function render() {
   const after = afterIt ? `${afterIt.reps || (afterIt.time ? afterIt.time + 's' : '')} ${exOf(afterIt.exerciseId).name}` : next?.video && !s.rest && !s.ready ? nextLabel(next) : '';
   // anteprima: un fotogramma fermo del video dell'esercizio dopo (non parte, così non appesantisce il telefono)
   const afterVid = afterIt && (exOf(afterIt.exerciseId).videoBox || exOf(afterIt.exerciseId).video);
-  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt"><span>Dopo</span><b>${esc(after.trim())}</b></div></div>` : '';
+  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt">${afterIt ? `<span>${esc(afterIt.reps || (afterIt.time ? afterIt.time + ' sec' : ''))}</span><b>${esc(exOf(afterIt.exerciseId).name)}</b>` : `<b>${esc(after.trim())}</b>`}</div></div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
-  P.root.innerHTML = `<div class="player ${P.full ? 'full' : ''} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
-    ${P.full ? `<div class="bgvid">${videoEl(fe)}</div>` : ''}
+  P.root.innerHTML = `<div class="player ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
       <div class="ttl">${s.pause && s.nextBlock && s.nextBlock !== s.block ? `<small>Recupero · poi ${esc(s.nextPhase || s.phase)}</small>${esc(s.nextBlock)}` : `<small>${esc(s.phase)}</small>${esc(s.block)}`}</div>
-      <button class="icon" data-act="full" aria-label="${P.full ? 'Riduci il video' : 'Video a tutto schermo'}">${P.full ? '⤡' : '⤢'}</button>
       <button class="icon ${P.voice ? 'on' : ''}" data-act="voice" aria-label="Voce">${P.voice ? '🔊' : '🔈'}</button>
     </div>
     <div class="p-scroll">
-      <div class="tiles">
-        <div class="tile ${mode}"><div class="big" id="clock">${clockText()}</div><div class="lbl">${s.kind === 'stopwatch' ? (s.cap ? `Tempo · cap ${fmt(s.cap)}` : 'Tempo') : s.kind === 'manual' ? 'Al tuo ritmo' : 'Secondi rimasti'}</div></div>
-        ${right}
+      <div class="timer ${mode}">
+        <div class="tinfo"><span>${esc(info[1])}</span><b>${esc(String(info[0]))}</b></div>
+        <div class="tclock"><div class="big" id="clock">${clockText()}</div><small>${s.kind === 'stopwatch' ? (s.cap ? `Tempo · cap ${fmt(s.cap)}` : 'Tempo') : s.kind === 'manual' ? 'Al tuo ritmo' : 'Secondi rimasti'}</small></div>
       </div>
       ${!s.ready && bs.length > 1 ? `<div class="bar">${bs.map((x, k) => `<i class="${k < pos ? 'done' : k === pos ? 'cur' : ''}"></i>`).join('')}</div>` : '<div style="height:12px"></div>'}
       <div class="now ${s.rest ? 'rest' : ''}">
@@ -423,20 +422,28 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${P.full ? '' : `<div class="video sq ${fe.videoBox ? 'boxfit' : ''}">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : `${fe.video && !IOS ? `<video class="blurbg" src="${esc(fe.video)}" autoplay muted loop playsinline aria-hidden="true"></video>` : ''}${videoEl(fe)}`}${badge}<button class="vfull" data-act="full" aria-label="Video a tutto schermo">⤢</button></div>`}
-      ${afterPill}
+      <div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : videoEl(fe)}${badge}</div>
+      ${afterPill ? `<div class="nexthead">Dopo</div>${afterPill}` : ''}
 
     </div>
     <div class="p-ctrl">${controls()}</div>
   </div>`;
   keepVideos(oldVideos);
+  fitVideos();
   checkAutoplay();
   updateClock();
+}
+// Riquadro 4:3 come KBMH: i video orizzontali lo riempiono, quelli vecchi verticali stanno interi su fondo nero.
+function fitVideos() {
+  P.root.querySelectorAll('.video.sq video').forEach((v) => {
+    const fit = () => v.classList.toggle('land', v.videoWidth / v.videoHeight > 1.2);
+    if (v.readyState >= 1) fit(); else v.addEventListener('loadedmetadata', fit, { once: true });
+  });
 }
 // Con il risparmio energetico l'iPhone non fa partire i video da soli: sembra tutto bloccato.
 // Se succede, compare un tasto: un tocco e i video ripartono (e da lì in poi vanno da soli).
 function checkAutoplay() {
-  const v = P.root.querySelector('.video video:not(.blurbg), .bgvid video');
+  const v = P.root.querySelector('.video video');
   if (!v) return;
   if (P.videoTapped) { for (const x of P.root.querySelectorAll('video[autoplay]')) x.play().catch(() => {}); return; } // dopo il tocco li avvia l'app
   const p = v.play?.();
@@ -492,7 +499,6 @@ function onClick(ev) {
     case 'close': if (confirm('Vuoi uscire dall\'allenamento?')) { const o = P.opts; stopPlayer(); o.onExit?.(); } break;
     case 'voice': P.voice = !P.voice; store.set('voice', P.voice); if (!P.voice) speechSynthesis?.cancel?.(); render(); break;
     case 'pause': togglePause(); break;
-    case 'full': P.full = !P.full; store.set('fullVideo', P.full); render(); break;
     case 'tut': {
       // mette in pausa e apre il tutorial sopra il player
       const t = P.p.tutorials[t_ex(ev)];

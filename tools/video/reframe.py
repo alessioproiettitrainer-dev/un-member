@@ -45,4 +45,4 @@ if os.path.exists(SRC):
     for p in P:
         if p.get('hold'): continue
         L=p['end']-p['start']
-        subprocess.run([sys.executable,os.path.join(os.path.dirname(os.path.abspath(__file__)),'seam.py'),SRC,sys.argv[2],p['name'],str(max(3,L-2.5)),str(L+1.5)],stdout=subprocess.DEVNULL)
+        subprocess.run([sys.executable,os.path.join(os.path.dirname(os.path.abspath(__file__)),'seam.py'),SRC,sys.argv[2],p['name'],str(max(3,L-2)),str(L+2)],stdout=subprocess.DEVNULL)

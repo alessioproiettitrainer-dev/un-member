@@ -25,12 +25,14 @@ for p in P:
     l=min(np.percentile(lefts,5),bx0) if lefts else bx0; r=max(np.percentile(rights,95),bx1) if rights else bx1
     feet=max(by1,FEET-6)  # i piedi: mai sopra la linea dei piedi tipica del video (es. thruster: il box finisce alle mani)
     top=min(top,feet-40)  # almeno una persona alta 40px (~1/7 del frame)
-    H=(feet-top)*S; top4=top*S-0.16*H; bot4=feet*S+0.07*H     # 16% sopra, 7% sotto i piedi
+    H=(feet-top)*S; top4=top*S-0.16*H; bot4=feet*S+0.03*H     # 16% sopra; sotto solo 3%: il bordo basso del movimento è già il tappetino (ombre comprese)
     h=bot4-top4; w=max(h*4/3,(r-l)*S*1.25); h=w*3/4
     h=max(h,1400); w=h*4/3   # mai troppo zoomato
     if h>FH: h=FH; w=FH*4/3
     cx=(l+r)/2*S
-    y=bot4-h if bot4-h>0 else 0; y=min(y,FH-h)
+    if bot4-h<0:  # sopra non c'è più immagine: invece di aggiungere spazio sotto, stringo il riquadro (min 1080 = 1:1 col video finale)
+        h=max(bot4,1080,(r-l)*S*1.25*3/4); w=h*4/3
+    y=max(0,min(bot4-h,FH-h))
     x=min(max(cx-w/2,0),FW-w)
     # se c'è ancora spazio sopra la testa oltre il margine, lascio l'extra sopra (non sotto): già garantito da y=bot4-h
     p['crop']=[int(w)//2*2,int(h)//2*2,int(x),int(max(0,y))]

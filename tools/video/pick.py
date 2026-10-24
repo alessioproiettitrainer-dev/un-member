@@ -17,7 +17,7 @@ for s in segs:
         q=1+np.argmax(st[1:,4]); x,y,w,h,ar=st[q]
         if ar>80: bl.append([x,y,x+w,y+h])
     bb=np.array(bl)
-    x0,y0=np.percentile(bb[:,0],5),np.percentile(bb[:,1],5); x1,y1=np.percentile(bb[:,2],95),np.percentile(bb[:,3],95)
+    x0,y0=np.percentile(bb[:,0],5),np.percentile(bb[:,1],20); x1,y1=np.percentile(bb[:,2],95),np.percentile(bb[:,3],95)
     X0,Y0,X1,Y1=int(max(0,x0-8)),int(max(0,y0-8)),int(min(480,x1+8)),int(min(270,y1+8))
     c=a[i0:i1,Y0:Y1,X0:X1].astype(np.float32)
     c=c[:,::2,::2].reshape(len(c),-1)

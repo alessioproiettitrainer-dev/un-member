@@ -38,3 +38,11 @@ for p in P:
     p['crop']=[int(w)//2*2,int(h)//2*2,int(x),int(max(0,y))]
     print(p['name'],'top',round(top),'feet',feet,'crop',p['crop'])
 json.dump(P,open(sys.argv[2],'w'))
+# poi rifinisce inizio e fine a 30 fps (loop senza scatto) per gli esercizi a ripetizioni
+import subprocess,os
+SRC=sys.argv[1].replace('.low.npy','.mp4')
+if os.path.exists(SRC):
+    for p in P:
+        if p.get('hold'): continue
+        L=p['end']-p['start']
+        subprocess.run([sys.executable,os.path.join(os.path.dirname(os.path.abspath(__file__)),'seam.py'),SRC,sys.argv[2],p['name'],str(max(3,L-2.5)),str(L+1.5)],stdout=subprocess.DEVNULL)

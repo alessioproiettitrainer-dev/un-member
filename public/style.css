@@ -487,3 +487,13 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .player .nextcard .atxt b { font-size: 14px; }
 .player .p-ctrl { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 .player .p-ctrl .btn { min-height: 48px; }
+/* lista dei movimenti del giro: una riga che scorre di lato, così il video resta grande */
+.player .circuit { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin-top: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.player .circuit::-webkit-scrollbar { display: none; }
+.player .circuit button { flex: none; width: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 5px 10px; border-radius: 10px; font-size: 12px; line-height: 1.2; text-align: left; }
+.player .circuit button b { font-size: 12px; }
+.player .circuit button span { white-space: nowrap; }
+.player .subnote { padding: 6px 10px; font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.player .subnote button { padding: 4px 8px; font-size: 11px; }
+.player .circuit button.sel { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.player .circuit b { min-width: 0; }

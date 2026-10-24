@@ -430,6 +430,9 @@ function render() {
   </div>`;
   keepVideos(oldVideos);
   fitVideos();
+  // nella riga dei movimenti l'esercizio in corso resta sempre in vista
+  const cur = P.root.querySelector('.circuit .sel');
+  if (cur) cur.parentElement.scrollLeft = cur.offsetLeft - (cur.parentElement.clientWidth - cur.offsetWidth) / 2;
   checkAutoplay();
   updateClock();
 }

@@ -41,7 +41,7 @@ for s in segs:
             e=(cm[j]-cm[i])/L
             if not s.get('hold') and (cm[j]-cm[i])<0.55*emax: continue
             # loop seam: endpoint similarity + stillness-free; prefer longer slightly
-            sc=(D[i,j]-0.02*L) if not s.get('hold') else (cm[j]-cm[i])/L-0.01*L
+            sc=(D[i,j]/max(e/(cm[-1]/n),0.2)-0.02*L) if not s.get('hold') else (cm[j]-cm[i])/L-0.01*L
             if best is None or sc<best[0]: best=(sc,i,j)
     _,i,j=best
     # period via autocorrelation of window vs its first frame region

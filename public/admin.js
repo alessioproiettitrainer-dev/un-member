@@ -216,16 +216,19 @@ function activitySummary() {
   const now = Date.now(), d = (u, ms) => u.lastSeen && now - Date.parse(u.lastSeen) < ms;
   const online = S.users.filter((u) => d(u, 5 * 60e3)).length, today = S.users.filter((u) => u.lastSeen && new Date(u.lastSeen).toDateString() === new Date().toDateString()).length;
   const week = S.users.filter((u) => d(u, 7 * 864e5)).length, trials = S.users.filter((u) => u.trialStart).length, conv = S.users.filter((u) => u.convertedFromTrial).length;
-  const tile = (n, l) => `<div style="flex:1;min-width:120px;background:var(--card-2,#1c1c20);border-radius:12px;padding:10px 12px"><div style="font-size:24px;font-weight:900">${n}</div><div class="muted small">${l}</div></div>`;
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso')}${tile(today, 'Entrati oggi')}${tile(week, 'Entrati negli ultimi 7 giorni')}${tile(`${conv}/${trials}`, 'Prove → abbonati')}</div>`;
+  // i riquadri sono anche filtri: un tocco mostra solo quei membri, un altro tocco torna a tutti
+  const tile = (n, l, k) => `<button data-uf="${S.uf === k ? 'all' : k}" style="flex:1;min-width:120px;text-align:left;background:var(--card-2,#1c1c20);border-radius:12px;padding:10px 12px;border:2px solid ${S.uf === k ? 'var(--accent,#ff7a00)' : 'transparent'};color:inherit;cursor:pointer"><div style="font-size:24px;font-weight:900">${n}</div><div class="muted small">${l}</div></button>`;
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso', 'online')}${tile(today, 'Entrati oggi', 'today')}${tile(week, 'Entrati negli ultimi 7 giorni', 'week')}${tile(`${conv}/${trials}`, 'Prove → abbonati', 'conv')}</div>`;
 }
 function usersView() {
   const q = S.uq.toLowerCase();
   const counts = { all: S.users.length };
   for (const u of S.users) { const k = userStatus(u)[0]; counts[k] = (counts[k] || 0) + 1; if ((u.active || u.trial) && (!u.lastSeen || Date.now() - Date.parse(u.lastSeen) > 3 * 864e5)) counts.idle = (counts.idle || 0) + 1; }
   const idle = (u) => !u.lastSeen || Date.now() - Date.parse(u.lastSeen) > 3 * 864e5;
-  const list = S.users.filter((u) => (S.uf === 'all' || (S.uf === 'idle' ? idle(u) && (u.active || u.trial) : userStatus(u)[0] === S.uf)) && (!q || u.name.toLowerCase().includes(q) || u.email.includes(q)))
-    .sort((a, b) => (a.accessUntil || '').localeCompare(b.accessUntil || ''));
+  const seenWithin = (u, ms) => u.lastSeen && Date.now() - Date.parse(u.lastSeen) < ms;
+  const act = { online: (u) => seenWithin(u, 5 * 60e3), today: (u) => u.lastSeen && new Date(u.lastSeen).toDateString() === new Date().toDateString(), week: (u) => seenWithin(u, 7 * 864e5), conv: (u) => u.convertedFromTrial };
+  const list = S.users.filter((u) => (S.uf === 'all' || (act[S.uf] ? act[S.uf](u) : S.uf === 'idle' ? idle(u) && (u.active || u.trial) : userStatus(u)[0] === S.uf)) && (!q || u.name.toLowerCase().includes(q) || u.email.includes(q)))
+    .sort(act[S.uf] && S.uf !== 'conv' ? (a, b) => (b.lastSeen || '').localeCompare(a.lastSeen || '') : (a, b) => (a.accessUntil || '').localeCompare(b.accessUntil || ''));
   const filters = [['all', 'Tutti'], ['trial', 'In prova'], ['pending', 'In attesa'], ['soon', 'In scadenza'], ['expired', 'Scaduti'], ['ok', 'Attivi'], ['idle', 'Spariti da 3+ giorni']];
   const pend = Object.entries(S.pending);
   return `<div class="cols two">

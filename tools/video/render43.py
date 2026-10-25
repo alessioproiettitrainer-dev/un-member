@@ -2,6 +2,9 @@
 import json,subprocess,sys,os
 SRC,PICK,OUT=sys.argv[1],sys.argv[2],sys.argv[3]
 FW,FH,S=3840,2160,8
+import subprocess as _sp
+_IW=int(_sp.run(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=width','-of','csv=p=0',SRC],capture_output=True,text=True).stdout.strip() or 3840)
+_F=_IW/3840  # i riquadri sono in coordinate 4K: si adattano anche alle copie master più piccole
 LIGHT="curves=all='0/0 0.15/0.24 0.4/0.56 0.75/0.87 1/1',eq=saturation=0.97"
 if os.environ.get('EXTRA'): LIGHT+=','+os.environ['EXTRA']  # correzione colore per pareggiare le sessioni (colormatch.py)
 ENC=['-c:v','libx264','-preset','slow','-crf','26','-pix_fmt','yuv420p','-r','30','-an','-movflags','+faststart']
@@ -16,6 +19,7 @@ for p in json.load(open(PICK)):
     x=max(0,min(FW-w,int((x0+x1)/2-w/2)))
     y=max(0,min(FH-h,int(y1-0.88*h)))
     if p.get('crop'): w,h,x,y=p['crop']
+    w,h,x,y=[int(v*_F)//2*2 for v in (w,h,x,y)]
     vf=f"crop={w}:{h}:{x}:{y},scale=1280:960:flags=lanczos,{LIGHT}"
     # loop senza scatto: la clip parte da start+D e negli ultimi D secondi sfuma nei primi D (fine e inizio coincidono)
     L=p['end']-p['start']; D=0.13  # dissolvenza cortissima: con inizio/fine nella stessa posizione non si vede

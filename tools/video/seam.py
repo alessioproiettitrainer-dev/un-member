@@ -1,7 +1,10 @@
 # seam.py video.mp4 pick.json nome [min max]: per gli esercizi veloci rifinisce inizio/fine a 30 fps sul riquadro di taglio, così fine e inizio combaciano
 import subprocess,numpy as np,json,sys
 SRC,PK,NAME=sys.argv[1:4]; MN=float(sys.argv[4]) if len(sys.argv)>4 else 4; MX=float(sys.argv[5]) if len(sys.argv)>5 else 8
-P=json.load(open(PK)); p=next(x for x in P if x['name']==NAME); w,h,x,y=p['crop']
+import subprocess as _sp
+_IW=int(_sp.run(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=width','-of','csv=p=0',SRC],capture_output=True,text=True).stdout.strip() or 3840)
+_F=_IW/3840  # i riquadri sono in coordinate 4K: si adattano anche alle copie master più piccole
+P=json.load(open(PK)); p=next(x for x in P if x['name']==NAME); w,h,x,y=[int(v*_F)//2*2 for v in p['crop']]
 MN=max(MN,min(2*p.get('period',0),MX-0.5),3)  # almeno 2 ripetizioni: niente clip da una sola ripetizione
 t0=p['start']-1.5; dur=(p['end']-p['start'])+3
 r=subprocess.run(['ffmpeg','-v','error','-ss',str(max(0,t0)),'-t',str(dur),'-i',SRC,'-vf',f'fps=30,crop={w}:{h}:{x}:{y},scale=96:72,format=gray','-f','rawvideo','-'],capture_output=True).stdout

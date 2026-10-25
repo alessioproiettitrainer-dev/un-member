@@ -638,7 +638,7 @@ root.addEventListener('input', (e) => {
     const pos = t.selectionStart; softRender(); const el = document.getElementById(t.id); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch {} }
   }
   if (t.id === 'mp') { S.mp = t.value; const pos = t.selectionStart; softRender(); const el = document.getElementById('mp'); el?.focus(); try { el.setSelectionRange(pos, pos); } catch {} }
-  if (t.id === 'uq') { S.uq = t.value; softRender(); document.getElementById('uq')?.focus(); }
+  if (t.id === 'uq') { S.uq = t.value; const pos = t.selectionStart; softRender(); const el = document.getElementById('uq'); el?.focus(); try { el.setSelectionRange(pos, pos); } catch {} } // il cursore resta dov'era (prima tornava all'inizio e si scriveva al contrario)
   if (t.id === 'exlistq') {
     S.exQ = t.value;
     root.querySelectorAll('.side .it[data-ex]').forEach((b) => { b.hidden = !exMatch(S.exercises.find((x) => x.id === b.dataset.ex) || {}, S.exQ); });

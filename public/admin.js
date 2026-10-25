@@ -130,6 +130,7 @@ function exercisesView() {
   const e = S.exercises.find((x) => x.id === S.exId);
   return `<div class="cols ${e ? 'has-sel' : ''}">
     <div class="side"><button class="btn primary add" data-act="ex-new">+ Nuovo esercizio</button>
+      <button class="sbtn" style="width:100%;margin:6px 0" data-act="clips-zip">⬇ Scarica tutte le clip nuove (.zip)</button>
       <input type="search" id="exlistq" class="listq" placeholder="🔍 Cerca per nome o categoria…" value="${esc(S.exQ || '')}" autocomplete="off">
       ${S.exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).map((x) => `<button class="it ${x.id === S.exId ? 'on' : ''}" data-ex="${x.id}" ${exMatch(x, S.exQ) ? '' : 'hidden'}>
         ${x.video ? `<video class="thumb" src="${esc(x.video)}#t=0.5" muted preload="metadata"></video>` : '<div class="thumb"></div>'}
@@ -873,6 +874,7 @@ root.addEventListener('click', async (e) => {
       }
       case 'bd-del': if (!confirm('Eliminare?')) return; await call('DELETE', `/api/admin/${t.dataset.kind}/${t.dataset.id}`); S[t.dataset.kind] = S[t.dataset.kind].filter((y) => y.id !== t.dataset.id); break;
       case 'u-del': if (!confirm('Eliminare questo membro e tutti i suoi dati (foto comprese)?')) return; await call('DELETE', `/api/admin/users/${t.dataset.id}`); S.users = S.users.filter((y) => y.id !== t.dataset.id); break;
+      case 'clips-zip': { const r = await call('POST', '/api/admin/clips-token'); toast('Download avviato: è un file grande, lascia finire'); location.href = r.url; break; }
       case 'ex-unvideobox': { const x = S.exercises.find((y) => y.id === S.exId); x.videoBox = ''; await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Video del riquadro tolto'); break; }
       case 'ex-unvideo': { const x = S.exercises.find((y) => y.id === S.exId); x.video = ''; await call('PUT', `/api/admin/exercises/${x.id}`, x); toast('Video tolto'); break; }
       case 'ex-back': S.exId = null; render(); return window.scrollTo(0, 0);

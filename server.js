@@ -1045,6 +1045,46 @@ admin.post('/mail-token', (req, res) => {
   res.json({ token: db.mailToken });
 });
 
+// Tutte le clip nuove (4:3) in un unico .zip, con il nome dell'esercizio: da salvare sul Drive.
+// Il pannello chiede un permesso valido 10 minuti, poi il telefono scarica il file direttamente (niente chiave nel link).
+const zipTokens = new Map();
+admin.post('/clips-token', (req, res) => {
+  const t = crypto.randomBytes(18).toString('base64url');
+  zipTokens.set(t, Date.now() + 10 * 60e3);
+  res.json({ url: `/api/clips.zip?t=${t}` });
+});
+const CRC_T = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = CRC_T[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+app.get('/api/clips.zip', async (req, res) => {
+  const exp = zipTokens.get(req.query.t);
+  if (!exp || exp < Date.now()) return res.status(403).send('Link scaduto: ritorna nel pannello e premi di nuovo "Scarica tutte le clip".');
+  const used = new Set(), files = [];
+  for (const e of [...db.exercises].sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!e.video || e.video !== e.videoBox || !/^\/uploads\/[\w.-]+$/.test(e.video)) continue; // solo le clip nuove
+    const p = path.join(UPLOADS, path.basename(e.video));
+    if (!fs.existsSync(p)) continue;
+    let name = `Nuovi esercizi/${e.name.replace(/[\\/:*?"<>|]/g, '-').trim()}.mp4`;
+    for (let i = 2; used.has(name); i++) name = name.replace(/( \(\d+\))?\.mp4$/, ` (${i}).mp4`);
+    used.add(name); files.push({ p, name: Buffer.from(name) });
+  }
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="Nuovi esercizi UN-MEMBER.zip"`);
+  // zip "stored" (senza ricompressione: gli mp4 sono già compressi), scritto un file alla volta
+  let off = 0; const central = [];
+  const write = (b) => new Promise((ok) => (res.write(b) ? ok() : res.once('drain', ok)));
+  for (const f of files) {
+    const data = await fs.promises.readFile(f.p), crc = crc32(data);
+    const h = Buffer.alloc(30); h.writeUInt32LE(0x04034b50, 0); h.writeUInt16LE(20, 4); h.writeUInt16LE(0x0800, 6); h.writeUInt32LE(crc, 14); h.writeUInt32LE(data.length, 18); h.writeUInt32LE(data.length, 22); h.writeUInt16LE(f.name.length, 26);
+    const c = Buffer.alloc(46); c.writeUInt32LE(0x02014b50, 0); c.writeUInt16LE(20, 4); c.writeUInt16LE(20, 6); c.writeUInt16LE(0x0800, 8); c.writeUInt32LE(crc, 16); c.writeUInt32LE(data.length, 20); c.writeUInt32LE(data.length, 24); c.writeUInt16LE(f.name.length, 28); c.writeUInt32LE(off, 42);
+    central.push(c, f.name);
+    await write(h); await write(f.name); await write(data);
+    off += 30 + f.name.length + data.length;
+  }
+  const cd = Buffer.concat(central), end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16);
+  await write(cd); res.end(end);
+});
+
 app.use('/api/admin', admin);
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 

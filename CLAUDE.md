@@ -49,6 +49,11 @@ Ogni volta che monto un video **non consegnare subito una versione sola**: propo
 3. **Quello che confermo diventa regola**: aggiungilo a "Regole confermate" qui sotto, così la volta dopo è già il default.
 
 ### Regole confermate
+Video parlati con errori (detto il 26/10, "Dubai 30"):
+- Quando ripeto una frase, di solito **l'ultima versione è quella buona**: tienila, ma controlla sul testo trascritto che sia
+  italiano corretto e detto bene (posso avere un po' di accento romano, va bene; le frasi sbagliate o incomplete no).
+- **Taglio netto appena finisce l'ultima parola**, niente pause né spazi morti: la clip deve essere molto dinamica.
+
 Confermate il 21/10 sul video "home gym, 5 attrezzi" (scelte dalle 5 varianti):
 - **Sottotitoli piccoli vicino alla bocca** (stile yapping), 1-3 parole, parole chiave in arancione.
 - **Zoom in/out** a servizio del parlato: scatto sull'hook, piccolo punch a ogni nuovo punto, allargamento sul riepilogo,

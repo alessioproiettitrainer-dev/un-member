@@ -454,7 +454,9 @@ function settingsView() {
       <div class="muted small">${S.mail.configured ? `Partono da <b>${esc(S.mail.from)}</b> · oggi inviate ${S.mail.today} su ${S.mail.cap} al giorno` : 'Da collegare: su Render aggiungi GMAIL_USER e GMAIL_APP_PASSWORD (la "password per le app" di Google).'}</div>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
         <span class="muted small">Email della prova (2° giorno, 4° giorno, ultimo giorno) ogni mattina alle <select id="mhour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === S.mail.hour ? 'selected' : ''}>${h}:00</option>`).join('')}</select></span>
-        <button class="sbtn" data-act="mail-test" ${S.mail.configured ? '' : 'disabled'}>Manda un'email di prova a me</button>
+        <button class="sbtn" data-act="mail-test" ${S.mail.configured ? '' : 'disabled'}>Manda un'email di prova a me</button></div>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" data-set="afterTrialMail" ${st.afterTrialMail ? 'checked' : ''}> Email "Tutto ok?" 2-4 giorni dopo la fine della prova, a chi non si è abbonato (con consulenza gratuita e piani) — poi premi Salva</label>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
         <button class="sbtn" data-act="mail-run" ${S.mail.configured ? '' : 'disabled'}>Invia ora quelle di oggi</button></div>
       ${S.mail.campaigns.length ? `<div class="lbl2" style="margin-top:10px">Invii</div>${S.mail.campaigns.slice(-6).reverse().map((c) => `<div class="muted small">${esc(c.label)} · ${c.sent}/${c.total} inviate${c.failed ? ` · ${c.failed} errori` : ''}${c.done ? '' : ' · in corso'}</div>`).join('')}` : ''}
       ${S.mail.log.length ? `<div class="lbl2" style="margin-top:10px">Ultimi invii automatici</div>${S.mail.log.slice(0, 5).map((l) => `<div class="muted small">${new Date(l.date).toLocaleString('it-IT')} · ${l.kind === 'prova' ? 'prova' : esc(l.label || '')}: ${l.sent} inviate${l.failed ? `, ${l.failed} errori${l.error ? ` (${esc(l.error)})` : ''}` : ''}${l.left ? `, ${l.left} rimandate a domani` : ''}</div>`).join('')}` : ''}`}</div>

@@ -5,6 +5,7 @@ const STAGES = [
   { key: 'd2', from: 2, to: 3 },
   { key: 'd4', from: 4, to: 5 },
   { key: 'last', last: true },
+  { key: 'after', after: [2, 4] }, // 2-4 giorni dopo la fine della prova, solo a chi non si è abbonato
 ];
 
 const firstName = (name) => {
@@ -41,6 +42,18 @@ function render(key, name, url, settings = {}) {
         'A presto!<br>Alessio',
       ],
     },
+    after: {
+      subject: `${name ? `${name}, tutto` : 'Tutto'} ok? 🙂`,
+      paras: [
+        ciao,
+        'La tua settimana di prova è finita da un paio di giorni e volevo sapere: <b>tutto ok? Come va? Hai avuto modo di pensarci?</b>',
+        ...(settings.consultUrl ? ['Ti ricordo che se hai bisogno di qualcosa di <b>più personalizzato</b>, puoi prenotare una <b>consulenza gratuita</b> con il mio collaboratore: è gratis e senza impegno, quindi fattela, che te frega? 😄', '__CONSULT__'] : []),
+        'Se invece vuoi continuare ad allenarti con l\'app, i piani li trovi qui:',
+        '__PLANS__',
+        'E se l\'app in qualche modo <b>non ti è piaciuta</b>, fammelo sapere: rispondi a questa email anche con una riga sola. Mi serve davvero per migliorarla.',
+        'Un abbraccio,<br>Alessio',
+      ],
+    },
     last: {
       subject: `${name ? `${name}, com'è` : 'Com\'è'} andata la settimana di prova? 🙏`,
       paras: [
@@ -68,13 +81,18 @@ function render(key, name, url, settings = {}) {
 
 // quale email (se c'è) deve ricevere oggi questo utente in prova
 function dueStage(u, today, trialDays) {
-  if (!u.trialUntil || u.trialUntil < today) return null;
+  if (!u.trialUntil) return null;
+  if (u.trialUntil < today) { // prova finita: solo l'email "tutto ok?" 2-4 giorni dopo
+    const after = Math.round((new Date(today + 'T12:00Z') - new Date(u.trialUntil + 'T12:00Z')) / 864e5);
+    const st = STAGES.find((x) => x.after);
+    return !(u.trialMails || {})[st.key] && after >= st.after[0] && after <= st.after[1] ? { key: st.key, day: after } : null;
+  }
   const end = new Date(u.trialUntil + 'T12:00Z');
   const start = u.trialStart ? new Date(u.trialStart + 'T12:00Z') : new Date(end.getTime() - (trialDays - 1) * 864e5);
   const day = Math.round((new Date(today + 'T12:00Z') - start) / 864e5);
   const sent = u.trialMails || {};
   for (const s of STAGES) {
-    if (sent[s.key]) continue;
+    if (sent[s.key] || s.after) continue;
     if (s.last ? today === u.trialUntil && day >= 1 : day >= s.from && day <= s.to) return { key: s.key, day };
   }
   return null;

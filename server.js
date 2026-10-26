@@ -946,7 +946,9 @@ const PUBLIC_URL = process.env.PUBLIC_URL || 'https://un-member.onrender.com';
 const mailAuth = (req, res, next) => (db.mailToken && req.get('x-mail-token') === db.mailToken) || isAdmin(req) ? next() : res.status(401).json({ error: 'Token non valido' });
 function trialDue() {
   const t = today(), days = Math.max(1, Number(db.settings.trialDays) || 7);
-  return db.users.filter((u) => inTrial(u) && !u.community?.banned).map((u) => {
+  // in prova, oppure prova finita da pochi giorni senza abbonamento (email "tutto ok?", se attivata in Impostazioni)
+  const ended = (u) => db.settings.afterTrialMail && !hasAccess(u) && !!u.trialUntil && u.trialUntil < t;
+  return db.users.filter((u) => (inTrial(u) || ended(u)) && !u.community?.banned).map((u) => {
     const st = mails.dueStage(u, t, days);
     return st && { userId: u.id, stage: st.key, day: st.day, to: u.email, ...mails.render(st.key, mails.firstName(u.name), PUBLIC_URL, db.settings) };
   }).filter(Boolean);
@@ -954,7 +956,7 @@ function trialDue() {
 app.get('/api/mail/trial-due', mailAuth, (req, res) => res.json(trialDue()));
 app.post('/api/mail/trial-sent', mailAuth, express.json(), (req, res) => {
   const u = db.users.find((x) => x.id === req.body?.userId);
-  if (!u || !['d2', 'd4', 'last'].includes(req.body?.stage)) return res.status(400).json({ error: 'Dati non validi' });
+  if (!u || !['d2', 'd4', 'last', 'after'].includes(req.body?.stage)) return res.status(400).json({ error: 'Dati non validi' });
   (u.trialMails ||= {})[req.body.stage] = today();
   save();
   res.json({ ok: true });

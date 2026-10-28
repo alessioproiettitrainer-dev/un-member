@@ -325,6 +325,22 @@ me.post('/seen', (req, res) => {
   if (k) { (req.user.seen ||= {})[k] = today(); save(); }
   res.json({ ok: true });
 });
+// Questionario del primo accesso: risposte salvate (età/peso/altezza/sesso finiscono anche nel profilo e nel peso)
+me.put('/quiz', (req, res) => {
+  const b = req.body || {}, u = req.user, num = (v, lo, hi) => { const n = Number(String(v).replace(',', '.')); return n >= lo && n <= hi ? n : ''; };
+  const age = num(b.age, 10, 99), kg = num(b.kg, 30, 250), heightCm = num(b.heightCm, 120, 230);
+  const eq = ['kb1', 'kb2', 'trx', 'bar', 'band', 'none'];
+  u.quiz = { age, kg, heightCm, sex: ['m', 'f'].includes(b.sex) ? b.sex : '', equipment: (Array.isArray(b.equipment) ? b.equipment : []).filter((x) => eq.includes(x)),
+    since: String(b.since || '').slice(0, 20), level: String(b.level || '').slice(0, 20), days: num(b.days, 1, 7), rec: String(b.rec || '').slice(0, 40), date: today() };
+  if (age) u.profile.birthYear = new Date().getFullYear() - age;
+  if (heightCm) u.profile.heightCm = heightCm;
+  if (u.quiz.sex) u.profile.sex = u.quiz.sex;
+  if (u.quiz.days) u.profile.trainingDays = { 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6] }[u.quiz.days] || u.profile.trainingDays;
+  if (kg) { const d = today(); u.weights = u.weights.filter((w) => w.date !== d); u.weights.push({ date: d, kg }); u.weights.sort((a, c) => a.date.localeCompare(c.date)); }
+  (u.seen ||= {}).quiz = today(); u.seen.trainIntro = today();
+  save();
+  res.json(publicUser(u));
+});
 me.put('/welcome', (req, res) => {
   req.user.welcomeSeen = String(req.body?.seen || '').slice(0, 500);
   save();
@@ -704,7 +720,7 @@ admin.get('/users', (req, res) => res.json(db.users.map((u) => ({
   id: u.id, name: u.name, email: u.email, joined: u.joined, workouts: u.history.length,
   lastWorkout: u.history.at(-1)?.date || '', accessUntil: u.accessUntil || '', active: hasAccess(u), trialUntil: u.trialUntil || '', trial: inTrial(u), trialMails: u.trialMails || {},
   accessLog: (u.accessLog || []).slice(-5), nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) },
-  profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays },
+  profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays }, quiz: u.quiz || null,
   weight: u.weights.at(-1)?.kg || '',
   lastSeen: u.lastSeen || '', visits: u.visits || 0, convertedFromTrial: u.convertedFromTrial || '', trialStart: u.trialStart || '',
   days7: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10)).length,

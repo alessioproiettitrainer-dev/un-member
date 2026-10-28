@@ -213,6 +213,12 @@ function seenText(iso) {
   return `Visto ${Math.round(ms / 864e5)} giorni fa`;
 }
 const seenClass = (u) => { const ms = u.lastSeen ? Date.now() - Date.parse(u.lastSeen) : Infinity; return ms < 5 * 60e3 ? 'st ok' : ms < 2 * 864e5 ? '' : 'muted'; };
+// risposte al questionario del primo accesso, in una riga
+const quizText = (q) => { if (!q) return '';
+  const eq = { kb1: '1 kettlebell', kb2: '2+ kettlebell', trx: 'TRX', bar: 'sbarra', band: 'elastici', none: 'niente attrezzi' };
+  const since = { 0: 'fermo/mai', '6m': '<6 mesi', '1y': '6 mesi-2 anni', '2y': '2+ anni' }, lvl = { beg: 'principiante', mid: 'intermedio', adv: 'avanzato' };
+  const rec = S.programs?.find((p) => p.id === q.rec)?.title;
+  return `<div class="muted small">📋 ${[q.age && `${q.age} anni`, q.kg && `${q.kg} kg`, q.heightCm && `${q.heightCm} cm`, (q.equipment || []).map((x) => eq[x]).join(', '), lvl[q.level], since[q.since] && `si allena da ${since[q.since]}`, q.days && `${q.days}x/settimana`].filter(Boolean).join(' · ')}${rec ? ` → consigliato <b>${esc(rec)}</b>` : ''}</div>`; };
 function activitySummary() {
   const now = Date.now(), d = (u, ms) => u.lastSeen && now - Date.parse(u.lastSeen) < ms;
   const online = S.users.filter((u) => d(u, 5 * 60e3)).length, today = S.users.filter((u) => u.lastSeen && new Date(u.lastSeen).toDateString() === new Date().toDateString()).length;
@@ -239,7 +245,7 @@ function usersView() {
         ${filters.map(([k, l]) => `<button class="sbtn ${S.uf === k ? 'acc' : ''}" data-uf="${k}">${l} ${counts[k] || 0}</button>`).join('')}</div>
       ${list.map((u) => { const [st, label] = userStatus(u); const open = S.openU[u.id]; return `<div class="urow">
         <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · ${u.workouts} allenamenti${u.lastWorkout ? ` (ultimo ${fmtDate(String(u.lastWorkout).slice(0, 10))})` : ''}</div>
-          <div class="small" style="margin-top:2px"><span class="${seenClass(u)}">● ${esc(seenText(u.lastSeen))}</span>${u.lastSeen ? ` <span class="muted">· ${u.visits} ${u.visits === 1 ? 'accesso' : 'accessi'} · attivo ${u.days7}/7 giorni, ${u.days30}/30</span>` : ''}${u.convertedFromTrial ? ` <span class="st ok">dalla prova all'abbonamento ✓</span>` : ''}</div><div class="muted small">${Object.keys(u.trialMails || {}).length ? `Email prova: ${[['d2', '2° giorno'], ['d4', '4° giorno'], ['last', 'ultimo giorno']].filter(([k]) => u.trialMails[k]).map(([, l]) => l).join(', ')} ✓` : ''}</div></div>
+          <div class="small" style="margin-top:2px"><span class="${seenClass(u)}">● ${esc(seenText(u.lastSeen))}</span>${u.lastSeen ? ` <span class="muted">· ${u.visits} ${u.visits === 1 ? 'accesso' : 'accessi'} · attivo ${u.days7}/7 giorni, ${u.days30}/30</span>` : ''}${u.convertedFromTrial ? ` <span class="st ok">dalla prova all'abbonamento ✓</span>` : ''}</div><div class="muted small">${Object.keys(u.trialMails || {}).length ? `Email prova: ${[['d2', '2° giorno'], ['d4', '4° giorno'], ['last', 'ultimo giorno'], ['after', 'tutto ok?']].filter(([k]) => u.trialMails[k]).map(([, l]) => l).join(', ')} ✓` : ''}</div>${quizText(u.quiz)}</div>
           <span class="st ${st}">${label}${u.accessUntil ? ` · ${fmtDate(u.accessUntil)}` : ''}</span></div>
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><span class="muted small">Aggiungi accesso:</span>
           ${[1, 3, 6, 12].map((m) => `<button class="sbtn acc" data-grant="${m}" data-id="${u.id}">+${m === 12 ? '1 anno' : m + (m === 1 ? ' mese' : ' mesi')}</button>`).join('')}

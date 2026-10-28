@@ -283,6 +283,80 @@ async function homeView() {
   $app.querySelectorAll('[data-wplay]').forEach((el) => { el.onclick = () => welcomePlayer(); });
   const wc = document.getElementById('wclose');
   if (wc) wc.onclick = () => welcomeDone();
+  if (SETTINGS.quiz !== false && !ME.seen?.quiz && ME.id !== 'admin-preview' && !document.querySelector('.quizsheet')) quizSheet(list);
+}
+
+// ---- questionario del primo accesso: 5 domande, poi il programma consigliato -------------
+function quizRecommend(a, list) {
+  const { current, base } = sortPrograms(list);
+  const vol = (n) => base.find((p) => new RegExp(`V\\.?\\s*${n}\\b`, 'i').test(p.title)) || base[n - 1] || base[0];
+  const eq = a.equipment || [], two = eq.includes('kb2'), one = two || eq.includes('kb1');
+  const exp = { '2y': 3, '1y': 2 }[a.since] || 1, lvl = { beg: 1, mid: 2, adv: 3 }[a.level] || 1;
+  const score = Math.min(exp, lvl) + (lvl > exp ? 0.5 : 0);
+  if (two && score >= 2 && current[0]) return { p: current[0], why: `Hai due kettlebell e ti alleni già da un po': il <b>ciclo del mese</b> cambia ogni settimana ed è pensato proprio per chi è intermedio o avanzato.` };
+  if (one) {
+    const n = score >= 3 ? 3 : score >= 2 ? 2 : 1;
+    return { p: vol(n), why: n === 1 ? 'Parti dal <b>Volume 1</b> dei Kettlebell Base: impari bene la tecnica con un kettlebell solo e cresci passo dopo passo, poi passi al 2 e al 3.'
+      : `Con la tua esperienza puoi partire dal <b>Volume ${n}</b> dei Kettlebell Base${two ? '' : ': ti basta un kettlebell'}. ${two ? 'Quando ti senti pronto passa al ciclo del mese.' : 'Se un domani prendi il secondo kettlebell, potrai passare al ciclo del mese.'}` };
+  }
+  return { p: vol(1), why: 'Per allenarti con i programmi dell\'app ti serve <b>almeno un kettlebell</b> (presto arrivano anche i programmi con il TRX). Intanto ti consiglio di partire dal <b>Volume 1</b> dei Kettlebell Base.' };
+}
+function quizSheet(list) {
+  const a = { equipment: [] };
+  const m = document.createElement('div');
+  m.className = 'tutmodal introsheet quizsheet';
+  const chips = (k, opts, multi) => `<div class="qchips">${opts.map(([v, l]) => `<button type="button" class="qchip ${(multi ? a[k].includes(v) : a[k] === v) ? 'on' : ''}" data-k="${k}" data-v="${v}" ${multi ? 'data-multi' : ''}>${l}</button>`).join('')}</div>`;
+  const steps = [
+    () => `<div class="h1" style="font-size:24px;margin-top:0">Ciao ${esc((ME.name || '').split(' ')[0])}! <em>Due domande</em></div>
+      <div class="muted">Così ti consiglio da quale programma partire. Ci vuole un minuto.</div>
+      <div class="qlab">Su di te</div>
+      <div class="qgrid"><label>Età<input type="number" inputmode="numeric" id="q_age" value="${a.age || ''}" placeholder="anni"></label>
+        <label>Peso<input type="number" inputmode="decimal" id="q_kg" value="${a.kg || ''}" placeholder="kg"></label>
+        <label>Altezza<input type="number" inputmode="numeric" id="q_h" value="${a.heightCm || ''}" placeholder="cm"></label></div>
+      ${chips('sex', [['m', 'Uomo'], ['f', 'Donna']])}`,
+    () => `<div class="qlab">Che attrezzatura hai?</div><div class="muted small">Puoi sceglierne più di una</div>
+      ${chips('equipment', [['kb1', '🏋️ 1 kettlebell'], ['kb2', '🏋️🏋️ 2 o più kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici'], ['none', 'Niente per ora']], true)}`,
+    () => `<div class="qlab">Da quanto ti alleni?</div>
+      ${chips('since', [['0', 'Non mi alleno / sono fermo da tanto'], ['6m', 'Da meno di 6 mesi'], ['1y', 'Da 6 mesi a 2 anni'], ['2y', 'Da più di 2 anni']])}
+      <div class="qlab">Come ti definiresti?</div>
+      ${chips('level', [['beg', 'Principiante'], ['mid', 'Intermedio'], ['adv', 'Avanzato']])}`,
+    () => `<div class="qlab">Quante volte a settimana vuoi allenarti?</div>
+      ${chips('days', [[2, '2'], [3, '3'], [4, '4'], [5, '5 o più']])}`,
+    () => { const r = quizRecommend(a, list); a.rec = r.p?.id || '';
+      return `<div class="h1" style="font-size:24px;margin-top:0">Il mio <em>consiglio</em> per te</div>
+      ${r.p ? `<div class="intro-opt"><b>${esc(r.p.title)}</b><div class="muted">${r.why}</div></div>` : ''}
+      <div class="muted small" style="margin-top:10px">È un consiglio per partire: se preferisci puoi iniziare con un altro programma, li trovi tutti in Allenamenti.</div>`; },
+  ];
+  let i = 0;
+  const finish = async (go) => {
+    const age = Number(a.age) || '', kg = Number(String(a.kg || '').replace(',', '.')) || '';
+    try { Object.assign(ME, await api('/api/me/quiz', 'PUT', { ...a, age, kg, days: a.days === 5 ? 5 : a.days })); } catch {}
+    if (go && a.rec) { try { Object.assign(ME, await api('/api/me', 'PUT', { activeProgramId: a.rec })); } catch {} }
+    m.remove();
+    location.hash = go && a.rec ? `#/p/${a.rec}` : '#/train';
+  };
+  const draw = () => {
+    const last = i === steps.length - 1;
+    m.innerHTML = `<div class="sc-box"><div class="qdots">${steps.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>${steps[i]()}
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px">
+        ${last ? `<button class="btn primary" style="flex:1" data-go>Inizio con questo</button><button class="btn" style="flex:1" data-mine>Scelgo io</button>`
+          : `${i ? '<button class="btn" data-back>‹</button>' : ''}<button class="btn primary" style="flex:1" data-next>Avanti</button>`}</div>
+      ${i === 0 ? '<button class="qskip" data-skip>Salta il questionario</button>' : ''}</div>`;
+  };
+  const readInputs = () => { const v = (id) => m.querySelector(id)?.value; if (m.querySelector('#q_age')) { a.age = v('#q_age'); a.kg = v('#q_kg'); a.heightCm = v('#q_h'); } };
+  m.addEventListener('click', (e) => {
+    const c = e.target.closest('.qchip');
+    if (c) { readInputs(); const k = c.dataset.k, val = isNaN(c.dataset.v) ? c.dataset.v : Number(c.dataset.v);
+      if (c.hasAttribute('data-multi')) { a[k] = a[k].includes(val) ? a[k].filter((x) => x !== val) : [...a[k].filter((x) => val === 'none' ? false : x !== 'none'), val]; } else a[k] = val;
+      return draw(); }
+    if (e.target.closest('[data-next]')) { readInputs(); i++; return draw(); }
+    if (e.target.closest('[data-back]')) { readInputs(); i--; return draw(); }
+    if (e.target.closest('[data-go]')) return finish(true);
+    if (e.target.closest('[data-mine]')) return finish(false);
+    if (e.target.closest('[data-skip]')) { m.remove(); api('/api/me/seen', 'POST', { key: 'quiz' }).catch(() => {}); ME.seen = { ...(ME.seen || {}), quiz: true }; }
+  });
+  draw();
+  document.body.append(m);
 }
 
 function challengeCard(c) {

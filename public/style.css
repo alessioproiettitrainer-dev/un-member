@@ -506,3 +506,15 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .player .now .subs { margin-top: 4px; }
 /* il video si vede sempre intero (mai piedi o testa tagliati), anche quando il riquadro è più basso */
 .player .video.sq video, .player .video.sq video.land { object-fit: contain; transform: none; }
+/* questionario del primo accesso */
+.quizsheet .qlab { font-weight: 900; text-transform: uppercase; font-size: 13px; letter-spacing: .5px; margin: 16px 0 8px; }
+.quizsheet .qchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.quizsheet .qchip { padding: 10px 14px; border-radius: 12px; background: var(--card-2, #1c1c20); font-weight: 700; border: 2px solid transparent; color: inherit; }
+.quizsheet .qchip.on { border-color: var(--accent); background: rgba(255, 122, 0, .15); }
+.quizsheet .qgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.quizsheet .qgrid label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 700; }
+.quizsheet .qgrid input { width: 100%; padding: 10px; border-radius: 10px; background: var(--card-2, #1c1c20); border: 1px solid var(--line); color: var(--text); font-size: 16px; }
+.quizsheet .qdots { display: flex; gap: 6px; margin-bottom: 14px; }
+.quizsheet .qdots i { flex: 1; height: 4px; border-radius: 2px; background: var(--card-2, #222228); }
+.quizsheet .qdots i.on { background: var(--accent); }
+.quizsheet .qskip { display: block; margin: 14px auto 0; color: var(--muted); font-size: 13px; text-decoration: underline; background: none; }

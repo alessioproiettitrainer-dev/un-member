@@ -243,6 +243,7 @@ const summary = (p) => ({
   id: p.id, title: p.title, subtitle: p.subtitle, level: p.level, weeks: p.weeks, kind: p.kind || 'base',
   startDate: p.startDate || '', endDate: cycleEnd(p),
   description: p.description, cover: p.cover, workoutCount: (p.workouts || []).length,
+  equipment: p.equipment || [], category: p.category || 'kettlebell',
 });
 
 app.get('/api/programs', member, active, (req, res) => {
@@ -334,12 +335,18 @@ me.put('/quiz', (req, res) => {
     since: String(b.since || '').slice(0, 20), level: String(b.level || '').slice(0, 20), days: num(b.days, 1, 7), rec: String(b.rec || '').slice(0, 40), date: today() };
   if (age) u.profile.birthYear = new Date().getFullYear() - age;
   if (heightCm) u.profile.heightCm = heightCm;
-  if (u.quiz.sex) u.profile.sex = u.quiz.sex;
+  if (u.quiz.sex) u.profile.sex = u.quiz.sex.toUpperCase(); // il profilo usa M/F
   if (u.quiz.days) u.profile.trainingDays = { 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6] }[u.quiz.days] || u.profile.trainingDays;
   if (kg) { const d = today(); u.weights = u.weights.filter((w) => w.date !== d); u.weights.push({ date: d, kg }); u.weights.sort((a, c) => a.date.localeCompare(c.date)); }
   (u.seen ||= {}).quiz = today(); u.seen.trainIntro = today();
   save();
   res.json(publicUser(u));
+});
+me.put('/equipment', (req, res) => {
+  const eq = ['kb1', 'kb2', 'trx', 'bar', 'band', 'none'];
+  (req.user.quiz ||= { date: today() }).equipment = (Array.isArray(req.body?.equipment) ? req.body.equipment : []).filter((x) => eq.includes(x));
+  save();
+  res.json(publicUser(req.user));
 });
 me.put('/welcome', (req, res) => {
   req.user.welcomeSeen = String(req.body?.seen || '').slice(0, 500);

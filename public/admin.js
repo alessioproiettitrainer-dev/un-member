@@ -502,7 +502,7 @@ function programsView() {
   const sec = (title, list, note = '') => (list.length ? `<div class="lbl2" style="margin:12px 4px 6px">${title}</div>${note}${list.map(item).join('')}` : '');
   return `<div class="cols ${p ? 'has-sel' : ''}">
     <div class="side"><button class="btn primary add" data-act="p-new">+ Nuovo programma</button>
-      ${sec('Programmi base', groups.base)}${sec('Cicli in corso', groups.now)}${sec('Cicli in arrivo', groups.next)}
+      ${sec('Programmi fissi', groups.base)}${sec('Programma del mese · in corso', groups.now)}${sec('Programma del mese · in arrivo', groups.next)}
       ${groups.past.length ? `<div class="lbl2" style="margin:16px 4px 2px">Archivio cicli</div><div class="muted small" style="margin:0 4px 6px">Finiti: i membri non li vedono più. Puoi duplicarli e riusarli con nuove date.</div>
         ${[...byMonth].map(([m, list]) => `<div class="small" style="margin:8px 4px 4px;font-weight:800">${esc(m)}</div>${list.map(item).join('')}`).join('')}` : ''}
       ${S.programs.length ? '' : '<div class="muted small" style="padding:8px">Nessun programma ancora.</div>'}
@@ -517,7 +517,10 @@ function programEditor(p) {
       <div class="f"><label>Sottotitolo</label><input type="text" data-b="subtitle" value="${esc(p.subtitle)}"></div></div>
     <div class="grid2"><div class="f"><label>Livello</label><select data-b="level">${['Principiante', 'Intermedio', 'Intermedio/Avanzato', 'Avanzato'].map((l) => `<option ${p.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="f"><label>Settimane</label><input type="number" min="0" data-b="weeks" value="${esc(p.weeks)}"></div>
-      <div class="f"><label>Tipo</label><select data-b="kind"><option value="base" ${p.kind !== 'cycle' ? 'selected' : ''}>Programma base (sempre disponibile)</option><option value="cycle" ${p.kind === 'cycle' ? 'selected' : ''}>Ciclo (dura N settimane da una data)</option></select></div>
+      <div class="f"><label>Tipo</label><select data-b="kind"><option value="base" ${p.kind !== 'cycle' ? 'selected' : ''}>Programma fisso (sempre disponibile)</option><option value="cycle" ${p.kind === 'cycle' ? 'selected' : ''}>Programma del mese (dura N settimane da una data)</option></select></div>
+      <div class="f"><label>Categoria (sezione in Allenamenti)</label><select data-b="category">${[['kettlebell', 'Kettlebell'], ['trx', 'TRX'], ['calisthenics', 'Calisthenics']].map(([v, l]) => `<option value="${v}" ${(p.category || 'kettlebell') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="f"><label>Attrezzatura che serve</label><div class="row" style="gap:10px;flex-wrap:wrap">${[['kb1', '1 kettlebell'], ['kb2', '2 kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici'], ['bw', 'Corpo libero']].map(([v, l]) => `<label class="chk"><input type="checkbox" data-peq="${v}" ${(p.equipment || []).includes(v) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+        <div class="muted small">Chi non ha questi attrezzi vede il programma in fondo, tra "serve altra attrezzatura". Il questionario lo usa per consigliare da dove partire.</div></div>
       ${p.kind === 'cycle' ? `<div class="f"><label>Inizio del ciclo</label><input type="date" data-b="startDate" value="${esc(p.startDate)}"></div>
         <div class="f"><label>Fine del ciclo (ultimo giorno)</label><input type="date" data-b="endDate" value="${esc(p.endDate || '')}">
           <div class="muted small">${cycleInfo(p) ? `Visibile ai membri dal ${esc(fmtDate(p.startDate))} al ${esc(fmtDate(cycleInfo(p).last))}, poi va in archivio.` : 'Se la lasci vuota: inizio + settimane.'}</div></div>` : ''}
@@ -622,6 +625,7 @@ function parentOf(path) {
 // ---- eventi ----------------------------------------------------------------
 root.addEventListener('input', (e) => {
   const t = e.target;
+  if (t.dataset.peq && S.draft) { const e = new Set(S.draft.equipment || []); t.checked ? e.add(t.dataset.peq) : e.delete(t.dataset.peq); S.draft.equipment = [...e]; S.dirty = true; return; }
   if (t.dataset.b && S.draft) {
     const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : Number(t.value)) : t.value;
     setPath(S.draft, t.dataset.b, v);

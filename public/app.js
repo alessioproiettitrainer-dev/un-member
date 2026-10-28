@@ -240,10 +240,19 @@ function nextWorkout(p) {
   }
   return pool.slice().sort((a, b) => (counts.get(a.id) || 0) - (counts.get(b.id) || 0))[0];
 }
+// attrezzatura: cosa serve a un programma e cosa ha il membro (dal questionario)
+const EQ_LABEL = { kb1: '1 kettlebell', kb2: '2 kettlebell', trx: 'TRX', bar: 'Sbarra / parallele', band: 'Elastici', bw: 'Corpo libero' };
+const CAT_LABEL = { kettlebell: 'Kettlebell', trx: 'TRX', calisthenics: 'Calisthenics' };
+const myEquip = () => ME.quiz?.equipment || null;
+function canDo(p, eq = myEquip()) {
+  if (!eq) return true; // senza questionario si vede tutto
+  return (p.equipment || []).every((x) => x === 'bw' || (x === 'kb1' ? eq.includes('kb1') || eq.includes('kb2') : eq.includes(x)));
+}
+const equipPill = (p) => ((p.equipment || []).length ? `<span class="pill">${p.equipment.map((x) => EQ_LABEL[x] || x).join(' + ')}</span>` : '');
 function programCard(p, extra = '') {
   return `<a class="prog" href="#/p/${p.id}">
     <div class="cover" style="${p.cover ? `background-image:url('${esc(p.cover)}')` : ''}"></div>
-    <div class="body"><div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}<span class="pill">${p.workoutCount} allenamenti</span>${extra}</div>
+    <div class="body"><div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}<span class="pill">${p.workoutCount} allenamenti</span>${equipPill(p)}${extra}</div>
       <div class="title">${esc(p.title)}</div><div class="muted small">${esc(p.subtitle || '')}</div></div></a>`;
 }
 
@@ -288,18 +297,21 @@ async function homeView() {
 
 // ---- questionario del primo accesso: 5 domande, poi il programma consigliato -------------
 function quizRecommend(a, list) {
-  const { current, base } = sortPrograms(list);
+  const all = sortPrograms(list), eq = a.equipment || [];
+  const current = all.current.filter((p) => canDo(p, eq)), base = all.base.filter((p) => canDo(p, eq) && (p.category || 'kettlebell') === 'kettlebell');
   const vol = (n) => base.find((p) => new RegExp(`V\\.?\\s*${n}\\b`, 'i').test(p.title)) || base[n - 1] || base[0];
-  const eq = a.equipment || [], two = eq.includes('kb2'), one = two || eq.includes('kb1');
+  const two = eq.includes('kb2'), one = two || eq.includes('kb1');
   const exp = { '2y': 3, '1y': 2 }[a.since] || 1, lvl = { beg: 1, mid: 2, adv: 3 }[a.level] || 1;
   const score = Math.min(exp, lvl) + (lvl > exp ? 0.5 : 0);
-  if (two && score >= 2 && current[0]) return { p: current[0], why: `Hai due kettlebell e ti alleni già da un po': il <b>ciclo del mese</b> cambia ogni settimana ed è pensato proprio per chi è intermedio o avanzato.` };
+  if (score >= 2 && current[0]) return { p: current[0], why: `Hai due kettlebell e ti alleni già da un po': il <b>programma del mese</b> ha allenamenti nuovi ogni settimana ed è pensato proprio per chi è intermedio o avanzato.` };
   if (one) {
     const n = score >= 3 ? 3 : score >= 2 ? 2 : 1;
     return { p: vol(n), why: n === 1 ? 'Parti dal <b>Volume 1</b> dei Kettlebell Base: impari bene la tecnica con un kettlebell solo e cresci passo dopo passo, poi passi al 2 e al 3.'
-      : `Con la tua esperienza puoi partire dal <b>Volume ${n}</b> dei Kettlebell Base${two ? '' : ': ti basta un kettlebell'}. ${two ? 'Quando ti senti pronto passa al ciclo del mese.' : 'Se un domani prendi il secondo kettlebell, potrai passare al ciclo del mese.'}` };
+      : `Con la tua esperienza puoi partire dal <b>Volume ${n}</b> dei Kettlebell Base${two ? '' : ': ti basta un kettlebell'}. ${two ? 'Quando ti senti pronto passa al programma del mese.' : 'Se un domani prendi il secondo kettlebell, potrai passare al programma del mese.'}` };
   }
-  return { p: vol(1), why: 'Per allenarti con i programmi dell\'app ti serve <b>almeno un kettlebell</b> (presto arrivano anche i programmi con il TRX). Intanto ti consiglio di partire dal <b>Volume 1</b> dei Kettlebell Base.' };
+  const bw = all.base.find((p) => canDo(p, eq) && (p.equipment || []).length && !(p.equipment || []).some((x) => x.startsWith('kb')));
+  if (bw) return { p: bw, why: `Con l'attrezzatura che hai puoi partire da <b>${esc(bw.title)}</b>.` };
+  return { p: all.base[0], why: 'Per allenarti con i programmi dell\'app ti serve <b>almeno un kettlebell</b> (presto arrivano anche i programmi con il TRX). Intanto ti consiglio di partire dal <b>Volume 1</b> dei Kettlebell Base.' };
 }
 function quizSheet(list) {
   const a = { equipment: [] };
@@ -389,10 +401,18 @@ async function trainView() {
   const list = await api('/api/programs');
   const { current, past, base } = sortPrograms(list);
   const mine = (p) => (p.id === (ME.activeProgramId || (current[0] || base[0])?.id) ? '<span class="pill ok">Il tuo programma</span>' : '');
+  // programmi fissi raggruppati per attrezzo; quelli che chiedono un attrezzo che il membro non ha finiscono in fondo
+  const ok = base.filter((p) => canDo(p)), other = base.filter((p) => !canDo(p));
+  const cats = Object.keys(CAT_LABEL).filter((c) => ok.some((p) => (p.category || 'kettlebell') === c));
+  const curOk = current.filter((p) => canDo(p)), curOther = current.filter((p) => !canDo(p));
+  const monthCard = (p) => programCard(p, `<span class="pill">Settimana ${cycleWeek(p)} di ${p.weeks}</span>${mine(p)}`);
   page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('programs')}
-    ${current.length ? `<div class="h2">Ciclo in corso</div>${current.map((p) => programCard(p, `<span class="pill">Settimana ${cycleWeek(p)} di ${p.weeks}</span>${mine(p)}`)).join('')}` : ''}
-    ${base.length ? `<div class="h2">Programmi base</div>${base.map((p) => programCard(p, mine(p))).join('')}` : ''}
-
+    ${curOk.length ? `<div class="h2">Programma del mese</div><div class="muted small" style="margin:-6px 0 10px">Allenamenti nuovi ogni settimana, per intermedi e avanzati</div>${curOk.map(monthCard).join('')}` : ''}
+    ${cats.map((c) => `<div class="h2">${CAT_LABEL[c]}</div>${ok.filter((p) => (p.category || 'kettlebell') === c).map((p) => programCard(p, mine(p))).join('')}`).join('')}
+    ${!ok.length && !curOk.length && (other.length || curOther.length) ? '<div class="card"><b>Per ora non ci sono programmi con la tua attrezzatura</b><div class="muted small">Stanno arrivando anche i programmi con il TRX. Intanto qui sotto trovi gli altri: per la maggior parte serve almeno un kettlebell.</div></div>' : ''}
+    ${other.length || curOther.length ? `<details class="otherprogs" ${!ok.length && !curOk.length ? 'open' : ''}><summary>Altri programmi · serve altra attrezzatura (${other.length + curOther.length})</summary>
+      <div class="muted small" style="margin:6px 0 10px">In base alle tue risposte non hai l'attrezzatura per questi. Se nel frattempo l'hai presa, aggiornala dal Profilo.</div>
+      ${curOther.map(monthCard).join('')}${other.map((p) => programCard(p, mine(p))).join('')}</details>` : ''}
     ${!list.length ? '<div class="empty">Nessun programma pubblicato per ora.</div>' : ''}`);
   if (SETTINGS.trainIntro !== false && !ME.seen?.trainIntro && ME.id !== 'admin-preview') trainIntro(base, current);
 }
@@ -406,8 +426,8 @@ function trainIntro(base, current) {
     <div class="intro-opt"><b>🟢 Sei nuovo o hai iniziato da poco?</b>
       <div class="muted">Parti dai <b>Kettlebell Base</b>: prima il <b>Volume 1</b>, poi il 2 e il 3. Ogni volume è un po' più difficile del precedente, così impari bene la tecnica e cresci passo dopo passo.</div></div>
     <div class="intro-opt"><b>🔥 Sei già intermedio o avanzato?</b>
-      <div class="muted">Puoi allenarti con il <b>ciclo del mese</b>, quello in corso.</div></div>
-    <div class="intro-warn">⚠️ Se sei nuovo, <b>non partire dal ciclo in corso</b>: è pensato per chi ha già esperienza e rischi di non riuscire a stare al passo.</div>
+      <div class="muted">Puoi allenarti con il <b>programma del mese</b>, quello in corso.</div></div>
+    <div class="intro-warn">⚠️ Se sei nuovo, <b>non partire dal programma del mese</b>: è pensato per chi ha già esperienza e rischi di non riuscire a stare al passo.</div>
     <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px">
       ${firstBase ? `<a class="btn primary" style="flex:1" href="#/p/${firstBase.id}" data-close>Inizio dal Volume 1</a>` : ''}
       <button class="btn" style="flex:1" data-close>Ho capito</button></div></div>`;
@@ -784,10 +804,18 @@ function profileView() {
       <label>Obiettivo<select name="goal">${[['lose', 'Dimagrire'], ['maintain', 'Mantenere'], ['gain', 'Aumentare massa']].map(([v, l]) => `<option value="${v}" ${pr.goal === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <button class="btn primary block">Salva profilo</button>
     </form>
+    <div class="card"><b>La tua attrezzatura</b><div class="muted small">In Allenamenti ti mostro prima i programmi che puoi fare con questi attrezzi.</div>
+      <div class="qchips" id="myeq" style="margin-top:10px">${[['kb1', '1 kettlebell'], ['kb2', '2 o più kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici']].map(([v, l]) => `<button type="button" class="qchip ${(myEquip() || []).includes(v) ? 'on' : ''}" data-eq="${v}">${l}</button>`).join('')}</div></div>
     ${welcomeSrc() ? '<button class="btn block" style="margin-top:12px" id="rewatch">▶ Rivedi il video di benvenuto</button>' : ''}
     <button class="btn block" style="margin-top:12px" id="logout">Esci</button>`);
   const rw = document.getElementById('rewatch');
   if (rw) rw.onclick = () => welcomePlayer();
+  document.getElementById('myeq').onclick = async (e) => {
+    const b = e.target.closest('[data-eq]'); if (!b) return;
+    b.classList.toggle('on');
+    const equipment = [...document.querySelectorAll('#myeq .on')].map((x) => x.dataset.eq);
+    try { Object.assign(ME, await api('/api/me/equipment', 'PUT', { equipment })); toast('Attrezzatura salvata'); } catch (err) { toast(err.message, true); }
+  };
   const form = document.getElementById('prof');
   const tdn = () => { const n = form.querySelectorAll('[name=td]:checked').length; document.getElementById('tdn').textContent = `${n} allenamenti a settimana: li uso anche per calcolare le tue calorie.`; };
   form.addEventListener('change', tdn); tdn();

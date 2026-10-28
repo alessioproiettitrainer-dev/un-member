@@ -1076,6 +1076,7 @@ admin.post('/mail-token', (req, res) => {
 const inbox = require('./inbox');
 admin.get('/replies', async (req, res) => {
   try {
+    if (req.query.sent) return res.json(await inbox.fetchReplies(Math.min(60, Number(req.query.days) || 21), true));
     const list = await inbox.fetchReplies(Math.min(60, Number(req.query.days) || 21));
     res.json(list.map((r) => { const u = db.users.find((x) => x.email === r.from);
       return { ...r, user: u ? { id: u.id, name: u.name, trialUntil: u.trialUntil || '', active: hasAccess(u), trial: inTrial(u), extraWeeks: u.extraWeeks || 0 } : null }; }));

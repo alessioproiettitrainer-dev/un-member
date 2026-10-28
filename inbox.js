@@ -17,23 +17,25 @@ function cleanText(t) {
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 3000);
 }
 
-async function fetchReplies(days = 21) {
+async function fetchReplies(days = 21, sent = false) {
   if (!configured()) throw new Error('Mancano GMAIL_USER e GMAIL_APP_PASSWORD su Render');
   const me = process.env.GMAIL_USER.toLowerCase();
   const client = new ImapFlow({ host: 'imap.gmail.com', port: 993, secure: true, logger: false,
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD.replace(/\s+/g, '') } });
   await client.connect();
   const list = [];
-  const lock = await client.getMailboxLock('INBOX', { readOnly: true });
+  const box = sent ? ((await client.list()).find((b) => b.specialUse === '\\Sent')?.path || '[Gmail]/Sent Mail') : 'INBOX';
+  const lock = await client.getMailboxLock(box, { readOnly: true });
   try {
     const since = new Date(Date.now() - days * 864e5);
     const uids = await client.search({ since }, { uid: true });
     for await (const m of client.fetch(uids.slice(-150), { source: true, envelope: true }, { uid: true })) {
       const from = (m.envelope.from?.[0]?.address || '').toLowerCase();
+      if (sent) { const p = await simpleParser(m.source); list.push({ uid: m.uid, to: (m.envelope.to || []).map((x) => x.address).join(', '), subject: p.subject || '', date: (p.date || new Date()).toISOString(), text: cleanText(p.text || '') }); continue; }
       if (!from || from === me || /no-?reply|mailer-daemon|postmaster|notifications?@|google\.com$/i.test(from)) continue;
       const p = await simpleParser(m.source);
       list.push({ uid: m.uid, from, fromName: m.envelope.from?.[0]?.name || '', subject: p.subject || '', date: (p.date || m.envelope.date || new Date()).toISOString(),
-        text: cleanText(p.text || ''), messageId: p.messageId || '', references: [].concat(p.references || []).join(' ') });
+        text: cleanText(p.text || String(p.html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div)>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')), attachments: (p.attachments || []).map((a) => a.filename || a.contentType), messageId: p.messageId || '', references: [].concat(p.references || []).join(' ') });
     }
   } finally { lock.release(); await client.logout().catch(() => {}); }
   return list.sort((a, b) => b.date.localeCompare(a.date));

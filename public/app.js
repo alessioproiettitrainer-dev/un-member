@@ -252,7 +252,7 @@ const equipPill = (p) => ((p.equipment || []).length ? `<span class="pill">${p.e
 function programCard(p, extra = '') {
   return `<a class="prog" href="#/p/${p.id}">
     <div class="cover" style="${p.cover ? `background-image:url('${esc(p.cover)}')` : ''}"></div>
-    <div class="body"><div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}<span class="pill">${p.workoutCount} allenamenti</span>${equipPill(p)}${extra}</div>
+    <div class="body"><div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}${equipPill(p)}${extra}</div>
       <div class="title">${esc(p.title)}</div><div class="muted small">${esc(p.subtitle || '')}</div></div></a>`;
 }
 

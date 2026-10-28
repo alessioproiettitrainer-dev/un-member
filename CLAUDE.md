@@ -17,7 +17,8 @@
 - EMOM: niente tasto "Fatto"; gli esercizi dell'intervallo girano in loop (rip × secondi per rip × "Ritmo delle ripetizioni" in Impostazioni); a 15 s dalla fine anteprima verde del prossimo, o "Recupero completo" se dopo c'è l'intervallo di recupero.
 - Player come KBMH (app di Vadim): niente schermo intero, timer in una riga (giro a sinistra, tempo a destra), riquadro video 4:3, sezione "Dopo" con miniatura sotto il video; su iPhone un solo video alla volta e tasto "Tocca per avviare il video" se il risparmio energetico blocca l'autoplay; nel recupero niente sfocato, nero.
 - Prova gratuita 7 giorni: parte da sola all'iscrizione (una per email). Email automatiche dall'app: 2° giorno, 4° giorno, ultimo giorno (con piani e link consulenza Calendly da Impostazioni).
-- Kettlebell Base Vol.1-3 per i nuovi, ciclo del mese per intermedi/avanzati (popup alla prima visita di Allenamenti).
+- Programmi: "Kettlebell Volume 1/2/3" (1 kettlebell, principiante) e "Programma del mese" (ex ciclo, 2 kettlebell, intermedio/avanzato). Ogni programma ha `equipment` (kb1/kb2/trx/bar/band/bw) e `category` (kettlebell/trx/calisthenics): Allenamenti mostra le sezioni per categoria e mette in fondo i programmi senza l'attrezzatura del membro.
+- Questionario del primo accesso (età, peso, altezza, sesso, attrezzatura, esperienza, livello, giorni) → programma consigliato (`quizRecommend` in app.js); attrezzatura modificabile dal Profilo. Traduzione automatica del browser bloccata (notranslate).
 
 ## Lavoro in arrivo: rifare tutti i video
 - Lista nel Word "Video da registrare" (150 esercizi esistenti + 44 nuovi con 1/2 kettlebell + 30 TRX alla porta).

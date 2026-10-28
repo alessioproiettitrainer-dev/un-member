@@ -299,19 +299,19 @@ async function homeView() {
 function quizRecommend(a, list) {
   const all = sortPrograms(list), eq = a.equipment || [];
   const current = all.current.filter((p) => canDo(p, eq)), base = all.base.filter((p) => canDo(p, eq) && (p.category || 'kettlebell') === 'kettlebell');
-  const vol = (n) => base.find((p) => new RegExp(`V\\.?\\s*${n}\\b`, 'i').test(p.title)) || base[n - 1] || base[0];
+  const vol = (n) => base.find((p) => new RegExp(`(V|Vol|Volume)\\.?\\s*${n}\\b`, 'i').test(p.title)) || base[n - 1] || base[0];
   const two = eq.includes('kb2'), one = two || eq.includes('kb1');
   const exp = { '2y': 3, '1y': 2 }[a.since] || 1, lvl = { beg: 1, mid: 2, adv: 3 }[a.level] || 1;
   const score = Math.min(exp, lvl) + (lvl > exp ? 0.5 : 0);
   if (score >= 2 && current[0]) return { p: current[0], why: `Hai due kettlebell e ti alleni già da un po': il <b>programma del mese</b> ha allenamenti nuovi ogni settimana ed è pensato proprio per chi è intermedio o avanzato.` };
   if (one) {
     const n = score >= 3 ? 3 : score >= 2 ? 2 : 1;
-    return { p: vol(n), why: n === 1 ? 'Parti dal <b>Volume 1</b> dei Kettlebell Base: impari bene la tecnica con un kettlebell solo e cresci passo dopo passo, poi passi al 2 e al 3.'
-      : `Con la tua esperienza puoi partire dal <b>Volume ${n}</b> dei Kettlebell Base${two ? '' : ': ti basta un kettlebell'}. ${two ? 'Quando ti senti pronto passa al programma del mese.' : 'Se un domani prendi il secondo kettlebell, potrai passare al programma del mese.'}` };
+    return { p: vol(n), why: n === 1 ? 'Parti da <b>Kettlebell Volume 1</b>: impari bene la tecnica con un kettlebell solo e cresci passo dopo passo, poi passi al 2 e al 3.'
+      : `Con la tua esperienza puoi partire da <b>Kettlebell Volume ${n}</b>${two ? '' : ': ti basta un kettlebell'}. ${two ? 'Quando ti senti pronto passa al programma del mese.' : 'Se un domani prendi il secondo kettlebell, potrai passare al programma del mese.'}` };
   }
   const bw = all.base.find((p) => canDo(p, eq) && (p.equipment || []).length && !(p.equipment || []).some((x) => x.startsWith('kb')));
   if (bw) return { p: bw, why: `Con l'attrezzatura che hai puoi partire da <b>${esc(bw.title)}</b>.` };
-  return { p: all.base[0], why: 'Per allenarti con i programmi dell\'app ti serve <b>almeno un kettlebell</b> (presto arrivano anche i programmi con il TRX). Intanto ti consiglio di partire dal <b>Volume 1</b> dei Kettlebell Base.' };
+  return { p: all.base[0], why: 'Per allenarti con i programmi dell\'app ti serve <b>almeno un kettlebell</b> (presto arrivano anche i programmi con il TRX). Intanto ti consiglio di partire da <b>Kettlebell Volume 1</b>.' };
 }
 function quizSheet(list) {
   const a = { equipment: [] };
@@ -424,7 +424,7 @@ function trainIntro(base, current) {
   m.innerHTML = `<div class="sc-box">
     <div class="h1" style="font-size:26px;margin-top:0">Da dove <em>partire?</em></div>
     <div class="intro-opt"><b>🟢 Sei nuovo o hai iniziato da poco?</b>
-      <div class="muted">Parti dai <b>Kettlebell Base</b>: prima il <b>Volume 1</b>, poi il 2 e il 3. Ogni volume è un po' più difficile del precedente, così impari bene la tecnica e cresci passo dopo passo.</div></div>
+      <div class="muted">Parti da <b>Kettlebell Volume 1</b>, poi il 2 e il 3. Ogni volume è un po' più difficile del precedente, così impari bene la tecnica e cresci passo dopo passo.</div></div>
     <div class="intro-opt"><b>🔥 Sei già intermedio o avanzato?</b>
       <div class="muted">Puoi allenarti con il <b>programma del mese</b>, quello in corso.</div></div>
     <div class="intro-warn">⚠️ Se sei nuovo, <b>non partire dal programma del mese</b>: è pensato per chi ha già esperienza e rischi di non riuscire a stare al passo.</div>

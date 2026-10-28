@@ -1072,6 +1072,38 @@ admin.post('/mail-token', (req, res) => {
 
 // Tutte le clip nuove (4:3) in un unico .zip, con il nome dell'esercizio: da salvare sul Drive.
 // Il pannello chiede un permesso valido 10 minuti, poi il telefono scarica il file direttamente (niente chiave nel link).
+// ---- risposte dei clienti (lette dalla Gmail via IMAP) e settimana gratis in più ----------------
+const inbox = require('./inbox');
+admin.get('/replies', async (req, res) => {
+  try {
+    const list = await inbox.fetchReplies(Math.min(60, Number(req.query.days) || 21));
+    res.json(list.map((r) => { const u = db.users.find((x) => x.email === r.from);
+      return { ...r, user: u ? { id: u.id, name: u.name, trialUntil: u.trialUntil || '', active: hasAccess(u), trial: inTrial(u), extraWeeks: u.extraWeeks || 0 } : null }; }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// una settimana di prova in più (massimo 2 a persona): riparte da oggi o dalla fine della prova se è ancora in corso
+admin.post('/users/:id/extra-week', (req, res) => {
+  const u = db.users.find((x) => x.id === req.params.id);
+  if (!u) return res.status(404).end();
+  if ((u.extraWeeks || 0) >= 2) return res.status(409).json({ error: 'Ha già avuto 2 settimane in più' });
+  const from = u.trialUntil && u.trialUntil >= today() ? u.trialUntil : today();
+  const d = new Date(from + 'T12:00Z'); d.setUTCDate(d.getUTCDate() + 7);
+  u.trialUntil = d.toISOString().slice(0, 10); u.extraWeeks = (u.extraWeeks || 0) + 1;
+  if (!u.trialStart) u.trialStart = today();
+  save();
+  res.json({ trialUntil: u.trialUntil, extraWeeks: u.extraWeeks });
+});
+admin.post('/reply', express.json(), async (req, res) => {
+  const { to, subject, body, inReplyTo, references } = req.body || {};
+  if (!to || !body) return res.status(400).json({ error: 'Manca destinatario o testo' });
+  try {
+    const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px">${String(body).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>`;
+    await mailer.send({ to, subject: /^re:/i.test(subject || '') ? subject : `Re: ${subject || ''}`, body, htmlBody: html, inReplyTo, references });
+    logMail({ kind: 'risposta', label: to, sent: 1, failed: 0 });
+    save();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 const zipTokens = new Map();
 admin.post('/clips-token', (req, res) => {
   const t = crypto.randomBytes(18).toString('base64url');

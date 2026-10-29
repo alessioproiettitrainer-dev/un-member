@@ -522,3 +522,10 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .quizsheet .qskip { display: block; margin: 14px auto 0; color: var(--muted); font-size: 13px; text-decoration: underline; background: none; }
 .otherprogs { margin-top: 18px; }
 .otherprogs summary { cursor: pointer; font-weight: 800; color: var(--muted); padding: 10px 0; }
+
+.hscroll { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px 14px; padding: 0 16px 4px; scroll-padding: 0 16px; scrollbar-width: none; }
+.hscroll::-webkit-scrollbar { display: none; }
+.hscroll > .prog { flex: 0 0 84%; margin-bottom: 0; scroll-snap-align: start; }
+.hscroll > .prog:only-child { flex-basis: 100%; }
+.rowhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rowhead span { font-family: inherit; text-transform: none; letter-spacing: 0; font-weight: 600; }

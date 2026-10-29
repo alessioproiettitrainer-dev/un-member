@@ -407,14 +407,16 @@ async function trainView() {
   const ok = base.filter((p) => canDo(p)), other = base.filter((p) => !canDo(p));
   const cats = Object.keys(CAT_LABEL).filter((c) => ok.some((p) => (p.category || 'kettlebell') === c));
   const curOk = current.filter((p) => canDo(p)), curOther = current.filter((p) => !canDo(p));
+  // ogni sezione è una riga che scorre di lato, così anche con tanti programmi la pagina resta corta
+  const row = (cards) => `<div class="hscroll">${cards.join('')}</div>`;
   const monthCard = (p) => programCard(p, `<span class="pill">Settimana ${cycleWeek(p)} di ${p.weeks}</span>${mine(p)}`);
   page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('programs')}
-    ${curOk.length ? `<div class="h2">Programma del mese</div><div class="muted small" style="margin:-6px 0 10px">Allenamenti nuovi ogni settimana, per intermedi e avanzati</div>${curOk.map(monthCard).join('')}` : ''}
-    ${cats.map((c) => `<div class="h2">${CAT_LABEL[c]}</div>${ok.filter((p) => (p.category || 'kettlebell') === c).map((p) => programCard(p, mine(p))).join('')}`).join('')}
+    ${curOk.length ? `<div class="h2">Programma del mese</div><div class="muted small" style="margin:-6px 0 10px">Allenamenti nuovi ogni settimana, per intermedi e avanzati</div>${row(curOk.map(monthCard))}` : ''}
+    ${cats.map((c) => { const ps = ok.filter((p) => (p.category || 'kettlebell') === c); return `<div class="h2 rowhead">${CAT_LABEL[c]}${ps.length > 1 ? `<span class="muted small">${ps.length} programmi · scorri →</span>` : ''}</div>${row(ps.map((p) => programCard(p, mine(p))))}`; }).join('')}
     ${!ok.length && !curOk.length && (other.length || curOther.length) ? '<div class="card"><b>Per ora non ci sono programmi con la tua attrezzatura</b><div class="muted small">Stanno arrivando anche i programmi con il TRX. Intanto qui sotto trovi gli altri: per la maggior parte serve almeno un kettlebell.</div></div>' : ''}
     ${other.length || curOther.length ? `<details class="otherprogs" ${!ok.length && !curOk.length ? 'open' : ''}><summary>Altri programmi · serve altra attrezzatura (${other.length + curOther.length})</summary>
       <div class="muted small" style="margin:6px 0 10px">In base alle tue risposte non hai l'attrezzatura per questi. Se nel frattempo l'hai presa, aggiornala dal Profilo.</div>
-      ${curOther.map(monthCard).join('')}${other.map((p) => programCard(p, mine(p))).join('')}</details>` : ''}
+      ${row([...curOther.map(monthCard), ...other.map((p) => programCard(p, mine(p)))])}</details>` : ''}
     ${!list.length ? '<div class="empty">Nessun programma pubblicato per ora.</div>' : ''}`);
   if (SETTINGS.trainIntro !== false && !ME.seen?.trainIntro && ME.id !== 'admin-preview') trainIntro(base, current);
 }

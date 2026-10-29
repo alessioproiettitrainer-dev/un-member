@@ -529,3 +529,21 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .hscroll > .prog:only-child { flex-basis: 100%; }
 .rowhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .rowhead span { font-family: inherit; text-transform: none; letter-spacing: 0; font-weight: 600; }
+/* test livelli */
+.ltbadge { display: inline-block; margin-top: 4px; padding: 4px 12px; border-radius: 99px; font-weight: 900; text-transform: uppercase; letter-spacing: .6px; font-size: 13px; color: var(--lc); background: color-mix(in srgb, var(--lc) 16%, transparent); border: 1px solid color-mix(in srgb, var(--lc) 50%, transparent); }
+.ltpts { font-size: 30px; font-weight: 900; line-height: 1; }
+.ltparts { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ltparts div { display: flex; justify-content: space-between; font-size: 14px; }
+.ltparts span { color: var(--muted); }
+.lthist { margin-top: 12px; }
+.lthist summary { cursor: pointer; font-weight: 800; color: var(--muted); font-size: 13px; padding: 4px 0; }
+.lthist .row { padding: 6px 0; font-size: 14px; align-items: center; }
+.lthist .ltbadge { font-size: 10px; padding: 2px 8px; margin: 0 4px; }
+.lthist .x { background: none; border: 0; color: var(--muted); }
+.ltsheet .sc-box { max-height: calc(100dvh - 32px); overflow: auto; background: var(--card); border-radius: 18px; padding: 18px; }
+.ltsheet .qgrid { grid-template-columns: repeat(2, 1fr); }
+.ltsheet select { width: 100%; padding: 10px; border-radius: 10px; background: var(--card-2, #1c1c20); border: 1px solid var(--line); color: var(--text); font-size: 16px; }
+.ltprev { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--card-2); display: grid; gap: 6px; }
+.ltlevels { display: grid; gap: 6px; }
+.ltlevels div { display: flex; align-items: center; gap: 10px; }
+.ltcard .btn { padding: 0 14px; white-space: nowrap; }

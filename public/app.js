@@ -585,6 +585,98 @@ function personalRecords() {
   return [...best.values()].sort((a, b) => b.h.date.localeCompare(a.h.date));
 }
 
+// ---- test livelli (Unconventional Hybrid Test) -------------------------------------
+// Stesso calcolo anche nel server (server.js, levelScore): se cambi i punteggi cambiali in tutti e due.
+const LT_LEVELS = [[550, 'Elite', '#b48cff'], [450, 'Oro', '#f5c542'], [350, 'Argento', '#c9d1d9'], [250, 'Bronzo', '#d08a4f'], [0, 'Base', '#7dd3fc']];
+const ltLevel = (tot) => LT_LEVELS.find(([min]) => tot >= min);
+function ltScore(t) {
+  const f = t.sex === 'f', load = (Number(t.kb1) || 0) + (Number(t.kb2) || 0), bw = Number(t.bw) || 0;
+  let complex = 0, pct = 0;
+  if (load && bw) {
+    pct = Math.floor((load / bw) * 100 / 5) * 5 + (f ? 10 : 0);
+    complex = pct < 20 ? 10 : pct >= 65 ? 150 : { 20: 20, 25: 30, 30: 40, 35: 55, 40: 70, 45: 85, 50: 100, 55: 115, 60: 130 }[pct];
+  }
+  const n = (k) => Math.max(0, Math.floor(Number(t[k]) || 0));
+  const parts = { complex, pushups: n('pushups') * (f ? 3 : 2), pullups: n('pullups') * (f ? 10 : 5), t2b: n('t2b') * 5, burpees: n('burpees') };
+  const total = Object.values(parts).reduce((a, b) => a + b, 0);
+  return { parts, pct, total, level: ltLevel(total)[1] };
+}
+const LT_TESTS = [['complex', 'Complex 2 kettlebell'], ['pushups', 'Piegamenti'], ['pullups', 'Trazioni strict'], ['t2b', 'Toes to bar strict'], ['burpees', 'Burpee in 5\'']];
+const ltBadge = (lv) => { const c = LT_LEVELS.find((x) => x[1] === lv)?.[2] || 'var(--accent)'; return `<span class="ltbadge" style="--lc:${c}">${esc(lv)}</span>`; };
+function levelCard() {
+  const ts = (ME.levelTests || []).slice().reverse().sort((a, b) => b.date.localeCompare(a.date));
+  const last = ts[0], prev = ts[1];
+  const nextLv = last && [...LT_LEVELS].reverse().find(([min]) => min > last.total);
+  return `<div class="card ltcard">
+    ${last ? `<div class="row between"><div><div class="muted small">Il tuo livello · ${new Date(last.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</div>${ltBadge(last.level)}</div>
+        <div style="text-align:right"><b class="ltpts">${last.total}</b><div class="muted small">punti${prev ? ` · ${last.total - prev.total >= 0 ? '+' : ''}${last.total - prev.total} dall'ultimo` : ''}</div></div></div>
+      ${nextLv ? `<div class="meter thin" style="margin:12px 0 4px"><i style="width:${Math.min(100, (last.total / nextLv[0]) * 100)}%"></i></div><div class="muted small">Ti mancano <b>${nextLv[0] - last.total} punti</b> per ${nextLv[1]}</div>` : '<div class="muted small" style="margin-top:8px">Sei al livello più alto 🔥</div>'}
+      <div class="ltparts">${LT_TESTS.map(([k, l]) => `<div><span>${l}</span><b>${last.parts[k]}</b></div>`).join('')}</div>`
+    : `<b>Scopri il tuo livello</b><div class="muted small" style="margin-top:4px">5 prove: complex con 2 kettlebell, piegamenti, trazioni, toes to bar e burpee. Rifallo ogni 2-3 mesi per vedere quanto sei migliorato.</div>`}
+    <div class="row" style="margin-top:12px;gap:8px"><button class="btn primary" id="ltnew" style="flex:1">${last ? 'Nuovo test' : 'Fai il test'}</button><button class="btn" id="lthow">Come funziona</button></div>
+    ${ts.length > 1 ? `<details class="lthist"><summary>Test precedenti (${ts.length - 1})</summary>${ts.slice(1).map((x) => `<div class="row between"><span>${new Date(x.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span><span>${x.total} punti ${ltBadge(x.level)} <button class="x" data-ltdel="${x.id}" aria-label="Elimina">✕</button></span></div>`).join('')}</details>` : ''}
+  </div>`;
+}
+function ltHow() {
+  const m = document.createElement('div');
+  m.className = 'tutmodal introsheet quizsheet ltsheet';
+  m.innerHTML = `<div class="sc-box"><div class="row between"><div class="h1" style="font-size:24px;margin:0">Hybrid <em>Test</em></div><button class="icon" data-close>✕</button></div>
+    <div class="muted small">Le 5 prove si fanno in quest'ordine, con i recuperi indicati.</div>
+    <div class="intro-opt"><b>1 · Complex con 2 kettlebell</b><div class="muted small">Sempre in mano, senza pause: 5 dead snatch senza appoggio, 5 strict press, 5 front squat, 5 thruster, 10 swing. Le kettlebell non toccano mai terra.<br>Dead snatch senza appoggio: a ogni ripetizione le kettlebell scendono indietro tra le gambe fino a sotto metà tibia, sfiorano terra senza toccarla, e da lì parti con lo snatch senza slancio.<br>Massimo 3 tentativi in 10 minuti, anche con carichi diversi: conta il complex completato con il carico più alto. <b>Recupero 3'</b></div></div>
+    <div class="intro-opt"><b>2 · Piegamenti</b><div class="muted small">Massimo unbroken, petto vicino a terra e braccia tese in alto. <b>Recupero 2'</b></div></div>
+    <div class="intro-opt"><b>3 · Trazioni strict</b><div class="muted small">Massimo unbroken, da dead hang, mento sopra la sbarra, niente kipping. <b>Recupero 2'</b></div></div>
+    <div class="intro-opt"><b>4 · Toes to bar strict</b><div class="muted small">Massimo unbroken, gambe tese per tutto il movimento, piedi che toccano la sbarra, partenza da dead hang, niente slancio. Se scendi dalla sbarra la prova finisce. <b>Recupero 3'</b></div></div>
+    <div class="intro-opt"><b>5 · Burpee senza piegamento</b><div class="muted small">Massimo in 5 minuti. Mani a terra, salto indietro in plank (petto staccato da terra), piedi vicino alle mani, saltello finale con corpo esteso e mani sopra la testa.</div></div>
+    <div class="qlab">Punteggio</div>
+    <div class="muted small">Complex: carico delle 2 kettlebell diviso il tuo peso, in percentuale (arrotondata per difetto al 5%). Sotto 20% = 10 punti · 20% = 20 · 25% = 30 · 30% = 40 · 35% = 55 · 40% = 70 · 45% = 85 · 50% = 100 · 55% = 115 · 60% = 130 · 65% o più = 150. Kettlebell miste ammesse (conta il totale). Donne: +10 punti percentuali.<br>
+    Piegamenti 2 punti l'una (donne 3) · Trazioni 5 (donne 10) · Toes to bar 5 · Burpee 1.</div>
+    <div class="qlab">Livelli</div>
+    <div class="ltlevels">${[...LT_LEVELS].reverse().map(([min, l]) => `<div>${ltBadge(l)}<span class="muted small">${min ? `${min}+ punti` : 'sotto 250'}</span></div>`).join('')}</div>
+    <button class="btn primary" data-close style="width:100%;margin-top:16px">Ho capito</button></div>`;
+  document.body.append(m);
+  m.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => m.remove()));
+}
+function ltSheet() {
+  const m = document.createElement('div');
+  m.className = 'tutmodal introsheet quizsheet ltsheet';
+  const sex = (ME.profile.sex || ME.quiz?.sex || '').toLowerCase();
+  const kbs = [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48];
+  const kbSel = (name) => `<select name="${name}"><option value="">–</option>${kbs.map((k) => `<option value="${k}">${k} kg</option>`).join('')}</select>`;
+  const numIn = (name, label) => `<label>${label}<input type="number" inputmode="numeric" min="0" name="${name}" placeholder="ripetizioni"></label>`;
+  m.innerHTML = `<form class="sc-box" id="ltform"><div class="row between"><div class="h1" style="font-size:24px;margin:0">I tuoi <em>risultati</em></div><button type="button" class="icon" data-close>✕</button></div>
+    <div class="muted small">Scrivi cosa hai fatto: il punteggio si calcola da solo.</div>
+    <div class="qlab">Su di te</div>
+    <div class="qchips"><button type="button" class="qchip ${sex === 'm' ? 'on' : ''}" data-sex="m">Uomo</button><button type="button" class="qchip ${sex === 'f' ? 'on' : ''}" data-sex="f">Donna</button></div>
+    <div class="qgrid" style="margin-top:8px"><label>Peso corporeo<input type="number" inputmode="decimal" step="0.1" name="bw" value="${ME.weights.at(-1)?.kg || ME.quiz?.kg || ''}" placeholder="kg"></label></div>
+    <div class="qlab">1 · Complex completato</div>
+    <div class="qgrid"><label>Kettlebell 1${kbSel('kb1')}</label><label>Kettlebell 2${kbSel('kb2')}</label></div>
+    <div class="muted small">Il carico più alto con cui l'hai finito. Se non l'hai completato lascia vuoto.</div>
+    <div class="qlab">Le altre prove</div>
+    <div class="qgrid">${numIn('pushups', 'Piegamenti')}${numIn('pullups', 'Trazioni')}${numIn('t2b', 'Toes to bar')}${numIn('burpees', 'Burpee 5\'')}</div>
+    <div class="ltprev" id="ltprev"></div>
+    <button class="btn primary" style="width:100%;margin-top:14px">Salva il risultato</button></form>`;
+  document.body.append(m);
+  const f = m.querySelector('form');
+  let s = sex;
+  const read = () => ({ sex: s, ...Object.fromEntries([...new FormData(f)].map(([k, v]) => [k, v])) });
+  const prev = () => {
+    const t = read(), r = ltScore(t);
+    m.querySelector('#ltprev').innerHTML = `<div class="row between"><span>Totale</span><span><b class="ltpts">${r.total}</b> punti ${ltBadge(r.level)}</span></div>
+      <div class="muted small">${t.kb1 && t.kb2 && t.bw ? `Complex: ${Number(t.kb1) + Number(t.kb2)} kg = ${r.pct}% del peso${s === 'f' ? ' (+10 donne)' : ''} → ${r.parts.complex} punti` : 'Complex: scegli le 2 kettlebell e scrivi il tuo peso'}</div>`;
+  };
+  m.querySelectorAll('[data-sex]').forEach((b) => (b.onclick = () => { s = b.dataset.sex; m.querySelectorAll('[data-sex]').forEach((x) => x.classList.toggle('on', x === b)); prev(); }));
+  f.oninput = prev; prev();
+  m.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => m.remove()));
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const t = read();
+    if (!t.sex) return toast('Scegli uomo o donna', true);
+    if (!(Number(t.bw) > 0)) return toast('Scrivi il tuo peso corporeo', true);
+    if (!!t.kb1 !== !!t.kb2) return toast('Scegli tutte e 2 le kettlebell (o nessuna)', true);
+    try { ME.levelTests = await api('/api/me/leveltest', 'POST', t); m.remove(); toast(`Livello ${ltScore(t).level}! 💪`); progressView(); } catch (err) { toast(err.message, true); }
+  };
+}
+
 // ---- progressi -----------------------------------------------------------------
 function progressView(month, day) {
   const h = ME.history;
@@ -597,6 +689,8 @@ function progressView(month, day) {
   const src = (ph) => `/api/me/photos/${ph.file}`;
   page('progress', `<div class="h1">Progressi</div>
     <div class="stats3"><div><b>${h.length}</b><span>allenamenti</span></div><div><b>${mins}</b><span>minuti</span></div><div><b>${memberDays}</b><span>giorni membro</span></div></div>
+    <div class="h2">Test livelli</div>
+    ${levelCard()}
     <div class="h2">Peso</div>
     <div class="card">${weightChart(ws)}
       <form class="row" id="wform" style="margin-top:10px"><input name="kg" type="number" step="0.1" min="20" max="300" placeholder="Peso di oggi (kg)" style="flex:1" required><button class="btn primary">Salva</button></form>
@@ -612,6 +706,12 @@ function progressView(month, day) {
     <div class="h2">Diario allenamenti</div>
     ${diary(month, day)}
     ${(() => { const pr = personalRecords(); return pr.length ? `<div class="h2">I miei record</div>${pr.map(({ sc, h: x, times }) => `<div class="rec"><div><b>${esc(sc.block)}</b><div class="muted small">${esc(x.workoutTitle)} · ${new Date(x.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}${times > 1 ? ` · fatto ${times} volte` : ''}</div></div><span class="pill accent">${esc(scoreText(sc))}</span></div>`).join('')}` : ''; })()}`);
+  document.getElementById('ltnew').onclick = ltSheet;
+  document.getElementById('lthow').onclick = ltHow;
+  $app.querySelectorAll('[data-ltdel]').forEach((b) => (b.onclick = async () => {
+    if (!confirm('Eliminare questo test?')) return;
+    try { ME.levelTests = await api(`/api/me/leveltest/${b.dataset.ltdel}`, 'DELETE'); progressView(); } catch (err) { toast(err.message, true); }
+  }));
   document.getElementById('wform').onsubmit = async (e) => {
     e.preventDefault();
     try { ME.weights = await api('/api/me/weight', 'PUT', { date: todayIso(), kg: e.target.kg.value }); progressView(); } catch (err) { toast(err.message, true); }
@@ -646,7 +746,8 @@ function diary(month, day) {
     const k = `${ym(y, m)}-${String(i + 1).padStart(2, '0')}`, n = byDay.get(k)?.length || 0;
     return `<a href="#/progress/${ym(y, m)}/${k}" class="cd ${n ? 'on' : ''} ${k === t ? 'today' : ''} ${k === day ? 'sel' : ''}">${i + 1}${n > 1 ? `<i>${n}</i>` : ''}</a>`;
   }).join('');
-  const list = (day ? byDay.get(day) || [] : inMonth).slice().reverse();
+  // sotto il calendario solo gli allenamenti del giorno toccato (la lista di tutto il mese era troppo lunga)
+  const list = day ? (byDay.get(day) || []).slice().reverse() : [];
   return `<div class="card"><div class="row between"><a class="sbtn" href="#/progress/${prev}">‹</a><b style="text-transform:capitalize">${first.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</b>
       ${ym(y, m) < ym(now.getFullYear(), now.getMonth() + 1) ? `<a class="sbtn" href="#/progress/${next}">›</a>` : '<span class="sbtn" style="opacity:.3">›</span>'}</div>
     <div class="cal"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span>${cells}</div>
@@ -655,7 +756,7 @@ function diary(month, day) {
       <div class="muted small">${esc(x.programTitle)} · ${new Date(x.date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })} · ${fmt(x.seconds)}</div>
       ${(x.scores || []).length ? x.scores.map((sc) => { const c = compareScore(x, sc); return `<div class="small"><span style="color:var(--accent)">${esc(sc.block)}: ${esc(scoreText(sc))}</span> <span class="cmp ${c.cls}">${c.cls === 'pr' ? '🏆' : ''}</span></div>`; }).join('')
         : Object.entries(x.results || {}).map(([k, v]) => `<div class="small" style="color:var(--accent)">${esc(k)}: ${esc(v)}</div>`).join('')}</div></div>`).join('')
-    || `<div class="empty">${day ? 'Nessun allenamento in questo giorno.' : 'Nessun allenamento questo mese.'}</div>`}`;
+    || (day ? '<div class="empty">Nessun allenamento in questo giorno.</div>' : '')}`;
 }
 
 function weightChart(ws) {

@@ -401,6 +401,32 @@ me.put('/challenge/:cid', (req, res) => {
   save();
   res.json(logs);
 });
+// Test livelli (Unconventional Hybrid Test): stesso calcolo di ltScore in public/app.js
+function levelScore(t) {
+  const f = t.sex === 'f', load = (Number(t.kb1) || 0) + (Number(t.kb2) || 0), bw = Number(t.bw) || 0;
+  let complex = 0;
+  if (load && bw) {
+    const pct = Math.floor((load / bw) * 100 / 5) * 5 + (f ? 10 : 0);
+    complex = pct < 20 ? 10 : pct >= 65 ? 150 : { 20: 20, 25: 30, 30: 40, 35: 55, 40: 70, 45: 85, 50: 100, 55: 115, 60: 130 }[pct];
+  }
+  const parts = { complex, pushups: t.pushups * (f ? 3 : 2), pullups: t.pullups * (f ? 10 : 5), t2b: t.t2b * 5, burpees: t.burpees };
+  const total = Object.values(parts).reduce((a, b) => a + b, 0);
+  const level = total >= 550 ? 'Elite' : total >= 450 ? 'Oro' : total >= 350 ? 'Argento' : total >= 250 ? 'Bronzo' : 'Base';
+  return { parts, total, level };
+}
+me.post('/leveltest', (req, res) => {
+  const b = req.body || {}, n = (v, hi) => Math.min(hi, Math.max(0, Math.floor(Number(v) || 0)));
+  const t = { sex: b.sex === 'f' ? 'f' : 'm', bw: Math.min(250, Math.max(0, Number(b.bw) || 0)), kb1: n(b.kb1, 64), kb2: n(b.kb2, 64), pushups: n(b.pushups, 300), pullups: n(b.pullups, 100), t2b: n(b.t2b, 100), burpees: n(b.burpees, 300) };
+  if (!t.bw) return res.status(400).json({ error: 'Scrivi il tuo peso corporeo' });
+  (req.user.levelTests ||= []).push({ id: crypto.randomBytes(6).toString('hex'), date: today(), ...t, ...levelScore(t) });
+  save();
+  res.json(req.user.levelTests);
+});
+me.delete('/leveltest/:id', (req, res) => {
+  req.user.levelTests = (req.user.levelTests || []).filter((x) => x.id !== req.params.id);
+  save();
+  res.json(req.user.levelTests);
+});
 me.put('/weight', (req, res) => {
   const { date = today(), kg } = req.body || {};
   req.user.weights = req.user.weights.filter((w) => w.date !== date);

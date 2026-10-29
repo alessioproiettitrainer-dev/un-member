@@ -20,6 +20,8 @@ async function api(url, method = 'GET', body) {
     headers: { ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}), ...(key ? { 'x-admin-key': key } : {}) },
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
   });
+  // il server si sta aggiornando (dura 2-3 minuti): pagina "Stiamo lavorando per voi" invece di un errore
+  if (r.status >= 502 && r.status <= 504) { if (!location.pathname.startsWith('/lavori')) { try { sessionStorage.setItem('backTo', location.pathname + location.hash); } catch {} location.href = '/lavori.html'; } throw new Error('Stiamo aggiornando l\'app'); }
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && !url.startsWith('/api/auth')) { ME = null; location.hash = '#/login'; throw new Error(j.error || 'Accedi'); }
   if (r.status === 402 && ME) { ME.active = false; paywallView(); throw new Error(j.error); }

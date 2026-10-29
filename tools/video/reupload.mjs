@@ -1,7 +1,7 @@
 // reupload.mjs cartella plan.json [plan2.json...]: ricarica le clip rifatte (prese da cartella, stesso nome file) sugli stessi esercizi, cambia solo il video
 import fs from 'node:fs';
 const B = 'https://un-member.onrender.com', H = { 'x-admin-key': process.env.K };
-const REN = { 'In Curl TRX': 'Hammer Curl TRX', 'Leg Press TRX': 'Squat Row TRX', 'Crunch TRX': 'Standing Rollout TRX', 'Atomic Sit Up TRX': 'Knee Tuck TRX', 'Y TRX': 'Y Fly TRX', 'T TRX': 'T Fly TRX', 'Back T. Lunge': 'Back Lunge', 'Front T. Lunge': 'Front Lunge', 'Quad Press': 'Quod Press' };
+const REN = { 'In Curl TRX': 'Hammer Curl TRX', 'Leg Press TRX': 'Sissy Squat TRX', 'Crunch TRX': 'Standing Rollout TRX', 'Atomic Sit Up TRX': 'Knee Tuck TRX', 'Y TRX': 'Y Fly TRX', 'T TRX': 'T Fly TRX', 'Back T. Lunge': 'Back Lunge', 'Front T. Lunge': 'Front Lunge', 'Quad Press': 'Quod Press' };
 const api = async (m, p, body) => { for (let t = 0; t < 6; t++) { try { const r = await fetch(B + p, { method: m, headers: { ...H, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); return JSON.parse(await r.text()); } catch { await new Promise((s) => setTimeout(s, 6000)); } } throw new Error('api ' + p); };
 const exs = await api('GET', '/api/admin/exercises');
 const [DIR, ...PLANS] = process.argv.slice(2);

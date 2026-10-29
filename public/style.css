@@ -133,15 +133,17 @@ a { color: inherit; }
 .form .row > .av { flex: none; }
 
 /* settimana */
-.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 12px 0 10px; }
-.day { display: grid; justify-items: center; gap: 4px; padding: 8px 0; border-radius: 12px; background: var(--card-2); border: 2px solid transparent; }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 14px 0 10px; text-align: center; }
+.day, .day.plan { display: grid; justify-items: center; gap: 6px; padding: 0; border: 0; border-radius: 0; background: none; position: static; }
 .day span { font-size: 11px; font-weight: 800; color: var(--muted); }
-.day b { font-size: 15px; }
-.day.plan { border-color: rgba(255, 122, 0, .55); }
-.day.done { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.day.done span { color: var(--accent-ink); }
-.day.today { box-shadow: 0 0 0 2px var(--text) inset; }
-.day.miss b { color: #ff6b6b; }
+.day b { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 800; background: var(--card-2); }
+.day u { width: 5px; height: 5px; border-radius: 50%; }
+.day.plan b { box-shadow: inset 0 0 0 2px var(--accent); }
+.day.plan u { background: var(--accent); }
+.day.miss b { box-shadow: inset 0 0 0 2px #e5484d; color: #e5484d; }
+.day.done b { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.day.today span { color: var(--text); }
+.day.today b { outline: 2px solid var(--text); outline-offset: 2px; }
 .next-wo .t { font-weight: 900; font-size: 22px; text-transform: uppercase; margin: 4px 0 2px; }
 
 /* challenge */

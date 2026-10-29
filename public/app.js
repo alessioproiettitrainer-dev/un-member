@@ -279,9 +279,9 @@ async function homeView() {
       <div class="week">${days.map((d) => {
         const k = iso(d), wd = d.getDay();
         const cls = [done.has(k) ? 'done' : '', plan.includes(wd) ? 'plan' : '', k === t ? 'today' : '', k < t && k >= ME.joined && plan.includes(wd) && !done.has(k) ? 'miss' : ''].join(' ');
-        return `<div class="day ${cls}"><span>${WD[wd].slice(0, 1)}</span><b>${done.has(k) ? '✓' : d.getDate()}</b></div>`;
+        return `<div class="day ${cls}"><span>${WD[wd].slice(0, 1)}</span><b>${d.getDate()}</b><u></u></div>`;
       }).join('')}</div>
-      <div class="muted small">I giorni cerchiati sono quelli in cui hai scelto di allenarti. Li cambi dal profilo.</div>
+      <div class="muted small">Cerchio arancione = giorno di allenamento, pieno = fatto, rosso = saltato. Li cambi dal profilo.</div>
     </div>
     ${nw ? `<div class="card next-wo"><div class="lab">${plan.includes(new Date().getDay()) ? 'Oggi si allena' : 'Prossimo allenamento'}</div>
       <div class="t">${esc(nw.title)}</div><div class="muted small">${esc(prog.title)}${cycleWeek(prog) ? ` · settimana ${cycleWeek(prog)} di ${prog.weeks}` : ''} · ~${Math.round(estimateSeconds(nw) / 60)} min</div>

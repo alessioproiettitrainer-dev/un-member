@@ -628,7 +628,7 @@ function ltHow() {
     <div class="intro-opt"><b>4 · Toes to bar strict</b><div class="muted small">Massimo unbroken, gambe tese per tutto il movimento, piedi che toccano la sbarra, partenza da dead hang, niente slancio. Se scendi dalla sbarra la prova finisce. <b>Recupero 3'</b></div></div>
     <div class="intro-opt"><b>5 · Burpee senza piegamento</b><div class="muted small">Massimo in 5 minuti. Mani a terra, salto indietro in plank (petto staccato da terra), piedi vicino alle mani, saltello finale con corpo esteso e mani sopra la testa.</div></div>
     <div class="qlab">Punteggio</div>
-    <div class="muted small">Complex: carico delle 2 kettlebell diviso il tuo peso, in percentuale (arrotondata per difetto al 5%). Sotto 20% = 10 punti · 20% = 20 · 25% = 30 · 30% = 40 · 35% = 55 · 40% = 70 · 45% = 85 · 50% = 100 · 55% = 115 · 60% = 130 · 65% o più = 150. Kettlebell miste ammesse (conta il totale). Donne: +10 punti percentuali.<br>
+    <div class="muted small">Complex: peso totale delle 2 kettlebell diviso il tuo peso, in percentuale (arrotondata per difetto al 5%). Sotto 20% = 10 punti · 20% = 20 · 25% = 30 · 30% = 40 · 35% = 55 · 40% = 70 · 45% = 85 · 50% = 100 · 55% = 115 · 60% = 130 · 65% o più = 150. Le 2 kettlebell devono essere uguali. Donne: +10 punti percentuali.<br>
     Piegamenti 2 punti l'una (donne 3) · Trazioni 5 (donne 10) · Toes to bar 5 · Burpee 1.</div>
     <div class="qlab">Livelli</div>
     <div class="ltlevels">${[...LT_LEVELS].reverse().map(([min, l]) => `<div>${ltBadge(l)}<span class="muted small">${min ? `${min}+ punti` : 'sotto 250'}</span></div>`).join('')}</div>
@@ -641,7 +641,7 @@ function ltSheet() {
   m.className = 'tutmodal introsheet quizsheet ltsheet';
   const sex = (ME.profile.sex || ME.quiz?.sex || '').toLowerCase();
   const kbs = [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48];
-  const kbSel = (name) => `<select name="${name}"><option value="">–</option>${kbs.map((k) => `<option value="${k}">${k} kg</option>`).join('')}</select>`;
+  const kbSel = `<select name="kb"><option value="">Non completato</option>${kbs.map((k) => `<option value="${k}">2 x ${k} kg</option>`).join('')}</select>`;
   const numIn = (name, label) => `<label>${label}<input type="number" inputmode="numeric" min="0" name="${name}" placeholder="ripetizioni"></label>`;
   m.innerHTML = `<form class="sc-box" id="ltform"><div class="row between"><div class="h1" style="font-size:24px;margin:0">I tuoi <em>risultati</em></div><button type="button" class="icon" data-close>✕</button></div>
     <div class="muted small">Scrivi cosa hai fatto: il punteggio si calcola da solo.</div>
@@ -649,8 +649,8 @@ function ltSheet() {
     <div class="qchips"><button type="button" class="qchip ${sex === 'm' ? 'on' : ''}" data-sex="m">Uomo</button><button type="button" class="qchip ${sex === 'f' ? 'on' : ''}" data-sex="f">Donna</button></div>
     <div class="qgrid" style="margin-top:8px"><label>Peso corporeo<input type="number" inputmode="decimal" step="0.1" name="bw" value="${ME.weights.at(-1)?.kg || ME.quiz?.kg || ''}" placeholder="kg"></label></div>
     <div class="qlab">1 · Complex completato</div>
-    <div class="qgrid"><label>Kettlebell 1${kbSel('kb1')}</label><label>Kettlebell 2${kbSel('kb2')}</label></div>
-    <div class="muted small">Il carico più alto con cui l'hai finito. Se non l'hai completato lascia vuoto.</div>
+    <div class="qgrid"><label style="grid-column:1/-1">Coppia di kettlebell${kbSel}</label></div>
+    <div class="muted small">La coppia più pesante con cui l'hai finito.</div>
     <div class="qlab">Le altre prove</div>
     <div class="qgrid">${numIn('pushups', 'Piegamenti')}${numIn('pullups', 'Trazioni')}${numIn('t2b', 'Toes to bar')}${numIn('burpees', 'Burpee 5\'')}</div>
     <div class="ltprev" id="ltprev"></div>
@@ -658,11 +658,12 @@ function ltSheet() {
   document.body.append(m);
   const f = m.querySelector('form');
   let s = sex;
-  const read = () => ({ sex: s, ...Object.fromEntries([...new FormData(f)].map(([k, v]) => [k, v])) });
+  // il complex si fa con 2 kettlebell uguali: si sceglie il peso della coppia
+  const read = () => { const t = { sex: s, ...Object.fromEntries(new FormData(f)) }; t.kb1 = t.kb2 = t.kb; delete t.kb; return t; };
   const prev = () => {
     const t = read(), r = ltScore(t);
     m.querySelector('#ltprev').innerHTML = `<div class="row between"><span>Totale</span><span><b class="ltpts">${r.total}</b> punti ${ltBadge(r.level)}</span></div>
-      <div class="muted small">${t.kb1 && t.kb2 && t.bw ? `Complex: ${Number(t.kb1) + Number(t.kb2)} kg = ${r.pct}% del peso${s === 'f' ? ' (+10 donne)' : ''} → ${r.parts.complex} punti` : 'Complex: scegli le 2 kettlebell e scrivi il tuo peso'}</div>`;
+      <div class="muted small">${t.kb1 && t.bw ? `Complex: 2 x ${t.kb1} = ${Number(t.kb1) * 2} kg = ${r.pct}% del peso${s === 'f' ? ' (+10 donne)' : ''} → ${r.parts.complex} punti` : 'Complex: scegli la coppia di kettlebell e scrivi il tuo peso'}</div>`;
   };
   m.querySelectorAll('[data-sex]').forEach((b) => (b.onclick = () => { s = b.dataset.sex; m.querySelectorAll('[data-sex]').forEach((x) => x.classList.toggle('on', x === b)); prev(); }));
   f.oninput = prev; prev();
@@ -672,7 +673,6 @@ function ltSheet() {
     const t = read();
     if (!t.sex) return toast('Scegli uomo o donna', true);
     if (!(Number(t.bw) > 0)) return toast('Scrivi il tuo peso corporeo', true);
-    if (!!t.kb1 !== !!t.kb2) return toast('Scegli tutte e 2 le kettlebell (o nessuna)', true);
     try { ME.levelTests = await api('/api/me/leveltest', 'POST', t); m.remove(); toast(`Livello ${ltScore(t).level}! 💪`); progressView(); } catch (err) { toast(err.message, true); }
   };
 }

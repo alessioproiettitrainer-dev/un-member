@@ -568,5 +568,5 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .lshots img { flex: 0 0 62%; max-width: 240px; height: auto; aspect-ratio: 480 / 1039; border-radius: 18px; border: 1px solid var(--line); scroll-snap-align: center; background: var(--card); }
 .ltesti { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 1.5; }
 .ltesti img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: 0 0 56px; }
-.landing #lgo { margin: 4px 0 24px; }
-.lcoach .lsign { display: block; width: 46px; height: auto; margin-top: 8px; opacity: .9; }
+.landing #lgo { margin: 4px 0 8px; }
+.landing .lsign { display: block; width: 72px; height: auto; margin: 4px auto 0; opacity: .55; }

@@ -189,7 +189,7 @@ function authView(mode, trial = false, landing = false) {
     </form>
     ${landing ? `<div class="landing">
       <div class="card lcoach"><img src="/img/coach.webp" alt="Alessio" width="320" height="480">
-        <div>Sono <b>Alessio</b>, coach di kettlebell e calisthenics. Ti preparo io l'allenamento di ogni giorno: tu apri l'app e ti alleni, a casa o al parco.<img class="lsign" src="/img/uncoach.webp" alt="UN-COACH" width="150" height="114"></div></div>
+        <div>Sono <b>Alessio</b>, coach di kettlebell e calisthenics. Ti preparo io l'allenamento di ogni giorno: tu apri l'app e ti alleni, a casa o al parco.</div></div>
       <div class="h2">Cosa trovi dentro</div>
       <div class="card lfeat">
         <div><span>📅</span><b>Allenamento del giorno già pronto (30-45 minuti)</b></div>
@@ -198,6 +198,7 @@ function authView(mode, trial = false, landing = false) {
       <div class="lshots">${[['oggi', 'Oggi: il tuo allenamento del giorno'], ['player', 'Il video di ogni esercizio con il timer'], ['programmi', 'I programmi']].map(([f, a]) => `<img src="/img/prova-${f}.webp" alt="${a}" width="480" height="1039" loading="lazy" decoding="async">`).join('')}</div>
       ${tm.text ? `<div class="card ltesti">${tm.photo ? `<img src="${esc(tm.photo)}" alt="" width="56" height="56" loading="lazy">` : ''}<div><div>“${esc(tm.text)}”</div>${tm.name ? `<div class="muted small" style="margin-top:6px">${esc(tm.name)}</div>` : ''}</div></div>` : ''}
       <button class="btn primary block" id="lgo" type="button">Inizia la prova gratis</button>
+      <img class="lsign" src="/img/uncoach.webp" alt="UN-COACH" width="150" height="114" loading="lazy">
     </div>` : ''}
     ${reg ? '' : '<div class="small" style="text-align:center;margin-top:14px"><a href="#/forgot">Password dimenticata?</a></div>'}
     <div class="muted small" style="text-align:center;margin-top:16px">${reg ? 'Hai già un account? <a href="#/login">Accedi</a>' : 'Non hai un account? <a href="#/register">Iscriviti</a>'}</div></div>`;

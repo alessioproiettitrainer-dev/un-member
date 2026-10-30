@@ -649,7 +649,7 @@ function notifyCoach(from, r, m) {
   coachPings[r.key] = Date.now();
   const link = `${process.env.APP_URL || 'https://un-member.onrender.com'}/#/chat/dm-${from.id}`;
   const text = m.text || '📷 Foto';
-  mailer.send({ to: coach.email, subject: `💬 ${from.name} ti ha scritto nell'app`,
+  mailer.send({ to: process.env.GMAIL_USER || coach.email, subject: `💬 ${from.name} ti ha scritto nell'app`,
     body: `${from.name} (${from.email}) ti ha scritto nella chat dell'app:\n\n${text}\n\nRispondi dall'app: ${link}`,
     htmlBody: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px"><p><b>${escHtml(from.name)}</b> (${escHtml(from.email)}) ti ha scritto nella chat dell'app:</p><blockquote style="margin:0;padding:10px 14px;border-left:3px solid #ff7a00;background:#f6f6f6;white-space:pre-line">${escHtml(text)}</blockquote><p style="margin:22px 0"><a href="${link}" style="background:#ff7a00;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 22px;border-radius:10px;display:inline-block">Rispondi nell'app</a></p><p style="color:#777;font-size:13px">Apri il link con il tuo account UN-COACH.</p></div>` }).catch(() => {});
 }

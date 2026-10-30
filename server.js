@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { fetchLowTicketClients } = require('./kalos');
 const mails = require('./mails');
+const followups = require('./followups');
 const mailer = require('./mailer');
 const crypto = require('crypto');
 
@@ -1024,7 +1025,7 @@ function trialDue() {
   const t = today(), days = Math.max(1, Number(db.settings.trialDays) || 7);
   // in prova, oppure prova finita da pochi giorni senza abbonamento (email "tutto ok?", se attivata in Impostazioni)
   const ended = (u) => db.settings.afterTrialMail && !hasAccess(u) && !!u.trialUntil && u.trialUntil < t;
-  return db.users.filter((u) => (inTrial(u) || ended(u)) && !u.community?.banned).map((u) => {
+  return db.users.filter((u) => (inTrial(u) || ended(u)) && !u.community?.banned && !isUnsub(u.email)).map((u) => {
     const st = mails.dueStage(u, t, days);
     return st && { userId: u.id, stage: st.key, day: st.day, to: u.email, ...mails.render(st.key, mails.firstName(u.name), PUBLIC_URL, db.settings) };
   }).filter(Boolean);
@@ -1046,8 +1047,14 @@ function canSendToday() {
   if (db.mailDay?.date !== d) db.mailDay = { date: d, count: 0 };
   return db.mailDay.count < DAILY_CAP;
 }
+// ogni email automatica ha il link per cancellarsi (in fondo e nell'intestazione, così Gmail mostra "Annulla iscrizione")
 async function sendOne(m) {
-  await mailer.send(m);
+  const link = unsubLink(m.to);
+  if (!m.hasFooter) {
+    m = { ...m, body: `${m.body || ''}\n\n—\nNon vuoi più ricevere queste email? Cancellati qui: ${link}` };
+    if (m.htmlBody) m.htmlBody += `<div style="font-family:Arial,Helvetica,sans-serif;color:#999;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:10px;max-width:560px">Non vuoi più ricevere queste email? <a href="${link}" style="color:#999">Cancellati qui</a>.</div>`;
+  }
+  await mailer.send({ ...m, headers: { 'List-Unsubscribe': `<${link}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } });
   db.mailDay.count++;
 }
 const logMail = (entry) => { (db.mailLog ||= []).unshift({ date: new Date().toISOString(), ...entry }); db.mailLog.length = Math.min(db.mailLog.length, 60); };
@@ -1067,6 +1074,7 @@ async function runCampaigns() {
     if (c.done) continue;
     for (const r of c.recipients) {
       if (r.sent || r.error) continue;
+      if (isUnsub(r.email)) { r.error = 'cancellato dalle email'; continue; }
       if (!canSendToday()) return save();
       const fill = (x) => {
         if (r.name) return String(x || '').replace(/\{nome\}/gi, r.name);
@@ -1081,13 +1089,82 @@ async function runCampaigns() {
     save();
   }
 }
+// ---- cancellazione dalle email: link firmato con l'indirizzo, vale anche per chi non è iscritto all'app (campagne)
+const unsubTok = (email) => crypto.createHmac('sha256', process.env.UNSUB_SECRET || ADMIN_KEY).update(String(email).toLowerCase()).digest('hex').slice(0, 32);
+const unsubLink = (email) => `${PUBLIC_URL}/disiscriviti?e=${encodeURIComponent(String(email).toLowerCase())}&t=${unsubTok(email)}`;
+const isUnsub = (email) => (db.unsubscribed || []).includes(String(email || '').toLowerCase());
+const unsubPage = (title, text, form) => `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0c0e;color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;padding:20px;box-sizing:border-box}.c{max-width:420px;background:#18181c;border-radius:18px;padding:26px;text-align:center}h1{font-size:22px;margin:0 0 10px}p{color:#a1a1aa;line-height:1.5}button{margin-top:10px;border:0;border-radius:12px;padding:14px 20px;font-weight:bold;font-size:15px;background:#ff7a00;color:#1a0c00;cursor:pointer}button.s{background:#2a2a30;color:#f4f4f5}</style></head><body><div class="c"><h1>${title}</h1><p>${text}</p>${form || ''}</div></body></html>`;
+app.get('/disiscriviti', (req, res) => {
+  const e = String(req.query.e || '').toLowerCase(), t = String(req.query.t || '');
+  if (!e || t !== unsubTok(e)) return res.status(400).send(unsubPage('Link non valido', 'Il link non è completo: aprilo di nuovo dall\'email.'));
+  const q = `e=${encodeURIComponent(e)}&t=${t}`;
+  if (isUnsub(e)) return res.send(unsubPage('Sei già cancellato', `<b>${escHtml(e)}</b> non riceve più le nostre email.`, `<form method="post" action="/disiscriviti?${q}&undo=1"><button class="s">Mi sono sbagliato, voglio riceverle</button></form>`));
+  res.send(unsubPage('Non vuoi più ricevere le email?', `Togliamo <b>${escHtml(e)}</b> dalle email di UN-MEMBER (novità, promemoria, offerte). L'app e il tuo account restano come sono.`, `<form method="post" action="/disiscriviti?${q}"><button>Sì, cancellami</button></form>`));
+});
+// POST: tasto della pagina oppure "Annulla iscrizione" di Gmail (List-Unsubscribe-Post)
+app.post('/disiscriviti', express.urlencoded({ extended: false }), (req, res) => {
+  const e = String(req.query.e || '').toLowerCase(), t = String(req.query.t || '');
+  if (!e || t !== unsubTok(e)) return res.status(400).send(unsubPage('Link non valido', 'Il link non è completo: aprilo di nuovo dall\'email.'));
+  db.unsubscribed = (db.unsubscribed || []).filter((x) => x !== e);
+  if (!req.query.undo) db.unsubscribed.push(e);
+  save();
+  res.send(req.query.undo ? unsubPage('Fatto 👍', 'Riceverai di nuovo le nostre email.') : unsubPage('Fatto, sei cancellato', 'Non riceverai più le nostre email. Se cambi idea, riapri il link dall\'ultima email.'));
+});
+// ---- email "ci manchi" a chi non apre l'app da più di 3 giorni: la prima dopo 4 giorni, poi una a settimana, massimo 6 di fila
+const FU_GAP = 7, FU_MAX = 6;
+const daysBetween = (a, b) => Math.round((Date.parse(b + 'T12:00Z') - Date.parse(a + 'T12:00Z')) / 864e5);
+function fuInfo(u) {
+  const t = today();
+  const progs = db.programs.filter((p) => p.published && (p.kind !== 'cycle' || (p.startDate <= t && (!p.endDate || p.endDate > t))))
+    .map((p) => ({ title: p.title, subtitle: p.kind === 'cycle' ? 'Programma del mese' : p.subtitle || '', month: p.kind === 'cycle' }))
+    .sort((a, b) => b.month - a.month);
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
+  const weekWorkouts = db.users.reduce((n, x) => n + x.history.filter((h) => h.date >= weekAgo).length, 0);
+  return { name: mails.firstName(u.name), url: PUBLIC_URL, access: canUse(u), programs: progs, news: db.settings.followupNews || '', soon: db.settings.followupSoon || '', weekWorkouts, unsub: unsubLink(u.email), settings: db.settings };
+}
+function followupDue() {
+  const t = today(), coach = coachUser();
+  return db.users.filter((u) => {
+    if (u.id === coach?.id || u.community?.banned || isUnsub(u.email) || inTrial(u)) return false;
+    const seen = (u.lastSeen || u.joined || t).slice(0, 10), f = u.followup || {};
+    if (daysBetween(seen, t) <= 3) return false;
+    if (Object.values(u.trialMails || {}).some((d) => daysBetween(d, t) < 3)) return false; // appena ricevuta un'email della prova
+    const streak = f.last && seen > f.last ? 0 : f.streak || 0; // è tornato dopo l'ultima: si riparte
+    return streak < FU_MAX && (!f.last || daysBetween(f.last, t) >= FU_GAP);
+  });
+}
+async function runFollowups() {
+  if (!db.settings.followupMail) return;
+  let sent = 0, failed = 0, lastErr = '';
+  for (const u of followupDue()) {
+    if (!canSendToday()) break;
+    const f = (u.followup ||= { n: 0, streak: 0, last: '' });
+    const seen = (u.lastSeen || u.joined || '').slice(0, 10);
+    if (f.last && seen > f.last) f.streak = 0;
+    try { await sendOne({ to: u.email, hasFooter: true, ...followups.render(f.n || 0, fuInfo(u)) }); f.n = (f.n || 0) + 1; f.streak = (f.streak || 0) + 1; f.last = today(); sent++; } catch (e) { failed++; lastErr = e.message; }
+  }
+  if (sent || failed) logMail({ kind: 'ci-manchi', label: 'Ci manchi', sent, failed, error: lastErr });
+  save();
+}
+admin.get('/followup', (req, res) => {
+  const due = followupDue();
+  const me = { name: 'Alessio', email: process.env.GMAIL_USER || 'prova@example.com' };
+  const sample = (n, access) => followups.render(n, { ...fuInfo({ ...me, history: [] }), name: 'Alessio', access });
+  res.json({ enabled: !!db.settings.followupMail, due: due.map((u) => ({ name: u.name, email: u.email, access: canUse(u), next: (u.followup?.n || 0) % followups.VARIANTS, lastSeen: (u.lastSeen || u.joined || '').slice(0, 10) })),
+    unsubscribed: db.unsubscribed || [], samples: Array.from({ length: followups.VARIANTS }, (_, n) => sample(n, true)), expiredSample: sample(0, false) });
+});
+admin.post('/followup/test', async (req, res) => {
+  const n = Number(req.body?.n) || 0, access = req.body?.access !== false;
+  try { await mailer.send({ to: process.env.GMAIL_USER, ...followups.render(n, { ...fuInfo({ name: 'Alessio', email: process.env.GMAIL_USER, history: [] }), name: 'Alessio', access }), subject: `[PROVA] ${followups.render(n, { ...fuInfo({ name: 'Alessio', email: process.env.GMAIL_USER }), name: 'Alessio', access }).subject}` }); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); }
+});
 async function mailTick(force) {
   if (mailBusy || !mailer.configured()) return;
   mailBusy = true;
   try {
     await runCampaigns();
     const n = romeNow(), hour = Number(db.settings.trialMailHour ?? 10);
-    if (force || (n.hour >= hour && db.lastTrialMails !== n.date)) { db.lastTrialMails = n.date; await runTrialMails(); }
+    if (force || (n.hour >= hour && db.lastTrialMails !== n.date)) { db.lastTrialMails = n.date; await runTrialMails(); await runFollowups(); }
   } finally { mailBusy = false; }
 }
 setInterval(() => mailTick().catch(() => {}), 5 * 60 * 1000);

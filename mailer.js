@@ -14,10 +14,10 @@ function tx() {
   return transport;
 }
 
-async function send({ to, subject, body, htmlBody, inReplyTo, references }) {
+async function send({ to, subject, body, htmlBody, inReplyTo, references, headers }) {
   if (!configured()) throw new Error('Mancano GMAIL_USER e GMAIL_APP_PASSWORD su Render');
   const from = `${process.env.MAIL_FROM_NAME || 'Alessio · UN-MEMBER'} <${process.env.GMAIL_USER}>`;
-  await tx().sendMail({ from, to, subject, text: body, html: htmlBody, ...(inReplyTo ? { inReplyTo, references: references || inReplyTo } : {}) });
+  await tx().sendMail({ from, to, subject, text: body, html: htmlBody, ...(headers ? { headers } : {}), ...(inReplyTo ? { inReplyTo, references: references || inReplyTo } : {}) });
 }
 
 module.exports = { configured, send };

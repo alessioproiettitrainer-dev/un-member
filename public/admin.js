@@ -466,6 +466,13 @@ function settingsView() {
         <button class="sbtn" data-act="mail-run" ${S.mail.configured ? '' : 'disabled'}>Invia ora quelle di oggi</button></div>
       ${S.mail.campaigns.length ? `<div class="lbl2" style="margin-top:10px">Invii</div>${S.mail.campaigns.slice(-6).reverse().map((c) => `<div class="muted small">${esc(c.label)} · ${c.sent}/${c.total} inviate${c.failed ? ` · ${c.failed} errori` : ''}${c.done ? '' : ' · in corso'}</div>`).join('')}` : ''}
       ${S.mail.log.length ? `<div class="lbl2" style="margin-top:10px">Ultimi invii automatici</div>${S.mail.log.slice(0, 5).map((l) => `<div class="muted small">${new Date(l.date).toLocaleString('it-IT')} · ${l.kind === 'prova' ? 'prova' : esc(l.label || '')}: ${l.sent} inviate${l.failed ? `, ${l.failed} errori${l.error ? ` (${esc(l.error)})` : ''}` : ''}${l.left ? `, ${l.left} rimandate a domani` : ''}</div>`).join('')}` : ''}`}</div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Email "Ci manchi" a chi non apre l'app da più di 3 giorni</label>
+      <label class="chk"><input type="checkbox" data-set="followupMail" ${st.followupMail ? 'checked' : ''}> Attive: ogni mattina con le email della prova — poi premi Salva</label>
+      <div class="muted small">La prima dopo 4 giorni senza aprire l'app, poi una a settimana, al massimo 6 di fila (se torna nell'app si riparte da zero). Ogni volta un testo diverso (6 a rotazione) con i programmi dell'app. Non partono a chi è in prova (ha già le sue) né a chi si è cancellato. In fondo c'è sempre "Cancellati qui".</div>
+      <div class="f" style="margin-top:8px"><label>Novità (frase che compare nell'email delle novità)</label><input type="text" data-set="followupNews" value="${esc(st.followupNews || '')}" placeholder="es. Nuovi video di tutti gli esercizi e il Test livelli in Progressi"></div>
+      <div class="f"><label>In arrivo</label><input type="text" data-set="followupSoon" value="${esc(st.followupSoon || '')}" placeholder="es. i programmi con il TRX e i nuovi tutorial"></div>
+      ${S.fu ? `<div class="muted small">Se fossero attive, oggi partirebbero a <b>${S.fu.due.length}</b> persone · cancellati dalle email: <b>${S.fu.unsubscribed.length}</b>${S.fu.unsubscribed.length ? ` (${S.fu.unsubscribed.slice(-10).map(esc).join(', ')})` : ''}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">${S.fu.samples.map((x, i) => `<button class="sbtn" data-act="fu-test" data-n="${i}" title="${esc(x.subject)}">Prova ${i + 1}</button>`).join('')}<span class="muted small">← mandami un esempio</span></div>` : ''}</div>
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Messaggi automatici di Alessio (chat privata nell'app)</label>
       <label class="chk"><input type="checkbox" data-set="coachMsgs" ${st.coachMsgs !== false ? 'checked' : ''}> Attivi: partono da soli per chi si iscrive, tra le 8 e le 21</label>
       <div class="muted small">${S.coach?.coach ? `Li manda il tuo account <b>${esc(S.coach.coach.name)}</b> (${esc(S.coach.coach.email)}). Quando un membro risponde ti arriva un'email: rispondi dall'app con quell'account.` : S.coach ? 'Account del coach non trovato: iscriviti nell\'app con la stessa email della Gmail collegata.' : ''} Scrivi {nome} per il nome del membro.</div>
@@ -763,7 +770,7 @@ root.addEventListener('click', async (e) => {
       S.tab = t.dataset.tab;
       if (S.tab === 'kalos') { S.kalos = null; render(); S.kalos = await call('GET', '/api/admin/kalos'); }
       if (S.tab === 'email') { S.mail = null; render(); [S.mail, S.kalos] = await Promise.all([call('GET', '/api/admin/mail').catch(() => null), call('GET', '/api/admin/kalos').catch(() => ({ clients: [] }))]); }
-      if (S.tab === 'settings') { S.mail = null; render(); [S.mail, S.coach] = await Promise.all([call('GET', '/api/admin/mail').catch(() => null), call('GET', '/api/admin/coach-replies').catch(() => null)]); }
+      if (S.tab === 'settings') { S.mail = null; render(); [S.mail, S.coach, S.fu] = await Promise.all([call('GET', '/api/admin/mail').catch(() => null), call('GET', '/api/admin/coach-replies').catch(() => null), call('GET', '/api/admin/followup').catch(() => null)]); }
       return render();
     }
     if (t.dataset.ex) { S.exId = t.dataset.ex; render(); return window.scrollTo(0, 0); }
@@ -850,6 +857,7 @@ root.addEventListener('click', async (e) => {
         try { await call('POST', '/api/admin/mail/test', payload); toast('Email di prova inviata: controlla la tua casella'); } catch (err) { toast(err.message, true); }
         return;
       }
+      case 'fu-test': { await call('POST', '/api/admin/followup/test', { n: Number(t.dataset.n) }); toast('Esempio mandato alla Gmail dell\'app'); break; }
       case 'mail-run': { const r = await call('POST', '/api/admin/mail/run'); toast(r.log ? `Inviate ${r.log.sent}${r.log.failed ? `, ${r.log.failed} errori` : ''}` : 'Niente da inviare'); S.mail = await call('GET', '/api/admin/mail'); break; }
       case 'kalos-run': {
         S.kalos.running = true; render();

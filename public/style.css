@@ -557,8 +557,8 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .auth input { scroll-margin: 90px 0 140px; }
 .landing { margin-top: 18px; display: grid; gap: 14px; }
 .landing .h2 { margin: 6px 0 -4px; }
-.lcoach { display: flex; gap: 14px; align-items: center; font-size: 15px; line-height: 1.45; }
-.lcoach > img, .lcoach .lph { width: 72px; height: 72px; flex: 0 0 72px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+.lcoach { display: flex; gap: 14px; align-items: center; padding: 12px; font-size: 15px; line-height: 1.45; }
+.lcoach > img, .lcoach .lph { width: 128px; height: auto; aspect-ratio: 2 / 3; flex: 0 0 128px; border-radius: 16px; object-fit: cover; border: 2px solid var(--accent); }
 .lcoach .lph { display: grid; place-items: center; background: var(--card-2); color: var(--accent); font-weight: 900; font-size: 28px; }
 .lfeat { display: grid; gap: 14px; }
 .lfeat div { display: flex; gap: 12px; align-items: center; font-size: 15px; }

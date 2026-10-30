@@ -555,7 +555,7 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 /* pagina della prova (#/prova, arrivo dalle pubblicità) */
 .auth.lpage { padding-top: 20px; }
 .auth input { scroll-margin: 90px 0 140px; }
-.landing { margin-top: 18px; display: grid; gap: 14px; }
+.landing { display: grid; gap: 14px; }
 .landing .h2 { margin: 6px 0 -4px; }
 .lcoach { display: flex; gap: 14px; align-items: center; padding: 12px; font-size: 15px; line-height: 1.45; }
 .lcoach > img, .lcoach .lph { width: 128px; height: auto; aspect-ratio: 2 / 3; flex: 0 0 128px; border-radius: 16px; object-fit: cover; border: 2px solid var(--accent); }

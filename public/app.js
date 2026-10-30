@@ -177,29 +177,33 @@ function authView(mode, trial = false, landing = false) {
   const days = Number(SETTINGS.trialDays) || 7;
   landing = landing && reg && trial && SETTINGS.trialEnabled;
   const tm = SETTINGS.provaTestimonial || {}; // testimonianza vera: compare solo quando c'è il testo
-  $app.innerHTML = `<div class="wrap auth ${landing ? 'lpage' : ''}">${brand(34)}<div class="muted" style="margin:6px 0 ${landing ? 16 : 26}px">${esc(SETTINGS.tagline || '')}</div>
-    ${trial && SETTINGS.trialEnabled ? `<div class="card trialcard" style="margin-bottom:12px"><b>Settimana di prova gratuita</b><div class="muted small">${reg ? 'Crea il tuo account' : 'Accedi'} e hai ${days} giorni di allenamenti gratis, senza pagamento.</div></div>` : ''}
-    <form class="card form">
+  const trialCard = trial && SETTINGS.trialEnabled ? `<div class="card trialcard" style="margin-bottom:12px"><b>Settimana di prova gratuita</b><div class="muted small">${reg ? 'Crea il tuo account' : 'Accedi'} e hai ${days} giorni di allenamenti gratis, senza pagamento.</div></div>` : '';
+  const form = `<form class="card form">
       <div class="h2" style="margin-top:0">${reg ? 'Crea il tuo account' : 'Accedi'}</div>
       ${reg ? '<label>Nome<input name="name" autocomplete="given-name" autocapitalize="words" enterkeyhint="next" required></label>' : ''}
       <label>Email<input name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" required></label>
       <label>Password<input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" minlength="6" enterkeyhint="go" required></label>
       <button class="btn primary block">${landing ? 'Inizia la prova gratis' : reg ? 'Iscriviti' : 'Entra'}</button>
       ${landing ? `<div class="muted small" style="text-align:center">Nessuna carta di credito. Alla fine dei ${days} giorni non paghi niente in automatico.</div>` : ''}
-    </form>
-    ${landing ? `<div class="landing">
+    </form>`;
+  // pagina della prova (pubblicità): saluto con foto, schermate dell'app, modulo, poi il resto
+  $app.innerHTML = landing ? `<div class="wrap auth lpage"><div class="landing">
       <div class="card lcoach"><img src="/img/coach.webp" alt="Alessio" width="320" height="480">
         <div>Sono <b>Alessio</b>, coach di kettlebell e calisthenics. Ti preparo io l'allenamento di ogni giorno: tu apri l'app e ti alleni, a casa o al parco.</div></div>
+      <div class="lshots">${[['oggi', 'Oggi: il tuo allenamento del giorno'], ['player', 'Il video di ogni esercizio con il timer'], ['programmi', 'I programmi']].map(([f, a]) => `<img src="/img/prova-${f}.webp" alt="${a}" width="480" height="1039" decoding="async">`).join('')}</div>
+      <div>${trialCard}${form}</div>
       <div class="h2">Cosa trovi dentro</div>
       <div class="card lfeat">
         <div><span>📅</span><b>Allenamento del giorno già pronto (30-45 minuti)</b></div>
         <div><span>🎥</span><b>Video di ogni esercizio, per farlo bene</b></div>
         <div><span>💬</span><b>Community con gli altri iscritti, e ci sono anch'io</b></div></div>
-      <div class="lshots">${[['oggi', 'Oggi: il tuo allenamento del giorno'], ['player', 'Il video di ogni esercizio con il timer'], ['programmi', 'I programmi']].map(([f, a]) => `<img src="/img/prova-${f}.webp" alt="${a}" width="480" height="1039" loading="lazy" decoding="async">`).join('')}</div>
       ${tm.text ? `<div class="card ltesti">${tm.photo ? `<img src="${esc(tm.photo)}" alt="" width="56" height="56" loading="lazy">` : ''}<div><div>“${esc(tm.text)}”</div>${tm.name ? `<div class="muted small" style="margin-top:6px">${esc(tm.name)}</div>` : ''}</div></div>` : ''}
       <button class="btn primary block" id="lgo" type="button">Inizia la prova gratis</button>
       <img class="lsign" src="/img/uncoach.webp" alt="UN-COACH" width="150" height="114" loading="lazy">
-    </div>` : ''}
+    </div>
+    <div class="muted small" style="text-align:center;margin-top:16px">Hai già un account? <a href="#/login">Accedi</a></div></div>`
+    : `<div class="wrap auth">${brand(34)}<div class="muted" style="margin:6px 0 26px">${esc(SETTINGS.tagline || '')}</div>
+    ${trialCard}${form}
     ${reg ? '' : '<div class="small" style="text-align:center;margin-top:14px"><a href="#/forgot">Password dimenticata?</a></div>'}
     <div class="muted small" style="text-align:center;margin-top:16px">${reg ? 'Hai già un account? <a href="#/login">Accedi</a>' : 'Non hai un account? <a href="#/register">Iscriviti</a>'}</div></div>`;
   $app.querySelector('form').onsubmit = async (e) => {

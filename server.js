@@ -164,6 +164,12 @@ app.post('/api/auth/register', (req, res) => {
     history: [], challengeLogs: {}, weights: [], food: [], photos: [], activeProgramId: '',
     accessUntil: '', accessLog: [], nutrition: { ...DEFAULT_NUTRITION },
   };
+  // provenienza (pubblicità Meta/TikTok…): solo i parametri utm, il sito da cui arriva e la data della prima visita
+  const src = req.body?.source;
+  if (src && typeof src === 'object') {
+    const clean = Object.fromEntries(['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'referrer', 'firstSeen'].map((k) => [k, String(src[k] || '').slice(0, 200)]).filter(([, v]) => v));
+    if (Object.keys(clean).length) u.source = clean;
+  }
   const pending = db.pendingGrants[em];
   if (pending) {
     if (pending.until) grantUntil(u, pending.until, `${pending.by} (pre-attivazione)`);
@@ -233,6 +239,13 @@ app.post('/api/auth/logout', (req, res) => {
 
 // ---- contenuti per i membri -------------------------------------------------
 app.get('/api/settings', (req, res) => res.json(db.settings));
+// foto del coach per la pagina della prova (pubblica: la vede anche chi non è ancora iscritto)
+app.get('/api/coach-photo', (req, res) => {
+  const a = coachUser()?.community?.avatar;
+  if (!a) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.sendFile(path.join(DATA_DIR, 'avatars', path.basename(a)), (err) => err && res.status(404).end());
+});
 // registro degli errori dei telefoni (ultimi 300), per capire i problemi segnalati dai clienti
 app.post('/api/log', express.text({ type: '*/*', limit: '4kb' }), (req, res) => {
   let b = req.body && typeof req.body === 'object' ? req.body : {}; if (typeof req.body === 'string') try { b = JSON.parse(req.body); } catch {}
@@ -783,6 +796,7 @@ admin.get('/users', (req, res) => res.json(db.users.map((u) => ({
   accessLog: (u.accessLog || []).slice(-5), nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) },
   profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays }, quiz: u.quiz || null,
   weight: u.weights.at(-1)?.kg || '',
+  source: u.source || null,
   lastSeen: u.lastSeen || '', visits: u.visits || 0, convertedFromTrial: u.convertedFromTrial || '', trialStart: u.trialStart || '',
   days7: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10)).length,
   days30: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10)).length,

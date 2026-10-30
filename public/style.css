@@ -552,3 +552,20 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .coachmsg .cm-ico { font-size: 26px; }
 .coachmsg .badge, #coachbtn .badge { position: static; display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 900; font-style: normal; }
 .bub .wvid { margin-top: 8px; min-height: 40px; padding: 0 14px; font-size: 13px; }
+/* pagina della prova (#/prova, arrivo dalle pubblicità) */
+.auth.lpage { padding-top: 20px; }
+.auth input { scroll-margin: 90px 0 140px; }
+.landing { margin-top: 18px; display: grid; gap: 14px; }
+.landing .h2 { margin: 6px 0 -4px; }
+.lcoach { display: flex; gap: 14px; align-items: center; font-size: 15px; line-height: 1.45; }
+.lcoach img, .lcoach .lph { width: 72px; height: 72px; flex: 0 0 72px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+.lcoach .lph { display: grid; place-items: center; background: var(--card-2); color: var(--accent); font-weight: 900; font-size: 28px; }
+.lfeat { display: grid; gap: 14px; }
+.lfeat div { display: flex; gap: 12px; align-items: center; font-size: 15px; }
+.lfeat span { flex: 0 0 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 122, 0, .14); font-size: 20px; }
+.lshots { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.lshots::-webkit-scrollbar { display: none; }
+.lshots img { flex: 0 0 62%; max-width: 240px; height: auto; aspect-ratio: 480 / 1039; border-radius: 18px; border: 1px solid var(--line); scroll-snap-align: center; background: var(--card); }
+.ltesti { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 1.5; }
+.ltesti img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: 0 0 56px; }
+.landing #lgo { margin: 4px 0 24px; }

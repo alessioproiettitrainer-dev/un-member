@@ -9,6 +9,16 @@ const ls = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const DAY = 864e5;
+// provenienza (link delle pubblicità: ?utm_source=meta&utm_content=reel6#/prova): vale la prima che porta dei dati
+try {
+  if (!ls.get('src', null)) {
+    const q = new URLSearchParams(location.search), o = {};
+    for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']) if (q.get(k)) o[k] = q.get(k).slice(0, 100);
+    const ref = document.referrer && !document.referrer.startsWith(location.origin) ? document.referrer.slice(0, 200) : '';
+    if (ref) o.referrer = ref;
+    if (Object.keys(o).length) ls.set('src', { ...o, firstSeen: new Date().toISOString() });
+  }
+} catch {}
 const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
 const WD = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
@@ -128,7 +138,7 @@ async function route() {
   if (parts[0] === 'prova') {
     ls.set('wantTrial', true);
     if (!ME) { const r = await fetch('/api/me', { credentials: 'same-origin' }); if (r.ok) ME = await r.json(); }
-    if (!ME) return authView('register', true);
+    if (!ME) return authView('register', true, true);
     location.replace('#/'); return;
   }
   if (parts[0] === 'login' || parts[0] === 'register') return authView(parts[0], ls.get('wantTrial', false));
@@ -161,25 +171,44 @@ async function route() {
 }
 
 // ---- accesso -----------------------------------------------------------------
-function authView(mode, trial = false) {
+// landing = arrivato dal link della prova (#/prova, pubblicità): sotto il modulo coach, cosa c'è dentro, schermate
+function authView(mode, trial = false, landing = false) {
   const reg = mode === 'register';
   const days = Number(SETTINGS.trialDays) || 7;
-  $app.innerHTML = `<div class="wrap auth">${brand(34)}<div class="muted" style="margin:6px 0 26px">${esc(SETTINGS.tagline || '')}</div>
+  landing = landing && reg && trial && SETTINGS.trialEnabled;
+  const tm = SETTINGS.provaTestimonial || {}; // testimonianza vera: compare solo quando c'è il testo
+  $app.innerHTML = `<div class="wrap auth ${landing ? 'lpage' : ''}">${brand(34)}<div class="muted" style="margin:6px 0 ${landing ? 16 : 26}px">${esc(SETTINGS.tagline || '')}</div>
     ${trial && SETTINGS.trialEnabled ? `<div class="card trialcard" style="margin-bottom:12px"><b>Settimana di prova gratuita</b><div class="muted small">${reg ? 'Crea il tuo account' : 'Accedi'} e hai ${days} giorni di allenamenti gratis, senza pagamento.</div></div>` : ''}
     <form class="card form">
       <div class="h2" style="margin-top:0">${reg ? 'Crea il tuo account' : 'Accedi'}</div>
-      ${reg ? '<label>Nome<input name="name" autocomplete="name" required></label>' : ''}
-      <label>Email<input name="email" type="email" autocomplete="email" required></label>
-      <label>Password<input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" minlength="6" required></label>
-      <button class="btn primary block">${reg ? 'Iscriviti' : 'Entra'}</button>
+      ${reg ? '<label>Nome<input name="name" autocomplete="given-name" autocapitalize="words" enterkeyhint="next" required></label>' : ''}
+      <label>Email<input name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" required></label>
+      <label>Password<input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" minlength="6" enterkeyhint="go" required></label>
+      <button class="btn primary block">${landing ? 'Inizia la prova gratis' : reg ? 'Iscriviti' : 'Entra'}</button>
+      ${landing ? `<div class="muted small" style="text-align:center">Nessuna carta di credito. Alla fine dei ${days} giorni non paghi niente in automatico.</div>` : ''}
     </form>
+    ${landing ? `<div class="landing">
+      <div class="card lcoach"><img src="/api/coach-photo" alt="Alessio" width="72" height="72" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lph',textContent:'A'}))">
+        <div>Sono <b>Alessio</b>, coach di kettlebell e calisthenics. Ti preparo io l'allenamento di ogni giorno: tu apri l'app e ti alleni, a casa o al parco.</div></div>
+      <div class="h2">Cosa trovi dentro</div>
+      <div class="card lfeat">
+        <div><span>📅</span><b>Allenamento del giorno già pronto (30-45 minuti)</b></div>
+        <div><span>🎥</span><b>Video di ogni esercizio, per farlo bene</b></div>
+        <div><span>💬</span><b>Community con gli altri iscritti, e ci sono anch'io</b></div></div>
+      <div class="lshots">${[['oggi', 'Oggi: il tuo allenamento del giorno'], ['player', 'Il video di ogni esercizio con il timer'], ['programmi', 'I programmi']].map(([f, a]) => `<img src="/img/prova-${f}.webp" alt="${a}" width="480" height="1039" loading="lazy" decoding="async">`).join('')}</div>
+      ${tm.text ? `<div class="card ltesti">${tm.photo ? `<img src="${esc(tm.photo)}" alt="" width="56" height="56" loading="lazy">` : ''}<div><div>“${esc(tm.text)}”</div>${tm.name ? `<div class="muted small" style="margin-top:6px">${esc(tm.name)}</div>` : ''}</div></div>` : ''}
+      <button class="btn primary block" id="lgo" type="button">Inizia la prova gratis</button>
+    </div>` : ''}
     ${reg ? '' : '<div class="small" style="text-align:center;margin-top:14px"><a href="#/forgot">Password dimenticata?</a></div>'}
     <div class="muted small" style="text-align:center;margin-top:16px">${reg ? 'Hai già un account? <a href="#/login">Accedi</a>' : 'Non hai un account? <a href="#/register">Iscriviti</a>'}</div></div>`;
   $app.querySelector('form').onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
+    if (reg) f.source = ls.get('src', null);
     try { ME = await api(`/api/auth/${reg ? 'register' : 'login'}`, 'POST', f); location.hash = '#/'; } catch (err) { toast(err.message, true); }
   };
+  const go = document.getElementById('lgo');
+  if (go) go.onclick = () => { const n = $app.querySelector('input[name=name]'); n.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => n.focus({ preventScroll: true }), 350); };
 }
 
 function forgotView() {

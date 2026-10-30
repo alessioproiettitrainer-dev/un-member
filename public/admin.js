@@ -227,6 +227,22 @@ function activitySummary() {
   const tile = (n, l, k) => `<button data-uf="${S.uf === k ? 'all' : k}" style="flex:1;min-width:120px;text-align:left;background:var(--card-2,#1c1c20);border-radius:12px;padding:10px 12px;border:2px solid ${S.uf === k ? 'var(--accent,#ff7a00)' : 'transparent'};color:inherit;cursor:pointer"><div style="font-size:24px;font-weight:900">${n}</div><div class="muted small">${l}</div></button>`;
   return `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso', 'online')}${tile(today, 'Entrati oggi', 'today')}${tile(week, 'Entrati negli ultimi 7 giorni', 'week')}${tile(`${conv}/${trials}`, 'Prove → abbonati', 'conv')}</div>`;
 }
+// provenienza delle iscrizioni (utm dei link delle pubblicità)
+const srcText = (x) => (x ? [x.utm_source, x.utm_content].filter(Boolean).join(' · ') || (x.referrer ? x.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : '') : '') || 'diretto';
+function sourceSummary() {
+  const days = Number(S.sp || 7), from = new Date(Date.now() - (days - 1) * 864e5).toISOString().slice(0, 10);
+  const rows = new Map();
+  for (const u of S.users) {
+    const k = srcText(u.source), r = rows.get(k) || { k, reg: 0, trial: 0 };
+    if (u.joined >= from) r.reg++;
+    if (u.trialStart && u.trialStart >= from) r.trial++;
+    if (r.reg || r.trial) rows.set(k, r);
+  }
+  const list = [...rows.values()].sort((a, b) => b.reg - a.reg || b.trial - a.trial);
+  return `<div class="card" style="margin-bottom:12px;padding:12px"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Da dove arrivano</b>
+    <span>${[[1, 'Oggi'], [7, '7 giorni'], [30, '30 giorni']].map(([d, l]) => `<button class="sbtn ${days === d ? 'acc' : ''}" data-act="src-period" data-d="${d}">${l}</button>`).join(' ')}</span></div>
+    ${list.length ? `<table class="srct"><tr><th>Provenienza (utm_source · utm_content)</th><th>Iscritti</th><th>Prove attivate</th></tr>${list.map((r) => `<tr><td>${esc(r.k)}</td><td>${r.reg}</td><td>${r.trial}</td></tr>`).join('')}</table>` : '<div class="muted small" style="margin-top:6px">Nessuna iscrizione in questo periodo.</div>'}</div>`;
+}
 function usersView() {
   const q = S.uq.toLowerCase();
   const counts = { all: S.users.length };
@@ -241,10 +257,11 @@ function usersView() {
   return `<div class="cols two">
     <div class="panel">
       ${activitySummary()}
+      ${sourceSummary()}
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><input type="text" id="uq" placeholder="Cerca nome o email (es. quella del pagamento Stripe)" value="${esc(S.uq)}" style="flex:1;min-width:220px">
         ${filters.map(([k, l]) => `<button class="sbtn ${S.uf === k ? 'acc' : ''}" data-uf="${k}">${l} ${counts[k] || 0}</button>`).join('')}</div>
       ${list.map((u) => { const [st, label] = userStatus(u); const open = S.openU[u.id]; return `<div class="urow">
-        <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · ${u.workouts} allenamenti${u.lastWorkout ? ` (ultimo ${fmtDate(String(u.lastWorkout).slice(0, 10))})` : ''}</div>
+        <div class="uhead"><div style="flex:1;min-width:180px"><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)} · iscritto ${fmtDate(u.joined)} · <span title="Provenienza${u.source?.utm_campaign ? ` · campagna ${esc(u.source.utm_campaign)}` : ''}${u.source?.utm_medium ? ` · ${esc(u.source.utm_medium)}` : ''}">da ${esc(srcText(u.source))}</span> · ${u.workouts} allenamenti${u.lastWorkout ? ` (ultimo ${fmtDate(String(u.lastWorkout).slice(0, 10))})` : ''}</div>
           <div class="small" style="margin-top:2px"><span class="${seenClass(u)}">● ${esc(seenText(u.lastSeen))}</span>${u.lastSeen ? ` <span class="muted">· ${u.visits} ${u.visits === 1 ? 'accesso' : 'accessi'} · attivo ${u.days7}/7 giorni, ${u.days30}/30</span>` : ''}${u.convertedFromTrial ? ` <span class="st ok">dalla prova all'abbonamento ✓</span>` : ''}</div><div class="muted small">${Object.keys(u.trialMails || {}).length ? `Email prova: ${[['d2', '2° giorno'], ['d4', '4° giorno'], ['last', 'ultimo giorno'], ['after', 'tutto ok?']].filter(([k]) => u.trialMails[k]).map(([, l]) => l).join(', ')} ✓` : ''}</div>${quizText(u.quiz)}</div>
           <span class="st ${st}">${label}${u.accessUntil ? ` · ${fmtDate(u.accessUntil)}` : ''}</span></div>
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><span class="muted small">Aggiungi accesso:</span>
@@ -857,6 +874,7 @@ root.addEventListener('click', async (e) => {
         try { await call('POST', '/api/admin/mail/test', payload); toast('Email di prova inviata: controlla la tua casella'); } catch (err) { toast(err.message, true); }
         return;
       }
+      case 'src-period': S.sp = Number(t.dataset.d); break;
       case 'fu-test': { await call('POST', '/api/admin/followup/test', { n: Number(t.dataset.n) }); toast('Esempio mandato alla Gmail dell\'app'); break; }
       case 'mail-run': { const r = await call('POST', '/api/admin/mail/run'); toast(r.log ? `Inviate ${r.log.sent}${r.log.failed ? `, ${r.log.failed} errori` : ''}` : 'Niente da inviare'); S.mail = await call('GET', '/api/admin/mail'); break; }
       case 'kalos-run': {

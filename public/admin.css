@@ -89,3 +89,7 @@ input[type=search]:focus { border-color: var(--accent); }
 .block.pauseblock { border-left-color: #3aa0ff; }
 [hidden] { display: none !important; }
 .modphoto { display: block; max-width: 180px; max-height: 180px; border-radius: 10px; margin: 6px 0; background: var(--card-2); }
+
+.srct { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.srct th, .srct td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.srct td + td, .srct th + th { text-align: right; width: 90px; }

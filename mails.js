@@ -35,7 +35,7 @@ function render(key, name, url, settings = {}) {
       paras: [
         ciao,
         'Ormai sei a metà settimana: <b>come stanno andando i workout?</b> Ti trovi con i tempi, gli esercizi sono chiari, c\'è qualcosa che ti ha fatto storcere il naso?',
-        'Intanto ti lascio 3 trucchi che in pochi scoprono subito:<br>🎥 <b>Tocca un esercizio</b> nell\'anteprima del workout e vedi subito la demo<br>⛶ Durante l\'allenamento premi il tasto <b>schermo intero</b>: il video diventa grande e i comandi restano sopra<br>🔊 La <b>voce</b> ti annuncia ogni esercizio e il recupero: se ti dà fastidio la togli dall\'icona in alto',
+        'Intanto ti lascio 3 trucchi che in pochi scoprono subito:<br>🎥 <b>Tocca un esercizio</b> nell\'anteprima del workout e vedi subito la demo<br>🏆 In <b>Progressi</b> trovi il <b>Test livelli</b>: 5 prove e scopri se sei Base, Bronzo, Argento, Oro o Elite. Rifallo tra qualche settimana e guarda i punti salire<br>🔊 La <b>voce</b> ti annuncia ogni esercizio e il recupero: se ti dà fastidio la togli dall\'icona in alto',
         'E se non l\'hai ancora fatto, <b>entra nella community</b>: presentati con una foto, scrivi come ti sta andando, fai una domanda. È lì che si crea il gruppo.',
         'Come sempre, se mi rispondi a questa email la leggo io personalmente. Ogni commento, anche una critica, mi aiuta a migliorarla.',
         '__BTN__Apri l\'app',

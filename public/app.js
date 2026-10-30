@@ -188,8 +188,8 @@ function authView(mode, trial = false, landing = false) {
       ${landing ? `<div class="muted small" style="text-align:center">Nessuna carta di credito. Alla fine dei ${days} giorni non paghi niente in automatico.</div>` : ''}
     </form>
     ${landing ? `<div class="landing">
-      <div class="card lcoach"><img src="/api/coach-photo" alt="Alessio" width="72" height="72" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lph',textContent:'A'}))">
-        <div>Sono <b>Alessio</b>, coach di kettlebell e calisthenics. Ti preparo io l'allenamento di ogni giorno: tu apri l'app e ti alleni, a casa o al parco.</div></div>
+      <div class="card lcoach"><img src="/img/coach.webp" alt="Alessio" width="72" height="72">
+        <div>Sono <b>Alessio</b>, coach di kettlebell e calisthenics. Ti preparo io l'allenamento di ogni giorno: tu apri l'app e ti alleni, a casa o al parco.<img class="lsign" src="/img/uncoach.webp" alt="UN-COACH" width="150" height="114"></div></div>
       <div class="h2">Cosa trovi dentro</div>
       <div class="card lfeat">
         <div><span>📅</span><b>Allenamento del giorno già pronto (30-45 minuti)</b></div>

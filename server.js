@@ -239,13 +239,6 @@ app.post('/api/auth/logout', (req, res) => {
 
 // ---- contenuti per i membri -------------------------------------------------
 app.get('/api/settings', (req, res) => res.json(db.settings));
-// foto del coach per la pagina della prova (pubblica: la vede anche chi non è ancora iscritto)
-app.get('/api/coach-photo', (req, res) => {
-  const a = coachUser()?.community?.avatar;
-  if (!a) return res.status(404).end();
-  res.set('Cache-Control', 'public, max-age=86400');
-  res.sendFile(path.join(DATA_DIR, 'avatars', path.basename(a)), (err) => err && res.status(404).end());
-});
 // registro degli errori dei telefoni (ultimi 300), per capire i problemi segnalati dai clienti
 app.post('/api/log', express.text({ type: '*/*', limit: '4kb' }), (req, res) => {
   let b = req.body && typeof req.body === 'object' ? req.body : {}; if (typeof req.body === 'string') try { b = JSON.parse(req.body); } catch {}

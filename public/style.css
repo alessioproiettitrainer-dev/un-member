@@ -547,3 +547,8 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .ltlevels { display: grid; gap: 6px; }
 .ltlevels div { display: flex; align-items: center; gap: 10px; }
 .ltcard .btn { padding: 0 14px; white-space: nowrap; }
+/* messaggi del coach */
+.coachmsg { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); border: 1px solid var(--accent); margin-bottom: 14px; }
+.coachmsg .cm-ico { font-size: 26px; }
+.coachmsg .badge, #coachbtn .badge { position: static; display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 900; font-style: normal; }
+.bub .wvid { margin-top: 8px; min-height: 40px; padding: 0 14px; font-size: 13px; }

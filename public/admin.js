@@ -466,6 +466,13 @@ function settingsView() {
         <button class="sbtn" data-act="mail-run" ${S.mail.configured ? '' : 'disabled'}>Invia ora quelle di oggi</button></div>
       ${S.mail.campaigns.length ? `<div class="lbl2" style="margin-top:10px">Invii</div>${S.mail.campaigns.slice(-6).reverse().map((c) => `<div class="muted small">${esc(c.label)} · ${c.sent}/${c.total} inviate${c.failed ? ` · ${c.failed} errori` : ''}${c.done ? '' : ' · in corso'}</div>`).join('')}` : ''}
       ${S.mail.log.length ? `<div class="lbl2" style="margin-top:10px">Ultimi invii automatici</div>${S.mail.log.slice(0, 5).map((l) => `<div class="muted small">${new Date(l.date).toLocaleString('it-IT')} · ${l.kind === 'prova' ? 'prova' : esc(l.label || '')}: ${l.sent} inviate${l.failed ? `, ${l.failed} errori${l.error ? ` (${esc(l.error)})` : ''}` : ''}${l.left ? `, ${l.left} rimandate a domani` : ''}</div>`).join('')}` : ''}`}</div>
+    <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Messaggi automatici di Alessio (chat privata nell'app)</label>
+      <label class="chk"><input type="checkbox" data-set="coachMsgs" ${st.coachMsgs !== false ? 'checked' : ''}> Attivi: partono da soli per chi si iscrive, tra le 8 e le 21</label>
+      <div class="muted small">${S.coach?.coach ? `Li manda il tuo account <b>${esc(S.coach.coach.name)}</b> (${esc(S.coach.coach.email)}). Quando un membro risponde ti arriva un'email: rispondi dall'app con quell'account.` : S.coach ? 'Account del coach non trovato: iscriviti nell\'app con la stessa email della Gmail collegata.' : ''} Scrivi {nome} per il nome del membro.</div>
+      <div class="f" style="margin-top:8px"><label>Benvenuto (subito, con il tasto del video di benvenuto)</label><textarea data-set="coachMsg0" rows="7">${esc(st.coachMsg0 || '')}</textarea></div>
+      <div class="f"><label>3° giorno</label><textarea data-set="coachMsg3" rows="4">${esc(st.coachMsg3 || '')}</textarea></div>
+      <div class="f"><label>6° giorno (solo a chi è ancora in prova)</label><textarea data-set="coachMsg6" rows="4">${esc(st.coachMsg6 || '')}</textarea></div>
+      ${S.coach?.replies?.length ? `<div class="lbl2" style="margin-top:6px">Ultime risposte dei membri</div>${S.coach.replies.map((r) => `<div class="muted small" style="margin:6px 0">${r.answered ? '✅' : '🟠'} <b>${esc(r.name)}</b> · ${new Date(r.ts).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}: ${esc(r.text.slice(0, 160))} · <a href="/#/chat/${esc(r.room)}" target="_blank">apri nell'app</a></div>`).join('')}<div class="muted small">🟠 = non hai ancora risposto</div>` : ''}</div>
     <div class="f" style="border:1px solid var(--line);border-radius:12px;padding:12px"><label>Consulenza gratuita (servizio personalizzato)</label>
       <div class="grid2"><div class="f" style="margin:0"><label>Link per prenotare la call</label><input type="text" data-set="consultUrl" value="${esc(st.consultUrl || '')}" placeholder="es. https://calendly.com/…"></div>
         <div class="f" style="margin:0"><label>Scritta del tasto</label><input type="text" data-set="consultLabel" value="${esc(st.consultLabel || '')}" placeholder="Prenota la consulenza gratuita"></div></div>
@@ -756,7 +763,7 @@ root.addEventListener('click', async (e) => {
       S.tab = t.dataset.tab;
       if (S.tab === 'kalos') { S.kalos = null; render(); S.kalos = await call('GET', '/api/admin/kalos'); }
       if (S.tab === 'email') { S.mail = null; render(); [S.mail, S.kalos] = await Promise.all([call('GET', '/api/admin/mail').catch(() => null), call('GET', '/api/admin/kalos').catch(() => ({ clients: [] }))]); }
-      if (S.tab === 'settings') { S.mail = null; render(); S.mail = await call('GET', '/api/admin/mail').catch(() => null); }
+      if (S.tab === 'settings') { S.mail = null; render(); [S.mail, S.coach] = await Promise.all([call('GET', '/api/admin/mail').catch(() => null), call('GET', '/api/admin/coach-replies').catch(() => null)]); }
       return render();
     }
     if (t.dataset.ex) { S.exId = t.dataset.ex; render(); return window.scrollTo(0, 0); }

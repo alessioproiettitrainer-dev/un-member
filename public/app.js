@@ -102,6 +102,11 @@ function lockedSheet() {
 }
 function page(tab, html) { $app.innerHTML = `${previewBar()}${trialBar()}<div class="wrap">${html}</div>${tabbar(tab)}`; refreshBadge(); }
 // Pallino con i messaggi privati non letti sull'icona Community
+// chat privata con Alessio: messaggi non letti e stanza (funziona anche senza entrare nella community)
+async function coachInfo() {
+  if (!ME?.active || ME.id === 'admin-preview') return {};
+  try { return await (await fetch('/api/community/unread')).json(); } catch { return {}; }
+}
 async function refreshBadge() {
   if (!ME?.active || !ME.community?.joined) return;
   try {
@@ -274,6 +279,7 @@ async function homeView() {
     <div class="topbar">${brand(24)}<span class="row" style="gap:8px"><span class="pill">Membro da ${memberDays} ${memberDays === 1 ? 'giorno' : 'giorni'}</span>${meAvatar()}</span></div>
     <div class="h1">Ciao <em>${esc(ME.name.split(' ')[0])}</em></div>
     ${welcomeSrc() && ME.welcomeSeen !== welcomeSrc() ? `<div class="card welcome" id="welcome"><button class="wplay" data-wplay>▶</button><div style="flex:1" data-wplay><b>${esc(SETTINGS.welcomeTitle || 'Guarda il video di benvenuto')}</b><div class="muted small">Come funziona l'app, in poco più di un minuto</div></div><button class="icon" id="wclose" aria-label="Non mostrare più">✕</button></div>` : ''}
+    <div id="coachcard"></div>
     <div class="card">
       <div class="row between"><b>La tua settimana</b><span class="muted small">${doneThisWeek}/${plan.length || '–'} allenamenti</span></div>
       <div class="week">${days.map((d) => {
@@ -292,6 +298,7 @@ async function homeView() {
   `);
   $app.querySelectorAll('[data-ch]').forEach((el) => el.addEventListener('click', onChallenge));
   $app.querySelectorAll('[data-wplay]').forEach((el) => { el.onclick = () => welcomePlayer(); });
+  coachInfo().then((c) => { const el = document.getElementById('coachcard'); if (el && c.coach) el.innerHTML = `<a class="card coachmsg" href="#/chat/${c.coachRoom}"><span class="cm-ico">💬</span><div style="flex:1"><b>Alessio ti ha scritto</b><div class="muted small">${c.coach === 1 ? 'Hai un messaggio nuovo' : `Hai ${c.coach} messaggi nuovi`}: tocca per leggere</div></div><span class="badge">${c.coach}</span></a>`; });
   const wc = document.getElementById('wclose');
   if (wc) wc.onclick = () => welcomeDone();
   if (SETTINGS.quiz !== false && !ME.seen?.quiz && ME.id !== 'admin-preview' && !document.querySelector('.quizsheet')) quizSheet(list);
@@ -911,8 +918,10 @@ function profileView() {
     </form>
     <div class="card"><b>La tua attrezzatura</b><div class="muted small">In Allenamenti ti mostro prima i programmi che puoi fare con questi attrezzi.</div>
       <div class="qchips" id="myeq" style="margin-top:10px">${[['kb1', '1 kettlebell'], ['kb2', '2 o più kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici']].map(([v, l]) => `<button type="button" class="qchip ${(myEquip() || []).includes(v) ? 'on' : ''}" data-eq="${v}">${l}</button>`).join('')}</div></div>
+    <div id="coachbtn"></div>
     ${welcomeSrc() ? '<button class="btn block" style="margin-top:12px" id="rewatch">▶ Rivedi il video di benvenuto</button>' : ''}
     <button class="btn block" style="margin-top:12px" id="logout">Esci</button>`);
+  coachInfo().then((c) => { const el = document.getElementById('coachbtn'); if (el && c.coachRoom) el.innerHTML = `<a class="btn block" style="margin-top:12px" href="#/chat/${c.coachRoom}">💬 Scrivi ad Alessio${c.coach ? ` <span class="badge">${c.coach}</span>` : ''}</a>`; });
   const rw = document.getElementById('rewatch');
   if (rw) rw.onclick = () => welcomePlayer();
   document.getElementById('myeq').onclick = async (e) => {
@@ -1191,10 +1200,10 @@ async function chatView(room) {
   const general = room === 'general';
   let last = 0;
   const first = await api(`/api/community/chat/${room}`);
-  const other = first.other;
+  const other = first.other, joined = !!ME.community?.joined;
   $app.innerHTML = `<div class="chat">
-    <div class="chat-top">${general ? '' : '<a class="icon" href="#/community/messages" aria-label="Indietro">‹</a>'}
-      ${general ? `<div style="flex:1"><div class="h1" style="margin:0;font-size:24px">Community</div></div>${meAvatar()}` : `<a href="#/community/u/${other.id}" class="row" style="gap:10px;flex:1;text-decoration:none">${avatar(other.avatar, other.name, 36)}<b>${esc(other.name)}</b></a>`}</div>
+    <div class="chat-top">${general ? '' : `<a class="icon" href="${joined ? '#/community/messages' : '#/'}" aria-label="Indietro">‹</a>`}
+      ${general ? `<div style="flex:1"><div class="h1" style="margin:0;font-size:24px">Community</div></div>${meAvatar()}` : `<a href="${joined ? `#/community/u/${other.id}` : '#/'}" class="row" style="gap:10px;flex:1;text-decoration:none">${avatar(other.avatar, other.name, 36)}<b>${esc(other.name)}</b></a>`}</div>
     ${general ? `<div style="padding:0 16px">${ctabs('chat')}</div>` : ''}
     <div class="msgs" id="msgs"></div>
     ${first.blocked ? '<div class="chat-in muted small" style="justify-content:center">Hai bloccato questo membro.</div>'
@@ -1213,7 +1222,7 @@ async function chatView(room) {
       el.className = `msg ${mine ? 'mine' : ''}`;
       el.innerHTML = `${mine || !general ? '' : `<a href="#/community/u/${m.from}">${avatar(m.avatar, m.name, 30)}</a>`}<div class="bub">${!mine && general ? `<b class="who">${esc(m.name)}</b>` : ''}
         ${m.photo ? `<img class="cphoto" src="${esc(m.photo)}" alt="Foto" loading="lazy" data-photo="${esc(m.photo)}">` : ''}
-        ${m.deleted ? '<div class="txt"><i class="muted">Messaggio eliminato</i></div>' : m.text ? `<div class="txt">${esc(m.text)}</div>` : ''}<span class="tm">${when(m.ts)}${!mine && !m.deleted ? ` · <button data-rep="${m.id}">Segnala</button>` : ''}</span></div>`;
+        ${m.deleted ? '<div class="txt"><i class="muted">Messaggio eliminato</i></div>' : m.text ? `<div class="txt">${esc(m.text)}</div>` : ''}${m.video && welcomeSrc() ? '<button class="btn primary wvid" data-wvideo>▶ Guarda il video</button>' : ''}<span class="tm">${when(m.ts)}${!mine && !m.deleted ? ` · <button data-rep="${m.id}">Segnala</button>` : ''}</span></div>`;
       box.append(el);
     }
     if (atBottom || msgs.some((m) => m.from === ME.id)) box.scrollTop = box.scrollHeight;
@@ -1222,6 +1231,7 @@ async function chatView(room) {
   box.scrollTop = box.scrollHeight;
   if (!first.messages.length) box.innerHTML = `<div class="empty">${general ? 'Nessun messaggio ancora: rompi il ghiaccio! 👋' : `Scrivi il primo messaggio a ${esc(other.name)}.`}</div>`;
   box.onclick = async (e) => {
+    if (e.target.closest('[data-wvideo]')) return welcomePlayer();
     const ph = e.target.closest('[data-photo]');
     if (ph) return photoViewer(ph.dataset.photo);
     const b = e.target.closest('[data-rep]');

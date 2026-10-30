@@ -27,6 +27,11 @@ const EMPTY = {
       { title: 'Solo allenamenti · annuale', price: '', period: "all'anno", note: '', url: '', best: false },
       { title: 'Allenamenti + alimentazione · annuale', price: '', period: "all'anno", note: 'Con il piano alimentare del nutrizionista', url: '', best: false },
     ], extraAppUrl: '', extraAppLabel: '',
+    // messaggi automatici di Alessio nella chat privata dell'app ({nome} = nome del membro)
+    coachMsgs: true,
+    coachMsg0: "Ciao {nome}! Sono Alessio 👋 Benvenuto in UN-MEMBER, sono contento di averti qui.\n\nTi ho preparato un video di un minuto su come funziona l'app: guardalo prima di iniziare, ti semplifica la vita.\n\nQuesta chat è diretta con me, non è un bot: se hai domande su allenamenti, esercizi o sull'app scrivimi pure, ti rispondo io.\n\nEntra anche nella Community (in basso nel menu): lì puoi confrontarti con gli altri membri, condividere i tuoi allenamenti e farti motivare 🔥\n\nBuon primo allenamento! 💪",
+    coachMsg3: "Ehi {nome}, come stanno andando i primi allenamenti? 🙂\n\nSe qualche esercizio non ti è chiaro, se il programma è troppo facile o troppo difficile, o se qualcosa nell'app non funziona, scrivimi qui: lo sistemiamo insieme.",
+    coachMsg6: "{nome}, la tua settimana di prova sta per finire. Com'è andata?\n\nSe vuoi continuare trovi i piani in Profilo. E se ti va di fare due chiacchiere sui tuoi obiettivi, puoi prenotare una consulenza gratuita con me dal link che trovi lì.\n\nQualunque cosa, scrivimi qui 💪",
     trialEndText: 'La tua settimana di prova è finita. Scegli il tuo piano qui sotto: entro 24 ore dal pagamento attiviamo il tuo accesso con la stessa email. Progressi e storico restano salvati.', communityRules: 'Rispetto per tutti. Niente spam, pubblicità o contenuti offensivi. Chi non rispetta le regole viene escluso dalla community.' },
   exercises: [], programs: [], tips: [], challenges: [], tutorials: [], users: [], sessions: {}, staff: [], staffSessions: {}, pendingGrants: {}, trialEmails: [],
   messages: [], reports: [],
@@ -167,6 +172,7 @@ app.post('/api/auth/register', (req, res) => {
   // con la prova attiva in Impostazioni, chi si iscrive (da qualunque link) parte subito con la settimana gratis
   if (trialAvailable(u)) startTrial(u);
   db.users.push(u);
+  setTimeout(() => { try { coachTick(); } catch {} }, 3000); // messaggio di benvenuto del coach
   startSession(res, u.id);
   res.json(publicUser(u));
 });
@@ -516,7 +522,10 @@ me.post('/block/:id', (req, res) => {
   res.json({ blocked: c.blocked });
 });
 
-const inCommunity = (u) => u && u.community?.joined && !u.community?.banned;
+// il coach (account con l'email di settings.coachEmail o GMAIL_USER) scrive a tutti in privato, anche a chi non è nella community
+const coachUser = () => { const e = String(db.settings.coachEmail || process.env.GMAIL_USER || '').trim().toLowerCase(); return e ? db.users.find((u) => u.email === e) : null; };
+const isCoach = (u) => !!u && u.id === coachUser()?.id;
+const inCommunity = (u) => u && (u.community?.joined || isCoach(u)) && !u.community?.banned;
 const card = (u) => ({ id: u.id, name: u.name, bio: u.community?.bio || '', avatar: u.community?.avatar ? `/api/avatars/${u.community.avatar}` : '', since: u.joined, workouts: u.history.length });
 const dmKey = (a, b) => `dm:${[a, b].sort().join(':')}`;
 const blockedBy = (u, otherId) => (u.community?.blocked || []).includes(otherId);
@@ -524,7 +533,9 @@ function community(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Accedi per continuare' });
   if (!canUse(req.user)) return res.status(402).json({ error: 'Abbonamento non attivo', inactive: true });
   if (req.user.community?.banned) return res.status(403).json({ error: 'Sei stato escluso dalla community' });
-  if (!inCommunity(req.user)) return res.status(409).json({ error: 'Entra prima nella community', notJoined: true });
+  const coach = coachUser();
+  const coachRoute = coach && (req.path === '/unread' || req.path.startsWith(`/chat/dm-${coach.id}`));
+  if (!inCommunity(req.user) && !coachRoute) return res.status(409).json({ error: 'Entra prima nella community', notJoined: true });
   next();
 }
 const cm = express.Router();
@@ -544,10 +555,10 @@ function resolveRoom(req, res) {
   const r = req.params.room;
   if (r === 'general') return { key: 'general' };
   const other = r.startsWith('dm-') && db.users.find((x) => x.id === r.slice(3));
-  if (!other || other.id === req.user.id || !inCommunity(other)) { res.status(404).json({ error: 'Chat non trovata' }); return null; }
+  if (!other || other.id === req.user.id || (!inCommunity(other) && !isCoach(req.user))) { res.status(404).json({ error: 'Chat non trovata' }); return null; }
   return { key: dmKey(req.user.id, other.id), other };
 }
-const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from); return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, photo: m.photo && !m.deleted ? `/api/chatphotos/${m.photo}` : '', from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '' }; };
+const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from); return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, photo: m.photo && !m.deleted ? `/api/chatphotos/${m.photo}` : '', video: !!m.video, from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '' }; };
 cm.get('/rooms', (req, res) => {
   const me_ = req.user.id, lr = req.user.lastRead || {};
   const rooms = new Map([['general', { room: 'general', title: 'Chat di gruppo', last: null, unread: 0 }]]);
@@ -588,6 +599,7 @@ cm.post('/chat/:room', (req, res) => {
   (req.user.lastRead ||= {})[req.params.room] = m.ts;
   save();
   res.json(msgOut(m));
+  notifyCoach(req.user, r, m);
 });
 // ---- foto in chat: il telefono le riduce prima (≈1280 px), qui un tetto di 3 MB e 10 foto al giorno a testa
 const PHOTO_DIR = path.join(DATA_DIR, 'chatphotos');
@@ -613,6 +625,7 @@ cm.post('/chat/:room/photo', chatPhotoUpload.single('file'), (req, res) => {
   (req.user.lastRead ||= {})[req.params.room] = m.ts;
   save();
   res.json(msgOut(m));
+  notifyCoach(req.user, r, m);
 });
 // nomi casuali e lunghi: si vedono solo dall'app (membro, admin o staff)
 app.get('/api/chatphotos/:file', (req, res) => {
@@ -627,14 +640,28 @@ cm.post('/report/:id', (req, res) => {
   save();
   res.json({ ok: true });
 });
+// quando un membro scrive al coach, al coach arriva un'email di avviso (al massimo una ogni 30 minuti per chat)
+const coachPings = {};
+function notifyCoach(from, r, m) {
+  const coach = coachUser();
+  if (!coach || !r.other || r.other.id !== coach.id || !mailer.configured()) return;
+  if (Date.now() - (coachPings[r.key] || 0) < 30 * 60 * 1000) return;
+  coachPings[r.key] = Date.now();
+  const link = `${process.env.APP_URL || 'https://un-member.onrender.com'}/#/chat/dm-${from.id}`;
+  const text = m.text || '📷 Foto';
+  mailer.send({ to: coach.email, subject: `💬 ${from.name} ti ha scritto nell'app`,
+    body: `${from.name} (${from.email}) ti ha scritto nella chat dell'app:\n\n${text}\n\nRispondi dall'app: ${link}`,
+    htmlBody: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px"><p><b>${escHtml(from.name)}</b> (${escHtml(from.email)}) ti ha scritto nella chat dell'app:</p><blockquote style="margin:0;padding:10px 14px;border-left:3px solid #ff7a00;background:#f6f6f6;white-space:pre-line">${escHtml(text)}</blockquote><p style="margin:22px 0"><a href="${link}" style="background:#ff7a00;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 22px;border-radius:10px;display:inline-block">Rispondi nell'app</a></p><p style="color:#777;font-size:13px">Apri il link con il tuo account UN-COACH.</p></div>` }).catch(() => {});
+}
+const escHtml = (x) => String(x || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 cm.get('/unread', (req, res) => {
-  const lr = req.user.lastRead || {}, me_ = req.user.id;
-  let n = 0;
+  const lr = req.user.lastRead || {}, me_ = req.user.id, coach = coachUser();
+  let n = 0, nc = 0;
   for (const m of db.messages) {
     if (m.from === me_ || blockedBy(req.user, m.from)) continue;
-    if (m.room.startsWith('dm:') && m.room.split(':').includes(me_) && m.ts > (lr[`dm-${m.from}`] || 0)) n++;
+    if (m.room.startsWith('dm:') && m.room.split(':').includes(me_) && m.ts > (lr[`dm-${m.from}`] || 0)) { n++; if (m.from === coach?.id) nc++; }
   }
-  res.json({ dm: n });
+  res.json({ dm: n, coach: nc, coachRoom: coach && coach.id !== me_ ? `dm-${coach.id}` : '' });
 });
 app.use('/api/community', cm);
 
@@ -1064,6 +1091,50 @@ async function mailTick(force) {
   } finally { mailBusy = false; }
 }
 setInterval(() => mailTick().catch(() => {}), 5 * 60 * 1000);
+// ---- messaggi automatici del coach nella chat privata (benvenuto, 3° giorno, 6° giorno se è in prova)
+// Partono solo per chi si iscrive da quando la funzione è attiva (db.coachMsgsFrom), tra le 8 e le 21.
+const COACH_STAGES = [{ key: 'w', from: 0, to: 2, text: 'coachMsg0', video: true }, { key: 'd3', from: 3, to: 5, text: 'coachMsg3' }, { key: 'd6', from: 6, to: 8, text: 'coachMsg6', trialOnly: true }];
+function coachTick() {
+  const coach = coachUser();
+  if (!coach || db.settings.coachMsgs === false) return;
+  const n = romeNow();
+  if (!db.coachMsgsFrom) { db.coachMsgsFrom = n.date; save(); }
+  if (n.hour < 8 || n.hour >= 21) return;
+  let changed = false;
+  for (const u of db.users) {
+    if (u.id === coach.id || !u.joined || u.joined < db.coachMsgsFrom || u.community?.banned) continue;
+    const day = Math.round((Date.parse(n.date) - Date.parse(u.joined)) / 864e5), sent = (u.coachMsgs ||= {});
+    for (const st of COACH_STAGES) {
+      if (sent[st.key] || day < st.from) continue;
+      if (day > st.to || (st.trialOnly && !inTrial(u)) || (st.key !== 'w' && !sent.w)) { sent[st.key] = 'skip'; changed = true; continue; }
+      const name = String(u.name || '').trim().split(/\s+/)[0];
+      const text = String(db.settings[st.text] || EMPTY.settings[st.text]).replace(/\{nome\}/gi, name).trim();
+      const m = { id: newId(), room: dmKey(coach.id, u.id), from: coach.id, text, ts: Date.now() };
+      if (st.video && (db.settings.welcomeVideo || db.settings.welcomeUrl)) m.video = true;
+      db.messages.push(m);
+      sent[st.key] = new Date().toISOString(); changed = true;
+      break; // un messaggio alla volta
+    }
+  }
+  if (changed) save();
+}
+setInterval(() => { try { coachTick(); } catch (e) { console.error('coachTick', e.message); } }, 5 * 60 * 1000);
+setTimeout(() => { try { coachTick(); } catch {} }, 20 * 1000);
+// ultime risposte dei membri al coach, per il pannello
+admin.get('/coach-replies', (req, res) => {
+  const coach = coachUser();
+  if (!coach) return res.json({ coach: null, replies: [] });
+  const out = [], seen = new Set();
+  for (let i = db.messages.length - 1; i >= 0 && out.length < 15; i--) {
+    const m = db.messages[i];
+    if (!m.room.startsWith('dm:') || !m.room.split(':').includes(coach.id) || m.from === coach.id || seen.has(m.room)) continue;
+    seen.add(m.room);
+    const u = db.users.find((x) => x.id === m.from);
+    const answered = db.messages.some((x) => x.room === m.room && x.from === coach.id && x.ts > m.ts);
+    out.push({ name: u?.name || 'Ex membro', email: u?.email || '', text: m.deleted ? '' : m.text || '📷 Foto', ts: m.ts, room: `dm-${m.from}`, answered });
+  }
+  res.json({ coach: { name: coach.name, email: coach.email }, from: db.coachMsgsFrom || '', replies: out });
+});
 admin.get('/mail', (req, res) => res.json({ configured: mailer.configured(), from: process.env.GMAIL_USER || '', hour: Number(db.settings.trialMailHour ?? 10), today: db.mailDay?.date === romeToday() ? db.mailDay.count : 0, cap: DAILY_CAP, log: db.mailLog || [],
   campaigns: Object.entries(db.campaigns || {}).map(([id, c]) => ({ id, label: c.label, subject: c.subject, created: c.created, done: c.done || '', total: c.recipients.length, sent: c.recipients.filter((r) => r.sent).length, failed: c.recipients.filter((r) => r.error).length })) }));
 admin.post('/mail/test', async (req, res) => {

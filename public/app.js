@@ -950,7 +950,8 @@ function profileView() {
       <div class="qchips" id="myeq" style="margin-top:10px">${[['kb1', '1 kettlebell'], ['kb2', '2 o più kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici']].map(([v, l]) => `<button type="button" class="qchip ${(myEquip() || []).includes(v) ? 'on' : ''}" data-eq="${v}">${l}</button>`).join('')}</div></div>
     <div id="coachbtn"></div>
     ${welcomeSrc() ? '<button class="btn block" style="margin-top:12px" id="rewatch">▶ Rivedi il video di benvenuto</button>' : ''}
-    <button class="btn block" style="margin-top:12px" id="logout">Esci</button>`);
+    <button class="btn block" style="margin-top:12px" id="logout">Esci</button>
+    <div style="text-align:center;margin:22px 0 6px"><button class="linkbtn muted small" id="delacc">Elimina il mio account</button></div>`);
   coachInfo().then((c) => { const el = document.getElementById('coachbtn'); if (el && c.coachRoom) el.innerHTML = `<a class="btn block" style="margin-top:12px" href="#/chat/${c.coachRoom}">💬 Scrivi ad Alessio${c.coach ? ` <span class="badge">${c.coach}</span>` : ''}</a>`; });
   const rw = document.getElementById('rewatch');
   if (rw) rw.onclick = () => welcomePlayer();
@@ -976,6 +977,11 @@ function profileView() {
   const lv = document.getElementById('leave');
   if (lv) lv.onclick = async () => { if (!confirm('Uscire dalla community? Non comparirai più tra i membri e non potrai scrivere in chat.')) return; ME = await api('/api/me/community', 'PUT', { joined: false }); profileView(); };
   document.getElementById('logout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };
+  document.getElementById('delacc').onclick = async () => {
+    const c = prompt('Vuoi cancellare il tuo account? Perdi allenamenti fatti, progressi e foto, e non si può tornare indietro.\n\nSe hai un abbonamento attivo, per disdirlo scrivi all\'assistenza.\n\nPer confermare scrivi ELIMINA');
+    if (c === null) return;
+    try { await api('/api/me/account', 'DELETE', { confirm: c }); ME = null; progCache.clear(); toast('Account cancellato'); location.hash = '#/login'; } catch (err) { toast(err.message, true); }
+  };
 }
 
 // ---- piani di abbonamento ---------------------------------------------------------

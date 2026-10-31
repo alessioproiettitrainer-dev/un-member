@@ -372,6 +372,18 @@ function startTrial(u) {
   u.trialUntil = new Date(Date.now() + (days - 1) * 864e5).toISOString().slice(0, 10); // oggi compreso
   db.trialEmails.push(trialKey(u.email));
 }
+// il membro cancella da solo il suo account (Profilo → Elimina account): via dati, foto e sessioni
+me.delete('/account', (req, res) => {
+  const u = req.user;
+  if (String(req.body?.confirm || '').trim().toUpperCase() !== 'ELIMINA') return res.status(400).json({ error: 'Scrivi ELIMINA per confermare' });
+  db.users = db.users.filter((x) => x.id !== u.id);
+  for (const [k, s] of Object.entries(db.sessions)) if (s.userId === u.id) delete db.sessions[k];
+  fs.rm(path.join(PRIVATE, u.id), { recursive: true, force: true }, () => {});
+  (db.deletedAccounts ||= []).push({ email: u.email, date: today() }); // solo per sapere chi se n'è andato
+  save();
+  res.setHeader('Set-Cookie', 'sid=; Path=/; Max-Age=0');
+  res.json({ ok: true });
+});
 me.post('/trial', (req, res) => {
   const u = req.user;
   if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Hai già un abbonamento attivo' : 'La settimana di prova si può fare una sola volta' });

@@ -570,3 +570,4 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .ltesti img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: 0 0 56px; }
 .landing #lgo { margin: 4px 0 8px; }
 .landing .lsign { display: block; width: 72px; height: auto; margin: 4px auto 0; opacity: .55; }
+.linkbtn { background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 6px; font: inherit; }

@@ -1,42 +1,109 @@
-# Note per Claude
+# UN-MEMBER — contesto del progetto
 
-- Parla in italiano con il proprietario (Alessio, coach, non programmatore): spiegazioni semplici, passi concreti.
-- **Risparmio di utilizzo di Claude**: quando un lavoro ripetitivo può girare dentro l'app (server su Render) invece che in una sessione o attività programmata di Claude, proponilo sempre e dillo esplicitamente. Esempi già fatti: lettura giornaliera da Kalos (`kalos.js`), email della prova e campagne inviate dall'app via Gmail (`mailer.js`, `mails.js`).
-- Kalos (gestionale esterno, non nostro): **solo lettura**, mai modificare, mai aprire chat o schede. Il collegamento fa solo login + lista low ticket.
-- Clienti Kalos ↔ app: si collegano **solo per email identica**, mai per nome.
-- Segreti (ADMIN_KEY, credenziali Kalos e Gmail) solo nelle variabili d'ambiente di Render, mai nel codice: il repository è pubblico.
-- Email a gruppi di persone (eventi, inviti): crea una campagna con `POST /api/admin/campaign` (`label`, `subject`, `body`, `htmlBody`, `recipients: [{email, name}]`, `{nome}` nel testo). La stessa etichetta non rimanda mai a chi l'ha già ricevuta. Mostra sempre il testo al proprietario prima di inviare.
+## 1. Cos'è l'app
+- PWA di allenamento di **Alessio** (UN-COACH, coach di kettlebell e calisthenics). Il proprietario non è un programmatore: parlagli **in italiano**, con spiegazioni semplici e passi concreti.
+- Per chi si allena a casa o al parco con kettlebell, TRX o corpo libero.
+- **Oggi:** la settimana dell'utente e l'allenamento del giorno.
+- **Allenamenti:**
+  - "Kettlebell Volume 1/2/3" (1 kettlebell, principianti);
+  - "Programma del mese" (ciclo mensile, 2 kettlebell, intermedi e avanzati);
+  - TRX BASE;
+  - sezioni per categoria (kettlebell/trx/calisthenics) e tutorial.
+- **Player:** video di ogni esercizio, timer e voce. Blocchi intervalli, EMOM, AMRAP e a tempo.
+- **Community:** chat di gruppo e messaggi privati. Il coach scrive dall'account "UN-COACH".
+- **Progressi:** calendario, peso, foto prima/dopo, record e "Test livelli" (Base, Bronzo, Argento, Oro, Elite).
+- **Cibo:** contacalorie e macro.
+- **Accesso:**
+  - prova gratuita di 7 giorni all'iscrizione (una per email);
+  - poi abbonamento con i piani in Impostazioni (per esempio "Solo allenamenti" o "Allenamenti + alimentazione"). Prezzi e link di pagamento si gestiscono dal pannello: non so con certezza quali siano quelli attivi oggi.
+  - il pagamento avviene fuori dall'app, tramite link esterno (le ricevute arrivano da Stripe). L'accesso lo attiva l'admin a mano dal pannello, anche pre-attivando un'email.
+  - pagamenti e nutrizione dei clienti "veri" restano su **Kalos**, il gestionale esterno.
 
-## Com'è fatta l'app
-- Online su https://un-member.onrender.com (pannello: `/admin`). Ogni push su `main` viene pubblicato da Render in 2-3 minuti. Copia del codice anche in `/home/user/kettlebell-app` se presente.
-- Node + Express, dati in `data/db.json` (disco di Render). Frontend in `public/` (`app.js`, `player.js` = player degli allenamenti, `engine.js` = calcolo degli step, `admin.js` = pannello).
-- Chiamate al server vero dalla sessione: `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node -e "fetch(...)"` con header `x-admin-key` (chiedi la chiave al proprietario, non scriverla nei file).
-- Test in locale: `ADMIN_KEY=test123 PORT=3000 node server.js`; Playwright in `/opt/node22/lib/node_modules/playwright/index.mjs` (Chromium headless non riproduce H.264: per i video usa copie .webm).
+## 2. Tecnologie
+- **Server:** Node ≥18 + Express (`server.js`). Database: un file JSON, `data/db.json`, sul disco persistente di Render.
+- **Frontend:** JavaScript vanilla, senza framework né build. È una PWA con service worker.
+- **Hosting:** Render, piano starter con disco. Ogni push su `main` viene pubblicato in automatico in 2-3 minuti.
+- **Email:** Gmail via nodemailer (SMTP) e imapflow + mailparser per leggere le risposte (`mailer.js`, `inbox.js`).
+- **Kalos:** solo lettura (`kalos.js`).
+- **Video:** mp4 caricati in `data/uploads`. Strumenti di taglio in Python/ffmpeg in `tools/video/` (faster-whisper, opencv).
 
-## Decisioni già prese (non rimetterle in discussione)
-- EMOM: niente tasto "Fatto"; gli esercizi dell'intervallo girano in loop (rip × secondi per rip × "Ritmo delle ripetizioni" in Impostazioni); a 15 s dalla fine anteprima verde del prossimo, o "Recupero completo" se dopo c'è l'intervallo di recupero.
-- Player come KBMH (app di Vadim): niente schermo intero, timer in una riga (giro a sinistra, tempo a destra), riquadro video 4:3, sezione "Dopo" con miniatura sotto il video; su iPhone un solo video alla volta e tasto "Tocca per avviare il video" se il risparmio energetico blocca l'autoplay; nel recupero niente sfocato, nero.
-- Prova gratuita 7 giorni: parte da sola all'iscrizione (una per email). Email automatiche dall'app: 2° giorno, 4° giorno, ultimo giorno (con piani e link consulenza Calendly da Impostazioni).
-- Programmi: "Kettlebell Volume 1/2/3" (1 kettlebell, principiante) e "Programma del mese" (ex ciclo, 2 kettlebell, intermedio/avanzato). Ogni programma ha `equipment` (kb1/kb2/trx/bar/band/bw) e `category` (kettlebell/trx/calisthenics): Allenamenti mostra le sezioni per categoria e mette in fondo i programmi senza l'attrezzatura del membro.
-- Progressi: "Test livelli" (Unconventional Hybrid Test, 5 prove → punti e livello Base/Bronzo/Argento/Oro/Elite), salvato in `u.levelTests`; calcolo uguale in `ltScore` (app.js) e `levelScore` (server.js). Sotto il calendario si vedono gli allenamenti solo del giorno toccato.
-- Messaggi automatici del coach (account con email GMAIL_USER, "UN-COACH") nella chat privata: benvenuto con video + invito alla community, 3° giorno, 6° giorno (se in prova); testi in Impostazioni (`coachMsg0/3/6`), solo per iscritti da `db.coachMsgsFrom`, 8-21. Risposte → email di avviso alla Gmail dell'app (GMAIL_USER, quella delle campagne) (max 1 ogni 30 min per chat) e lista nel pannello.
-- Email "Ci manchi" (`followups.js`, 6 testi a rotazione con i programmi veri): a chi non apre l'app da più di 3 giorni (non in prova, non cancellati), prima dopo 4 giorni poi ogni 7, max 6 di fila; si attivano con `followupMail` in Impostazioni. Ogni email automatica ha "Cancellati qui" (`/disiscriviti`, link firmato, lista `db.unsubscribed`, vale anche per le campagne) e List-Unsubscribe.
-- Pagina della prova (#/prova, pubblicità Meta/TikTok): modulo in alto con "Inizia la prova gratis", sotto foto coach (`public/img/coach.webp`), cosa trovi dentro, 3 schermate (`public/img/prova-*.webp`), testimonianza solo se `settings.provaTestimonial.text`, logo UN-COACH in fondo. Provenienza: utm + referrer salvati in localStorage `src` (la prima con dati) → `u.source` all'iscrizione; pannello Iscritti: "da …" e riquadro "Da dove arrivano".
-- Questionario del primo accesso (età, peso, altezza, sesso, attrezzatura, esperienza, livello, giorni) → programma consigliato (`quizRecommend` in app.js); attrezzatura modificabile dal Profilo. Traduzione automatica del browser bloccata (notranslate).
+## 3. Struttura
+- **`server.js`:** tutte le API.
+  - `/api/auth`, `/api/me/*`, `/api/community/*`, `/api/admin/*` (header `x-admin-key`);
+  - email automatiche, campagne, `/disiscriviti`, messaggi automatici del coach.
+- **`mails.js`:** testi delle email della prova (2° giorno, 4° giorno, ultimo giorno, "tutto ok?" dopo la fine).
+- **`followups.js`:** email "Ci manchi".
+- **`mailer.js`, `inbox.js`, `kalos.js`:** invio email, lettura delle risposte, lettura da Kalos.
+- **`seed.js`:** crea dati iniziali solo se il db non esiste.
+- **`public/`:**
+  - `app.js` (app membri e router `#/…`), `player.js` (player degli allenamenti), `engine.js` (calcolo degli step);
+  - `admin.html` + `admin.js` + `admin.css` (pannello `/admin`);
+  - `style.css`, `sw.js`, `lavori.html` (pagina "Stiamo lavorando per voi" quando il server risponde 502), `img/` (foto del coach, logo UN-COACH, schermate della pagina della prova).
+- **`tools/video/`:** pipeline dei video (vedi sezione 5).
 
-## Lavoro in arrivo: rifare tutti i video
-- Lista nel Word "Video da registrare" (150 esercizi esistenti + 44 nuovi con 1/2 kettlebell + 30 TRX alla porta).
-- Alessio gira in 4K orizzontale con Sony, un video lungo per sessione: dice il nome dell'esercizio, batte le mani, poi 3-4 ripetizioni. Va fatto: trascrizione audio, abbinamento nomi, scelta delle ripetizioni più pulite (7-10 s, loop), ritaglio **4:3** (1280x960, messo sia in `video` che in `videoBox`; niente 9:16 e niente sfocato: Alessio non li vuole), sostituzione negli esercizi esistenti (i workout restano), misura dei secondi per ripetizione. Lavorare un file alla volta (spazio disco limitato). Prima una prova con 3-4 esercizi.
-- Luce: applica a TUTTE le clip la stessa correzione (più esposizione/luminosità, ombre schiarite): Alessio deve vedersi bene (viso, tatuaggi), lo sfondo può venire più chiaro/bruciato, non importa. Lui non batte sempre le mani: usa il nome detto (trascrizione) + inizio del movimento.
-- Inquadratura: nel 4K orizzontale il 9:16 prende ~1/3 centrale, il 4:5 poco meno di metà; si usa tutta l'altezza.
-- File grandi da Drive: il connettore Drive passa i file in base64 nel contesto (inutilizzabile per video). Farsi condividere il file "chiunque abbia il link" e scaricarlo con curl/gdown. Le clip finite si scaricano dall'app (pannello), non si caricano su Drive dal connettore.
-- Strumenti in `tools/video/` (pip install opencv-python-headless scipy; faster-whisper già presente): `transcribe.py audio.wav medium` (nomi con tempi) → `scan.py` (fotogrammi piccoli .npy) → `boxes.py` → `pick.py low.npy box.json segs.json pick.json` (segs = nome, t0, t1, hold per le tenute) → controlla a occhio con fogli di miniature → `render43.py` → ricodifica 1280x960 crf 26 → `upload.mjs plan.json` (K=chiave admin nell'ambiente; carica con `?raw=1`, fa backup dei video vecchi). Il server non deve ricomprimere le clip: con ffmpeg sul piano Render va in crash di memoria.
-- Inquadratura approvata: larga, con sfondo (porto, palazzi), lui non riempie il riquadro; piedi verso il basso (~88% dell'altezza).
-- Primo video (24/10, Drive 16-qtN1ypnzcNtuL-kIoaLCQqCRXEXCn4): 22 esercizi caricati. Superman Dinamico = Superman Pulse. Pull Plank Knee / Pull Plank Full (gambe tese).
-- Colore uguale tra le sessioni: `tools/video/color_ref.json` = valori medi delle clip approvate del 24/10 (dopo la correzione luce). Per ogni nuovo video misura gli stessi valori e regola esposizione/bilanciamento (curves/eq/colorbalance) finché non coincidono, poi confronta a occhio affiancando una clip vecchia e una nuova.
-- Sessione 24/10 pomeriggio (cartella Drive 1S8fSVYql9r7_EhfMX7j29L4gRMEyzSMa, 24 video): ~240 esercizi con video nuovo 4:3. Taglio: `reframe.py` (16% sopra le mani, 3% sotto i piedi, centrato) + `seam.py` (inizio/fine a 30 fps) + dissolvenza 0,3 s in `render43.py`; per clip già tagliate senza originale: `loopfix.py`, verifica con `loopscore.py` (1 = loop invisibile).
-- Drive: scaricare molte volte gli stessi file pubblici fa scattare "Quota exceeded" per ~24 h. Scaricare ogni video una volta sola e tenere i file finché il lavoro non è approvato.
-- Ancora da girare (video vecchi verticali): elastici, Bear Crawl/Cat/Ape/Kong/Quod Gecko/Quod Press Jump/Half Swop/High Bridge, Lateral/Drop/Switch Lunge, Hollow Pullover/Tuck/Negative, L-Leg/Straddle Lift, stretching (Child Pose, Hamstring, Bridge), circles (Elbow/Head/Wrist/Shoulder), Split Squat KT/2KT, Bulgarian Goblet, 360 Press, Big Halo, Goblet Twist, ATW Lunge, Deadlift 2KT Outside, Gorilla Row + Row, Renegade Row + Push Up, EMOM Clean+Press/Squat; da rifare: Knee L-Sit, Clean 1 Arm SX, Push Press 1H SX.
-- 24/10 sera: Alessio NON vuole la sfumatura visibile nei loop (si vede doppio quando fine e inizio non combaciano). Ora nell'app ci sono le clip con taglio netto (cartelle locali `rv/`), Jumping Jack & co. (v1410) col metodo buono `seam.py`. Da rifare quando Drive si sblocca: tutti i video dall'originale con reframe+seam (min 2 ripetizioni, dissolvenza 0,13 s solo se la posizione combacia). Thruster 2KT: clip tagliata da Alessio stesso. Gorilla Row + Row 2KT: montata da Gorilla Row (dx, sx) + Row 2KT con `joinloop.py`.
-- REGOLA (Alessio, 25/10): quando si lavora sui video di Drive, scaricare ogni originale UNA volta e tenerne subito una **copia locale "master"** compressa (es. `ffmpeg -i orig.mp4 -vf scale=2560:-2 -c:v libx264 -crf 18 -preset slow -c:a aac master.mp4`, ~5-10 volte più piccola, basta per i ritagli 1280x960), poi cancellare l'originale da 4K. Tutti i rifacimenti si fanno dai master, mai riscaricando da Drive. Cartella master: `/home/user/vids/master/` (non nel repo).
-- Il blocco "Quota exceeded" di Drive vale per tutti i download dalla sessione (anche copie nuove dello stesso file): dopo un blocco aspettare ~1 giorno. I processi avviati con nohup/setsid muoiono quando la sessione resta inattiva: usare Bash con run_in_background. Stato 27/10: tutti i 22 video rifatti dai master (/home/user/vids/master, copie 2560 crf 22) con reframe+seam e caricati (213 clip). Per ritocchi futuri usare i master, non Drive.
+## 4. Come si avvia e si pubblica
+- **In locale:** `npm install`, poi `ADMIN_KEY=test123 PORT=3000 node server.js`. Pannello: `http://localhost:3000/admin`.
+  - Prima dei test fai un backup di `data/db.json` e rimettilo alla fine: il db locale non va nel repository.
+- **Test visivi:** Playwright in `/opt/node22/lib/node_modules/playwright/index.mjs`. Chromium headless non riproduce i video H.264: usa copie `.webm`.
+- **Deploy:** `git push origin main`, poi Render pubblica da solo.
+  - Le modifiche visibili ai clienti vanno mostrate ad Alessio con screenshot da telefono (390x844) **prima** del push. Nel frattempo si lavora su un ramo.
+- **Variabili d'ambiente** (solo su Render, mai nel codice; il repository è pubblico): `ADMIN_KEY`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM_NAME`, `MAIL_DAILY_CAP`, `KALOS_EMAIL`, `KALOS_PASSWORD`, `PUBLIC_URL`, `APP_URL`, `UNSUB_SECRET` (se manca si usa `ADMIN_KEY`), `PORT`.
+- **Chiamate al server vero dalla sessione:** `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node -e "fetch(...)"` con header `x-admin-key`. La chiave chiedila ad Alessio e non scriverla nei file.
+
+## 5. Decisioni prese (non rimetterle in discussione)
+- **Player come quello di KBMH (l'app di Vadim):**
+  - niente schermo intero;
+  - timer su una riga;
+  - riquadro video 4:3;
+  - sezione "Dopo" con miniatura;
+  - nessuna scritta sopra il video;
+  - nel recupero schermo nero, niente sfocato.
+- **EMOM:** niente tasto "Fatto". Gli esercizi girano in loop. A 15 secondi dalla fine compare l'anteprima del prossimo esercizio.
+- **Video:**
+  - 4:3, 1280x960, in `video` e in `videoBox`;
+  - inquadratura larga con lo sfondo, luce e colore uguali per tutti (`tools/video/color_ref.json`);
+  - loop senza "doppia immagine": `reframe.py` + `seam.py`;
+  - il server non ricomprime le clip: caricare con `?raw=1`, altrimenti Render va in crash di memoria.
+- **Video da Drive:** ogni originale si scarica una volta sola. Subito si tiene una copia "master" (2560 px) in `/home/user/vids/master/` e si cancella il 4K. Riscaricare spesso dallo stesso Drive blocca i download per circa 24 ore.
+- **Clienti Kalos ↔ app:** si collegano **solo per email identica**, mai per nome. Kalos è **solo lettura**: mai modificare, mai aprire chat o schede.
+- **Email automatiche** (partono dall'app ogni mattina alle 10, dalla Gmail uncoach.info):
+  - prova: 2° giorno, 4° giorno, ultimo giorno, "tutto ok?" 2-4 giorni dopo la fine;
+  - "Ci manchi" a chi non apre l'app da più di 3 giorni: la prima dopo 4 giorni, poi ogni 7, al massimo 6 di fila, con 6 testi a rotazione (`followupMail` in Impostazioni);
+  - ogni email ha "Cancellati qui" (`/disiscriviti`, lista `db.unsubscribed`), che vale anche per le campagne.
+- **Email a gruppi:** si fanno con `POST /api/admin/campaign`. La stessa etichetta non arriva due volte alla stessa persona. **Mostra sempre il testo ad Alessio prima di inviare.**
+- **Risposte dei clienti:** si leggono da `GET /api/admin/replies` e si risponde con `POST /api/admin/reply`, sempre dopo l'ok di Alessio.
+  - Una settimana di prova in più (`/users/:id/extra-week`) va solo a chi ha avuto problemi o non è riuscito a provare: **massimo 2 a persona**.
+- **Messaggi del coach nella chat privata:** benvenuto con il video e l'invito alla community, poi 3° e 6° giorno (`coachMsg0/3/6`).
+  - Le risposte dei membri fanno partire un'email di avviso a uncoach.info. Il nome dell'account resta "UN-COACH".
+- **Programmi:** ogni programma ha `equipment` (kb1/kb2/trx/bar/band/bw) e `category`. Allenamenti mostra righe che scorrono di lato e mette in fondo i programmi per cui manca l'attrezzatura.
+- **Primo accesso:** questionario → programma consigliato (`quizRecommend`). L'attrezzatura si cambia dal Profilo.
+- **Pagina della prova** `#/prova` (pubblicità Meta e TikTok):
+  - salva la provenienza utm in `u.source`; nel pannello c'è il riquadro "Da dove arrivano";
+  - la testimonianza compare solo se `settings.provaTestimonial.text` è valorizzato. **Mai inventare testimonianze.**
+- **Membri:** possono cancellare da soli l'account (Profilo → "Elimina il mio account").
+- **Traduzione automatica del browser:** bloccata (notranslate).
+
+## 6. Regole e convenzioni
+- **Testi:** tutti in italiano, tono diretto e amichevole (romano leggero, "daje"). La firma è "Alessio".
+- **Design:**
+  - tema scuro (`--bg #0c0c0e`), arancione `--accent #ff7a00`, font **Montserrat**, titoli in maiuscolo;
+  - mobile-first, niente scroll orizzontale della pagina.
+- **Codice:** vanilla JS, stile compatto come quello che c'è già. Commenti brevi in italiano. Nessuna dipendenza nuova senza motivo.
+- **Segreti e dati dei clienti:** mai segreti nel codice o in questo file, mai dati dei clienti nel repository. Nei mockup usa solo dati inventati.
+- **Non toccare senza chiedere:** prezzi, durata della prova, email automatiche, messaggi del coach.
+- **Commit:** niente identificativi del modello nei commit.
+- **Risparmio:** se un lavoro ripetitivo può girare dentro l'app (server Render) invece che in una sessione di Claude, proponilo.
+
+## 7. Bug noti e cose in sospeso
+- **Pagina della prova:** il ramo `prova-ordine` (prima il saluto con foto, poi le schermate, poi il modulo; senza logo né frase in alto) **aspetta l'ok di Alessio**. Gli avevo proposto anche un pulsante "Inizia la prova gratis ↓" sotto il saluto. Il ramo `prova-landing` è già stato unito.
+- **Proposta non ancora fatta:** quando un membro cancella l'account, toglierlo in automatico anche dalle email.
+- **Video ancora da girare** (oggi ci sono quelli vecchi verticali): elastici, Bear Crawl/Cat/Ape/Kong, Quod Gecko, Quod Press Jump, Half Swop, High Bridge, Lateral/Drop/Switch Lunge, Hollow Pullover/Tuck/Negative, L-Leg/Straddle Lift, stretching, circles, Split Squat KT/2KT, Bulgarian Goblet, 360 Press, Big Halo, Goblet Twist, ATW Lunge, Deadlift 2KT Outside, Renegade Row + Push Up, EMOM Clean+Press/Squat.
+  - Da rifare: Knee L-Sit, Clean 1 Arm SX, Push Press 1H SX.
+  - Circa 40 tenute hanno ancora un piccolo salto nel loop.
+- **In programma:** nuovi programmi TRX e calisthenics, testimonianza vera per la pagina della prova (testo e foto li manda Alessio).
+- **Da verificare:** che la tastiera del telefono non copra il pulsante della pagina della prova dentro i browser di Instagram e TikTok. Non si poteva simulare: deve controllarlo Alessio dal telefono.
+
+## 8. Istruzioni per le prossime sessioni
+- Leggi questo file prima di iniziare.
+- Lavora in locale. Per le modifiche visibili mostra gli screenshot e aspetta l'ok prima del push su `main`.
+- A fine lavoro, se è cambiato qualcosa di importante (decisioni, file nuovi, cose in sospeso), aggiorna questo file restando sintetico.

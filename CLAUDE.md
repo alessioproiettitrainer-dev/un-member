@@ -47,8 +47,8 @@
 - **Test visivi:** Playwright in `/opt/node22/lib/node_modules/playwright/index.mjs`. Chromium headless non riproduce i video H.264: usa copie `.webm`.
 - **Deploy:** `git push origin main`, poi Render pubblica da solo.
   - Le modifiche visibili ai clienti vanno mostrate ad Alessio con screenshot da telefono (390x844) **prima** del push. Nel frattempo si lavora su un ramo.
-- **Variabili d'ambiente** (solo su Render, mai nel codice; il repository è pubblico): `ADMIN_KEY`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_FROM_NAME`, `MAIL_DAILY_CAP`, `KALOS_EMAIL`, `KALOS_PASSWORD`, `PUBLIC_URL`, `APP_URL`, `UNSUB_SECRET` (se manca si usa `ADMIN_KEY`), `PORT`.
-- **Chiamate al server vero dalla sessione:** `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node -e "fetch(...)"` con header `x-admin-key`. La chiave chiedila ad Alessio e non scriverla nei file.
+- **Variabili d'ambiente:** su Render (Environment), mai nel codice: il repository è pubblico. L'elenco è nella sezione 9.
+- **Chiamate al server vero dalla sessione:** `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node -e "fetch(...)"` con header `x-admin-key`. Prendi la chiave da `.env` (`ADMIN_KEY`); se il file non c'è, chiedila ad Alessio. Non scriverla in nessun file che va su git.
 
 ## 5. Decisioni prese (non rimetterle in discussione)
 - **Player come quello di KBMH (l'app di Vadim):**
@@ -107,3 +107,17 @@
 - Leggi questo file prima di iniziare.
 - Lavora in locale. Per le modifiche visibili mostra gli screenshot e aspetta l'ok prima del push su `main`.
 - A fine lavoro, se è cambiato qualcosa di importante (decisioni, file nuovi, cose in sospeso), aggiorna questo file restando sintetico.
+
+## 9. Accessi
+Le chiavi vere sono in `.env` (cartella principale del progetto, escluso da git con `.gitignore`). `.env.example` ha gli stessi nomi con i valori vuoti. Quelle di produzione sono su Render → Environment. Attenzione: la sessione cloud è temporanea e un clone nuovo non ha `.env`. Se manca, chiedi le chiavi ad Alessio.
+- `ADMIN_KEY`: chiave del pannello `/admin` e delle API admin (header `x-admin-key`).
+- `GMAIL_USER`: Gmail da cui partono e a cui arrivano le email dell'app (uncoach.info). È anche l'account del coach se `settings.coachEmail` non è impostato.
+- `GMAIL_APP_PASSWORD`: "password per le app" di Google, per spedire (SMTP) e leggere le risposte (IMAP).
+- `MAIL_FROM_NAME`: nome del mittente (vuoto = "Alessio · UN-MEMBER").
+- `MAIL_DAILY_CAP`: massimo di email al giorno (vuoto = 450).
+- `KALOS_EMAIL`, `KALOS_PASSWORD`: login a Kalos per leggere ogni giorno la lista low ticket (solo lettura).
+- `PUBLIC_URL`, `APP_URL`: indirizzo pubblico dell'app, usato nei link delle email.
+- `UNSUB_SECRET`: firma dei link "Cancellati qui" (vuoto = si usa `ADMIN_KEY`).
+- `PORT`: porta del server (Render la imposta da solo; in locale 3000).
+- Pagamenti: nessuna chiave. I piani sono link esterni messi in Impostazioni, non c'è un collegamento API a Stripe.
+- Database: nessuna credenziale. È il file `data/db.json` sul disco di Render.

@@ -5,3 +5,8 @@ data/uploads/
 data/db.json
 data/chatphotos/
 data/avatars/
+
+# chiavi e accessi: mai su git
+.env
+.env.*
+!.env.example

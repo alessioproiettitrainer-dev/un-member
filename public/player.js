@@ -129,8 +129,8 @@ function nextItemAfter() {
 const guided = (s) => s.amrap || s.kind === 'stopwatch' || s.emom;
 // EMOM con 2-3 esercizi nello stesso minuto: i video girano tutti insieme nel riquadro diviso in colonne,
 // senza cambiare esercizio ogni pochi secondi (con 1-3 ripetizioni scattava di continuo).
-// Su iPhone un video alla volta (i modelli meno recenti scattano): lì ogni esercizio resta almeno EMOM_MIN secondi.
-const splitOf = (s) => s.emom && !IOS && s.items.length >= 2 && s.items.length <= 3;
+// Vale anche su iPhone (prova voluta da Alessio). Con 4 o più esercizi resta un video alla volta, almeno EMOM_MIN secondi ciascuno.
+const splitOf = (s) => s.emom && s.items.length >= 2 && s.items.length <= 3;
 const EMOM_MIN = 8;
 
 function enterStep(i) {

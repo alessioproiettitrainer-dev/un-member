@@ -59,6 +59,7 @@
   - nessuna scritta sopra il video;
   - nel recupero schermo nero, niente sfocato.
 - **Schermo sempre acceso nel player:** `keepAwake()` in `player.js` (Wake Lock rinnovato a ogni ritorno in primo piano, tocco e ogni 15 s; su iPhone o se manca, video muto `public/nosleep.mp4` in loop).
+- **EMOM con 2-3 esercizi nello stesso minuto:** riquadro diviso in colonne, i video girano tutti insieme (anche su iPhone, in prova: se i telefoni vecchi scattano si torna a un video alla volta togliendolo in `splitOf`). Con 4+ esercizi un video alla volta, minimo 8 s ciascuno.
 - **EMOM:** niente tasto "Fatto". Gli esercizi girano in loop. A 15 secondi dalla fine compare l'anteprima del prossimo esercizio.
 - **Video:**
   - 4:3, 1280x960, in `video` e in `videoBox`;

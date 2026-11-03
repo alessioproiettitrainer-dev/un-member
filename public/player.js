@@ -60,11 +60,39 @@ function say(text) {
   });
 }
 
+// Schermo sempre acceso durante l'allenamento (come YouTube): Wake Lock del browser, da richiedere di nuovo
+// ogni volta che l'app torna in primo piano; dove non c'è o non basta (iPhone, browser di Instagram/Facebook)
+// un piccolo video nero muto in loop, invisibile, che tiene sveglio il telefono.
+async function keepAwake() {
+  if (!P || document.visibilityState !== 'visible') return;
+  let ok = !!(P.wake && !P.wake.released);
+  if (!ok && navigator.wakeLock) {
+    try {
+      P.wake = await navigator.wakeLock.request('screen');
+      P.wake.addEventListener?.('release', () => setTimeout(keepAwake, 400)); // il telefono l'ha tolto: lo richiedo
+      ok = true;
+    } catch {}
+  }
+  if (ok && !IOS) return;
+  if (!P.nosleep) {
+    const v = document.createElement('video');
+    v.src = '/nosleep.mp4'; v.muted = true; v.loop = true; v.playsInline = true;
+    v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    v.style.cssText = 'position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1';
+    document.body.append(v);
+    P.nosleep = v;
+  }
+  if (P.nosleep.paused) P.nosleep.play().catch(() => {});
+}
+const onVisible = () => keepAwake();
+
 export function stopPlayer() {
   if (!P) return;
   P.root.removeEventListener('click', onClick);
-  clearInterval(P.timer);
+  document.removeEventListener('visibilitychange', onVisible);
+  clearInterval(P.timer); clearInterval(P.awake);
   P.wake?.release?.().catch(() => {});
+  if (P.nosleep) { P.nosleep.pause(); P.nosleep.remove(); }
   window.speechSynthesis?.cancel?.();
   for (const v of [...(P.vcache || []), ...P.root.querySelectorAll('video')]) { v.pause(); v.removeAttribute('src'); v.load(); } // libera i video
   P = null;
@@ -79,10 +107,12 @@ export async function startPlayer(root, program, workout, opts) {
     started: Date.now(), ladderStart: {}, focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
     subs: store.get('subs', {}), voice: store.get('voice', true), full: false,
   };
-  try { P.wake = await navigator.wakeLock?.request('screen'); } catch {}
+  keepAwake();
+  document.addEventListener('visibilitychange', onVisible);
   root.addEventListener('click', onClick);
   enterStep(0);
   P.timer = setInterval(tick, 100);
+  P.awake = setInterval(keepAwake, 15000); // ricontrollo ogni tanto che lo schermo resti acceso
 }
 
 function exOf(id) {
@@ -487,6 +517,7 @@ function onClick(ev) {
   const t = ev.target.closest('button');
   if (!t || !P) return;
   ac(); // sblocca l'audio su iOS al primo tocco
+  keepAwake(); // un tocco permette di riavviare lo schermo-sempre-acceso se il telefono l'aveva tolto
   const s = P.steps[P.idx];
   if (t.dataset.focus) {
     const k = Number(t.dataset.focus);

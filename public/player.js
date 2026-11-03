@@ -127,6 +127,11 @@ function nextItemAfter() {
   return nx && !nx.video ? nx.items[0] : null;
 }
 const guided = (s) => s.amrap || s.kind === 'stopwatch' || s.emom;
+// EMOM con 2-3 esercizi nello stesso minuto: i video girano tutti insieme nel riquadro diviso in colonne,
+// senza cambiare esercizio ogni pochi secondi (con 1-3 ripetizioni scattava di continuo).
+// Su iPhone un video alla volta (i modelli meno recenti scattano): lì ogni esercizio resta almeno EMOM_MIN secondi.
+const splitOf = (s) => s.emom && !IOS && s.items.length >= 2 && s.items.length <= 3;
+const EMOM_MIN = 8;
 
 function enterStep(i) {
   if (i >= P.steps.length) return finish();
@@ -208,7 +213,7 @@ function tick() {
         return render();
       }
       P.g.t += dt;
-      if (P.g.t >= pace.dur) {
+      if (!splitOf(s) && P.g.t >= Math.max(pace.dur, s.items.length > 1 ? EMOM_MIN : 0)) {
         P.g.i = (P.g.i + 1) % s.items.length; P.g.t = 0; P.focus = P.g.i;
         if (s.items.length > 1) { beep(1200, 40, 0.06); render(); return say(`${exSay(s.items[P.g.i])}.`); }
       }
@@ -410,6 +415,10 @@ function render() {
         })()
       : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
+      : splitOf(s)
+      ? `<div class="lab">${esc(s.label)} · nello stesso minuto</div>
+         <div class="splitlist">${items.map((it) => `<div><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></div>`).join('')}</div>
+         <div class="gbar"><i></i></div>`
       : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
          <div class="repline"><span class="repnow" id="rep">${pace.reps ? esc(focusItem.reps) : fmt(Math.ceil(pace.dur - g.t))}</span><span class="reptot">${pace.reps ? 'rip' : 'tempo'}</span></div>
          <div class="name">${esc(fe.name)}</div>
@@ -452,7 +461,8 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      <div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : videoEl(fe)}${badge}</div>
+      ${g && !g.finished && splitOf(s) ? `<div class="video sq split n${items.length}">${items.map((it) => { const e = exOf(it.exerciseId), src = e.videoBox || e.video; return src ? `<video src="${esc(src)}" autoplay muted loop playsinline preload="auto"></video>` : '<div></div>'; }).join('')}</div>`
+        : `<div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : videoEl(fe)}${badge}</div>`}
       ${afterPill ? `<div class="nexthead">Dopo</div>${afterPill}` : '<div class="nexthead" style="visibility:hidden">Dopo</div><div class="nextcard" style="visibility:hidden"><div class="athumb"></div></div>'}
 
     </div>

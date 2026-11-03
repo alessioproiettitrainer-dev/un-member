@@ -36,6 +36,9 @@ export function spokenEn(name) {
     .replace(/\bT\. /g, 'T ').replace(/&/g, ' and ').replace(/\+/g, ' and ').replace(/\s+/g, ' ').trim();
 }
 const exSay = (it) => `${it.reps || (it.time ? it.time + 's' : '')} «${exOf(it.exerciseId).name}»`;
+// EMOM con 2-3 esercizi nello stesso minuto: la voce (e il "Dopo") li dicono tutti, non solo il primo
+const group = (st) => !!st && st.items?.length >= 2 && st.items.length <= 3 && (st.emom || P.steps[P.steps.indexOf(st) + 1]?.emom);
+const sayItems = (st) => (group(st) ? st.items.map(exSay).join(', ') : exSay(st.items[0]));
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 export function spoken(text) {
@@ -144,7 +147,7 @@ function enterStep(i) {
   if (s.ladder && s.firstRung && !P.ladderStart[s.blockKey]) P.ladderStart[s.blockKey] = Date.now();
   render();
   if (s.video) return say(`Ora un video: ${s.block}.`);
-  const first = exSay(s.items[0]);
+  const first = sayItems(s);
   if (s.ready) say(`Preparati! ${s.block}. ${s.summary || ''}. Si parte con ${first}.`);
   else if (s.pause) say(`Pausa. ${Math.round(s.dur)} secondi di recupero. Poi ${s.nextBlock || ''}: ${first}.`);
   else if (s.rest) say(`${pick(['Recupera.', 'Bene, recupero.', 'Ottimo, respira.'])} Poi: ${first}.`);
@@ -207,9 +210,10 @@ function tick() {
       if (P.remaining <= emomSoon(s)) {
         P.g.finished = true; beep(880, 160);
         const ni = nextItemAfter(), after = P.steps[P.idx + 1], sec = Math.ceil(P.remaining);
+        const nst = P.steps.slice(P.idx + 1).find((x) => !x.rest || x.ready);
         // se dopo c'è un intervallo (o una pausa) di recupero, si annuncia quello e non l'esercizio che viene dopo
         say(after?.rest && !after.ready ? `Tra ${sec} secondi recupero completo${after.dur ? `, ${Math.round(after.dur)} secondi` : ''}.`
-          : ni ? `Prossimo esercizio tra ${sec} secondi: ${exSay(ni)}.` : 'Ultimi secondi!');
+          : ni ? `${group(nst) ? 'Prossimo minuto' : 'Prossimo esercizio'} tra ${sec} secondi: ${group(nst) ? sayItems(nst) : exSay(ni)}.` : 'Ultimi secondi!');
         return render();
       }
       P.g.t += dt;
@@ -439,7 +443,10 @@ function render() {
   const after = afterIt ? `${afterIt.reps || (afterIt.time ? afterIt.time + 's' : '')} ${exOf(afterIt.exerciseId).name}` : next?.video && !s.rest && !s.ready ? nextLabel(next) : '';
   // anteprima: un fotogramma fermo del video dell'esercizio dopo (non parte, così non appesantisce il telefono)
   const afterVid = afterIt && (exOf(afterIt.exerciseId).videoBox || exOf(afterIt.exerciseId).video);
-  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt">${afterIt ? `<span>${esc(afterIt.reps || (afterIt.time ? afterIt.time + ' sec' : ''))}</span><b>${esc(exOf(afterIt.exerciseId).name)}</b>` : `<b>${esc(after.trim())}</b>`}</div></div>` : '';
+  const afterGroup = afterIt && next && !next.video && next.items[0] === afterIt && group(next) ? next.items : null;
+  const afterTxt = afterGroup ? afterGroup.map((it) => `<div class="agrp"><span>${esc(it.reps || (it.time ? it.time + ' sec' : ''))}</span> <b>${esc(exOf(it.exerciseId).name)}</b></div>`).join('')
+    : afterIt ? `<span>${esc(afterIt.reps || (afterIt.time ? afterIt.time + ' sec' : ''))}</span><b>${esc(exOf(afterIt.exerciseId).name)}</b>` : `<b>${esc(after.trim())}</b>`;
+  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt">${afterTxt}</div></div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
   P.root.innerHTML = `<div class="player ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     <div class="p-top">

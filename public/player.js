@@ -71,12 +71,14 @@ async function keepAwake() {
   let ok = !!(P.wake && !P.wake.released);
   if (!ok && navigator.wakeLock) {
     try {
-      P.wake = await navigator.wakeLock.request('screen');
+      const lock = await navigator.wakeLock.request('screen');
+      if (!P) { lock.release().catch(() => {}); return; } // allenamento chiuso nel frattempo
+      P.wake = lock;
       P.wake.addEventListener?.('release', () => setTimeout(keepAwake, 400)); // il telefono l'ha tolto: lo richiedo
       ok = true;
     } catch {}
   }
-  if (ok && !IOS) return;
+  if (!P || (ok && !IOS)) return;
   if (!P.nosleep) {
     const v = document.createElement('video');
     v.src = '/nosleep.mp4'; v.muted = true; v.loop = true; v.playsInline = true;

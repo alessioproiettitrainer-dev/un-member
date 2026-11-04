@@ -34,7 +34,7 @@ async function api(url, method = 'GET', body) {
   if (r.status >= 502 && r.status <= 504) { if (!location.pathname.startsWith('/lavori')) { try { sessionStorage.setItem('backTo', location.pathname + location.hash); } catch {} location.href = '/lavori.html'; } throw new Error('Stiamo aggiornando l\'app'); }
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && !url.startsWith('/api/auth')) { ME = null; location.hash = '#/login'; throw new Error(j.error || 'Accedi'); }
-  if (r.status === 402 && ME) { ME.active = false; paywallView(); throw new Error(j.error); }
+  if (r.status === 402 && ME) { ME.active = false; paywallView(); const e = new Error(j.error); e.paywall = true; throw e; } // accesso scaduto: resta la schermata per abbonarsi
   if (!r.ok) throw new Error(j.error || 'Errore di rete');
   return j;
 }
@@ -177,7 +177,7 @@ async function route() {
     if (parts[0] === 'food') return foodView(parts[1]);
     if (parts[0] === 'profile') return profileView();
     return await homeView();
-  } catch (e) { fail(e); }
+  } catch (e) { if (!e.paywall) fail(e); }
 }
 
 // ---- accesso -----------------------------------------------------------------

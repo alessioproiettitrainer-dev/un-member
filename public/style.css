@@ -593,3 +593,53 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
 .pill.opt { font-size: 9px; padding: 3px 7px; vertical-align: 2px; }
 .now .note .mus { display: block; margin-top: 4px; color: var(--text); }
 .pdesc { white-space: pre-line; }
+/* ---- schermi larghi (PC, tablet orizzontale, TV): player a 3 colonne, pagine più ampie ---- */
+.uplist { display: none; }
+@media (min-width: 760px) and (orientation: landscape) {
+  .player { max-width: none; }
+  .player .p-top { padding-left: 24px; padding-right: 24px; }
+  .player .p-scroll { display: grid !important; grid-template-columns: minmax(240px, 22%) 1fr minmax(220px, 20%); grid-template-rows: auto auto 1fr auto; column-gap: 20px; row-gap: 10px; padding: 8px 24px; overflow: hidden; align-items: start; }
+  .player .p-scroll > .wbar { grid-column: 1 / -1; }
+  .player .p-scroll > .skipph { grid-column: 1; grid-row: 4; justify-self: start; margin: 0; }
+  .player .p-scroll > .timer { grid-column: 1; grid-row: 2; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .player .p-scroll > .timer .tclock .big { font-size: clamp(56px, 6vw, 110px); }
+  .player .p-scroll > .bar, .player .p-scroll > div[style*="height:12px"] { display: none; }
+  .player .p-scroll > .now { grid-column: 1; grid-row: 3; align-self: stretch; overflow: auto; }
+  .player .p-scroll > .now .repnow { font-size: clamp(48px, 5vw, 96px); }
+  .player .p-scroll > .now .name { font-size: clamp(20px, 2vw, 34px); }
+  .player .p-scroll > .now .note { -webkit-line-clamp: 6; font-size: 15px; }
+  .player .p-scroll > .video.sq { grid-column: 2; grid-row: 2 / span 3; max-height: calc(100vh - 210px); max-width: none; height: auto; aspect-ratio: 4 / 3; width: 100%; justify-self: center; align-self: center; }
+  .player .p-scroll > .nexthead, .player .p-scroll > .nextcard { display: none; }
+  .player .uplist { display: block; grid-column: 3; grid-row: 2 / span 3; }
+  .player .uplist .upi { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; display: grid; gap: 2px; }
+  .player .uplist .upi:first-of-type { border: 2px solid var(--accent); }
+  .player .uplist .upi b { font-size: clamp(15px, 1.3vw, 22px); }
+  .player .uplist .upi span { color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 800; }
+  .player .uplist .upi.rest b { color: var(--muted); }
+  .player .p-ctrl { max-width: 720px; margin: 0 auto; width: 100%; }
+  .player .video.sq.split { aspect-ratio: auto; height: calc(100vh - 210px); }
+  /* pagine dell'app: più larghe, liste di programmi a griglia */
+  .wrap { max-width: 1100px; }
+  .chat { max-width: 900px; }
+  .hscroll > .prog { flex: 0 0 calc((100% - 24px) / 3); }
+  .hscroll > .prog:only-child { flex-basis: calc((100% - 24px) / 3); }
+}
+@media (min-width: 1600px) and (orientation: landscape) {
+  .player .p-scroll { grid-template-columns: minmax(300px, 22%) 1fr minmax(280px, 20%); }
+}
+.tvhelp ol { padding-left: 20px; line-height: 1.6; margin: 14px 0; }
+.tvhelp { max-width: 560px; margin: 0 auto; }
+/* telefono girato in orizzontale (o duplicato sulla TV): poco spazio in altezza */
+@media (min-width: 760px) and (orientation: landscape) and (max-height: 500px) {
+  .player .p-top { padding-top: 4px; padding-bottom: 0; }
+  .player .p-scroll { padding-top: 2px; row-gap: 4px; }
+  .player .p-scroll > .timer .tclock .big { font-size: 40px; }
+  .player .p-scroll > .now .repnow { font-size: 34px; }
+  .player .p-scroll > .now .name { font-size: 18px; }
+  .player .p-scroll > .now .note { display: none; }
+  .player .p-scroll > .video.sq, .player .video.sq.split { max-height: calc(100vh - 120px); height: calc(100vh - 120px); }
+  .player .uplist .upi { padding: 6px 10px; margin-bottom: 4px; }
+  .player .uplist .upi:nth-of-type(n + 4) { display: none; }
+  .player .uplist .upi b { font-size: 14px; }
+  .player .p-ctrl .btn { min-height: 40px; }
+}

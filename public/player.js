@@ -388,6 +388,37 @@ function wholeBar() {
   const skip = (s.phaseType === 'warmup' || s.phaseType === 'cooldown') && n > 1 ? `<button class="skipph" data-act="skipph">Salta ${s.phaseType === 'warmup' ? 'riscaldamento' : 'defaticamento'} ⏭</button>` : '';
   return `<div class="wbar">${segs}</div>${skip}`;
 }
+// Guarda sulla TV: le web app non possono trasmettere da sole, si usa la trasmissione del telefono/computer.
+// Sul TV (o su PC e tablet in orizzontale) il player si dispone da solo a 3 colonne.
+function tvHelp() {
+  const ua = navigator.userAgent, ios = IOS, android = /Android/i.test(ua);
+  const steps = ios ? ['Apri il <b>Centro di controllo</b> (scorri dall\'angolo in alto a destra).', 'Tocca <b>Duplica schermo</b> e scegli la tua TV o l\'Apple TV.', 'Gira il telefono in <b>orizzontale</b>.']
+    : android ? ['Apri le <b>impostazioni rapide</b> (scorri dall\'alto) e tocca <b>Trasmetti schermo</b> / Smart View / Screen Cast.', 'Scegli la TV o il Chromecast.', 'Gira il telefono in <b>orizzontale</b>.']
+    : ['In Chrome apri il menu <b>⋮</b> → <b>Trasmetti…</b> (o Salva e condividi → Trasmetti) e scegli la TV o il Chromecast.', 'Oppure collega il computer alla TV con il cavo HDMI.', 'Metti il browser a <b>schermo intero</b> (F11): il player si allarga da solo.'];
+  const m = document.createElement('div');
+  m.className = 'tutmodal tvhelp';
+  m.innerHTML = `<div class="tm-top"><b>📺 Guarda sulla TV</b><button class="icon" data-act="tvclose" aria-label="Chiudi">✕</button></div>
+    <ol>${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
+    <div class="muted small">Sulla TV, sul computer o sul tablet in orizzontale l'allenamento si dispone da solo: video grande al centro, timer e ripetizioni a sinistra, prossimi esercizi a destra.${ios || android ? ' Puoi anche aprire l\'app direttamente dal browser della smart TV.' : ''}</div>
+    <button class="btn primary block" data-act="tvclose" style="margin-top:14px">Ho capito</button>`;
+  P.root.querySelector('.player').append(m);
+}
+// schermi larghi (PC, tablet, TV): colonna a destra con i prossimi esercizi (sul telefono è nascosta)
+function upList() {
+  const out = [], seen = new Set();
+  for (const st of P.steps.slice(P.idx + 1)) {
+    if (out.length >= 4) break;
+    if (st.video) { out.push({ t: nextLabel(st) }); continue; }
+    if (st.ready || (st.rest && !st.pause)) continue;
+    if (st.pause) { out.push({ rest: true, t: `Pausa · ${Math.round(st.dur)} s` }); continue; }
+    const its = st.items.length <= 3 ? st.items : [st.items[0]];
+    const key = st.blockKey + its.map((x) => x.exerciseId).join();
+    if (seen.has(key) && (st.emom || st.amrap)) continue; // i giri uguali dello stesso blocco una volta sola
+    seen.add(key);
+    out.push({ t: its.map((it) => `${it.reps || (it.time ? it.time + 's' : st.kind === 'timed' ? fmt(st.dur) : '')} ${exOf(it.exerciseId).name}`.trim()).join(' + '), b: st.block });
+  }
+  return `<div class="uplist"><div class="nexthead">Prossimi</div>${out.length ? out.map((x) => `<div class="upi ${x.rest ? 'rest' : ''}"><b>${esc(x.t)}</b>${x.b ? `<span>${esc(x.b)}</span>` : ''}</div>`).join('') : '<div class="upi"><b>Fine allenamento 💪</b></div>'}</div>`;
+}
 function renderControls() {
   const c = P.root.querySelector('.p-ctrl');
   if (c) c.innerHTML = controls();
@@ -463,7 +494,7 @@ function render() {
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
       <div class="ttl">${s.pause && s.nextBlock && s.nextBlock !== s.block ? `<small>Recupero · poi ${esc(s.nextPhase || s.phase)}</small>${esc(s.nextBlock)}` : `<small>${esc(s.phase)}</small>${esc(s.block)}`}</div>
-      <span class="row" style="gap:6px"><button class="icon tz" data-act="tz" aria-label="Grandezza del testo">A<small>${['', '+', '++'][P.tz]}</small></button>
+      <span class="row" style="gap:6px"><button class="icon" data-act="tv" aria-label="Guarda sulla TV">📺</button><button class="icon tz" data-act="tz" aria-label="Grandezza del testo">A<small>${['', '+', '++'][P.tz]}</small></button>
       <button class="icon ${P.voice ? 'on' : ''}" data-act="voice" aria-label="Voce">${P.voice ? '🔊' : '🔈'}</button></span>
     </div>
     <div class="p-scroll">
@@ -484,7 +515,7 @@ function render() {
       ${g && !g.finished && splitOf(s) ? `<div class="video sq split n${items.length}">${items.map((it) => { const e = exOf(it.exerciseId), src = e.videoBox || e.video; return src ? `<video src="${esc(src)}" autoplay muted loop playsinline preload="auto"></video>` : '<div></div>'; }).join('')}</div>`
         : `<div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : videoEl(fe)}${badge}</div>`}
       ${afterPill ? `<div class="nexthead">Dopo</div>${afterPill}` : '<div class="nexthead" style="visibility:hidden">Dopo</div><div class="nextcard" style="visibility:hidden"><div class="athumb"></div></div>'}
-
+      ${upList()}
     </div>
     <div class="p-ctrl">${controls()}</div>
   </div>`;
@@ -562,6 +593,7 @@ function onClick(ev) {
   }
   switch (t.dataset.act) {
     case 'close': if (confirm('Vuoi uscire dall\'allenamento?')) { const o = P.opts; stopPlayer(); o.onExit?.(); } break;
+    case 'tv': tvHelp(); break;
     case 'tz': P.tz = (P.tz + 1) % 3; store.set('tz', P.tz); render(); break;
     case 'skipph': {
       // salta tutto il riscaldamento (o il defaticamento): si va al primo passo della parte dopo
@@ -586,7 +618,7 @@ function onClick(ev) {
       P.root.querySelector('.player').append(m);
       break;
     }
-    case 'tutclose': ev.target.closest('.tutmodal')?.remove(); break;
+    case 'tutclose': case 'tvclose': ev.target.closest('.tutmodal')?.remove(); break;
     case 'gnext': if (P.g && !P.g.finished) advanceGuide(); break;
     case 'done': freezeStopwatch(); askScore(s, 'fortime', { seconds: Math.round(elapsed()) }); break;
     case 'sc-inc': case 'sc-dec': { const i = t.closest('.stepper').querySelector('input'); i.value = Math.max(0, (Number(i.value) || 0) + (t.dataset.act === 'sc-inc' ? 1 : -1)); break; }

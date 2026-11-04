@@ -90,11 +90,29 @@ async function keepAwake() {
   if (P.nosleep.paused) P.nosleep.play().catch(() => {});
 }
 const onVisible = () => keepAwake();
+// Tastiera (PC collegato alla TV) e telecomandi/cuffie Bluetooth: barra spaziatrice o Invio = "Fatto",
+// P = pausa, frecce = avanti/indietro. Se il telefono è duplicato sulla TV si tocca il telefono come sempre.
+function pressAct(act) { const b = P?.root.querySelector(`.p-ctrl [data-act="${act}"]`); if (b) { b.click(); return true; } return false; }
+function onKey(e) {
+  if (!P || e.target.closest?.('input, textarea, select') || P.root.querySelector('.scoremodal, .tutmodal')) return;
+  const k = e.key;
+  if (k === ' ' || k === 'Enter') { e.preventDefault(); pressAct('gnext') || pressAct('done') || (P.steps[P.idx].kind === 'manual' && pressAct('next')) || pressAct('pause'); }
+  else if (k === 'p' || k === 'P' || k === 'MediaPlayPause') { e.preventDefault(); pressAct('pause'); }
+  else if (k === 'ArrowRight' || k === 'MediaTrackNext') { e.preventDefault(); pressAct('next'); }
+  else if (k === 'ArrowLeft' || k === 'MediaTrackPrevious') { e.preventDefault(); pressAct('prev'); }
+}
+function mediaKeys(on) {
+  const ms = navigator.mediaSession; if (!ms) return;
+  const set = (a, f) => { try { ms.setActionHandler(a, on ? f : null); } catch {} };
+  set('play', () => pressAct('pause')); set('pause', () => pressAct('pause'));
+  set('nexttrack', () => pressAct('gnext') || pressAct('done') || pressAct('next')); set('previoustrack', () => pressAct('prev'));
+}
 
 export function stopPlayer() {
   if (!P) return;
   P.root.removeEventListener('click', onClick);
   document.removeEventListener('visibilitychange', onVisible);
+  document.removeEventListener('keydown', onKey); mediaKeys(false);
   clearInterval(P.timer); clearInterval(P.awake);
   P.wake?.release?.().catch(() => {});
   if (P.nosleep) { P.nosleep.pause(); P.nosleep.remove(); }
@@ -114,6 +132,7 @@ export async function startPlayer(root, program, workout, opts) {
   };
   keepAwake();
   document.addEventListener('visibilitychange', onVisible);
+  document.addEventListener('keydown', onKey); mediaKeys(true);
   root.addEventListener('click', onClick);
   enterStep(0);
   P.timer = setInterval(tick, 100);
@@ -399,6 +418,7 @@ function tvHelp() {
   m.className = 'tutmodal tvhelp';
   m.innerHTML = `<div class="tm-top"><b>📺 Guarda sulla TV</b><button class="icon" data-act="tvclose" aria-label="Chiudi">✕</button></div>
     <ol>${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
+    <div class="small" style="margin-bottom:10px"><b>Il tasto "Fatto" (AMRAP, a tempo, serie):</b> se duplichi il telefono, lo premi sul telefono come sempre e la TV lo mostra. Dal computer usa la <b>barra spaziatrice</b> (Fatto), <b>P</b> (pausa) e le <b>frecce</b> (avanti/indietro); funzionano anche i tasti play/avanti di cuffie e telecomandi Bluetooth.</div>
     <div class="muted small">Sulla TV, sul computer o sul tablet in orizzontale l'allenamento si dispone da solo: video grande al centro, timer e ripetizioni a sinistra, prossimi esercizi a destra.${ios || android ? ' Puoi anche aprire l\'app direttamente dal browser della smart TV.' : ''}</div>
     <button class="btn primary block" data-act="tvclose" style="margin-top:14px">Ho capito</button>`;
   P.root.querySelector('.player').append(m);

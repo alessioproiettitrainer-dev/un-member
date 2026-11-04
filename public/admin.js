@@ -139,7 +139,8 @@ function exercisesView() {
     <div class="panel">${e ? `<button class="sbtn mback" data-act="ex-back">‹ Torna all\'elenco</button>
       <div class="grid2"><div class="f"><label>Nome</label><input type="text" data-exf="name" value="${esc(e.name)}"></div>
       <div class="f"><label>Categoria</label><input type="text" data-exf="category" value="${esc(e.category)}" placeholder="es. Swing, Squat, Core"></div></div>
-      <div class="f"><label>Indicazioni tecniche (cue)</label><textarea data-exf="cues" placeholder="es. Spingi l'anca, braccia rilassate">${esc(e.cues)}</textarea></div>
+      <div class="f"><label>Come si esegue</label><textarea data-exf="cues" placeholder="es. Spingi l'anca, braccia rilassate">${esc(e.cues)}</textarea></div>
+      <div class="f"><label>Muscoli coinvolti</label><input type="text" data-exf="muscles" value="${esc(e.muscles || '')}" placeholder="es. Glutei, femorali, core"></div>
       <div class="f"><label>Video demo (in loop nel player)</label>
         <div class="upl">${e.video ? `<video class="vid" id="exvid" src="${esc(e.video)}" autoplay muted loop playsinline></video>` : '<div class="vid" style="display:grid;place-items:center;color:var(--muted)">Nessun video</div>'}
           <div style="display:grid;gap:8px"><input type="file" accept="video/*" data-upload="ex-video"><div class="prog-bar"><i id="upbar"></i></div>

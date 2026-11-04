@@ -516,7 +516,7 @@ async function programView(pid) {
   page('train', `<a class="back" href="#/train">‹ Allenamenti</a>
     ${p.cover ? `<div class="prog"><div class="cover" style="background-image:url('${esc(p.cover)}')"></div></div>` : ''}
     <div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}${equipPill(p)}${cycleWeek(p) ? `<span class="pill">Settimana ${cycleWeek(p)}</span>` : ''}${fasi && wk ? `<span class="pill">Fase ${wk} di ${stagesOf(p).length}</span>` : ''}</div>
-    <div class="h1">${esc(p.title)}</div><div class="muted">${esc(p.description)}</div>
+    <div class="h1">${esc(p.title)}</div><div class="muted pdesc">${esc(p.description)}</div>
     <button class="btn ${isMine ? '' : 'primary'} block" style="margin-top:14px" id="setmine" ${isMine ? 'disabled' : ''}>${isMine ? '✓ È il tuo programma' : 'Segui questo programma'}</button>
     ${[...byWeek].sort((a, b) => a[0] - b[0]).map(([k, ws]) => `<div class="h2">${!k ? 'Allenamenti' : fasi ? `Fase ${k}${k === wk ? ' · <em>in corso</em>' : ''}<div class="muted small" style="text-transform:none;font-weight:600;margin-top:2px">${(([a, b]) => (a === b ? `Settimana ${a}` : `Settimane ${a}-${b}`))(stageRange(p, k))}: ripeti questi allenamenti ogni settimana</div>` : `Settimana ${k}${k === wk ? ' · <em>questa settimana</em>' : ''}`}</div>` + ws.map((w, i) => (w.locked ? `
       <a class="wo locked" href="#/w/${pid}/${w.id}"><div class="num">🔒</div>
@@ -558,7 +558,7 @@ async function workoutView(pid, wid) {
     m.className = 'demosheet';
     m.innerHTML = `<div class="card"><div class="row between"><div class="h2" style="margin:0">${esc(e.name)}</div><button class="icon" data-close aria-label="Chiudi">✕</button></div>
       <div class="demovid">${e.videoBox || e.video ? `<video src="${esc(e.videoBox || e.video)}" autoplay muted loop playsinline onloadedmetadata="this.classList.toggle('land', this.videoWidth / this.videoHeight > 1.2)"></video>` : emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : '<div class="muted" style="padding:40px;text-align:center">Video non ancora caricato</div>'}</div>
-      ${e.cues ? `<div class="muted" style="margin-top:10px">${esc(e.cues)}</div>` : ''}</div>`;
+      ${e.cues ? `<div class="muted" style="margin-top:10px">${esc(e.cues)}</div>` : ''}${e.muscles ? `<div class="small" style="margin-top:8px"><b style="color:var(--accent)">Muscoli:</b> ${esc(e.muscles)}</div>` : ''}</div>`;
     m.onclick = (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) m.remove(); };
     document.body.append(m);
   }));

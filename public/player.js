@@ -473,7 +473,7 @@ function render() {
       ${!s.ready && bs.length > 1 ? `<div class="bar">${bs.map((x, k) => `<i class="${k < pos ? 'done' : k === pos ? 'cur' : ''}"></i>`).join('')}</div>` : '<div style="height:12px"></div>'}
       <div class="now ${s.rest ? 'rest' : ''}">
         ${now}
-        ${!g?.finished && (focusItem.notes || fe.cues) ? `<div class="note">${esc(focusItem.notes || fe.cues)}</div>` : ''}
+        ${!g?.finished && (focusItem.notes || fe.cues) ? `<div class="note">${esc(focusItem.notes || fe.cues)}${fe.muscles ? `<span class="mus"><b>Muscoli:</b> ${esc(fe.muscles)}</span>` : ''}</div>` : ''}
         ${s.notes && !s.rest && !g ? `<div class="note">${esc(s.notes)}</div>` : ''}
         ${!g?.finished && P.subs[focusItem.exerciseId] && P.p.exercises[focusItem.exerciseId] ? `<div class="subnote">Stai facendo una variante al posto di <b>${esc(P.p.exercises[focusItem.exerciseId].name)}</b> <button data-sub="${esc(focusItem.exerciseId)}">↺ Torna all'originale</button></div>` : ''}
         ${g?.finished ? '' : variantButtons(focusItem)}

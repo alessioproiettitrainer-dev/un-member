@@ -82,6 +82,8 @@
 - **Pagina della prova** `#/prova` (pubblicità Meta e TikTok):
   - salva la provenienza utm in `u.source`; nel pannello c'è il riquadro "Da dove arrivano";
   - la testimonianza compare solo se `settings.provaTestimonial.text` è valorizzato. **Mai inventare testimonianze.**
+- **Prova finita / scaduti:** solo la schermata per abbonarsi (`paywallView`, senza barra in basso), ricontrollo dell'accesso a ogni ritorno nell'app (`hasAccessNow`).
+- **Programmi a fasi:** `p.stages` (es. [4,4,4]); con le fasi il campo `week` degli allenamenti è il numero della fase, che si ripete per le sue settimane (`stageOf` in server.js e app.js). Categoria `quick` = "20 Minuti Training".
 - **Membri:** possono cancellare da soli l'account (Profilo → "Elimina il mio account").
 - **Traduzione automatica del browser:** bloccata (notranslate).
 
@@ -97,7 +99,7 @@
 - **Risparmio:** se un lavoro ripetitivo può girare dentro l'app (server Render) invece che in una sessione di Claude, proponilo.
 
 ## 7. Bug noti e cose in sospeso
-- **Pagina della prova:** il ramo `prova-ordine` (prima il saluto con foto, poi le schermate, poi il modulo; senza logo né frase in alto) **aspetta l'ok di Alessio**. Gli avevo proposto anche un pulsante "Inizia la prova gratis ↓" sotto il saluto. Il ramo `prova-landing` è già stato unito.
+- **Pagina della prova:** ordine attuale saluto con foto → schermate → modulo (online dal 4/11). Proposta non ancora fatta: pulsante "Inizia la prova gratis ↓" sotto il saluto.
 - **Proposta non ancora fatta:** quando un membro cancella l'account, toglierlo in automatico anche dalle email.
 - **Video ancora da girare** (oggi ci sono quelli vecchi verticali): elastici, Bear Crawl/Cat/Ape/Kong, Quod Gecko, Quod Press Jump, Half Swop, High Bridge, Lateral/Drop/Switch Lunge, Hollow Pullover/Tuck/Negative, L-Leg/Straddle Lift, stretching, circles, Split Squat KT/2KT, Bulgarian Goblet, 360 Press, Big Halo, Goblet Twist, ATW Lunge, Deadlift 2KT Outside, Renegade Row + Push Up, EMOM Clean+Press/Squat.
   - Da rifare: Knee L-Sit, Clean 1 Arm SX, Push Press 1H SX.

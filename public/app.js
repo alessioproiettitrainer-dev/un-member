@@ -343,7 +343,7 @@ async function homeView() {
       }).join('')}</div>
       <div class="muted small">Cerchio arancione = giorno di allenamento, pieno = fatto, rosso = saltato. Li cambi dal profilo.</div>
     </div>
-    ${nw ? `<div class="card next-wo"><div class="lab">${plan.includes(new Date().getDay()) ? 'Oggi si allena' : 'Prossimo allenamento'}</div>
+    ${nw ? `<div class="card next-wo"><div class="lab">Il tuo prossimo allenamento</div>
       <div class="t">${esc(nw.title)}</div><div class="muted small">${esc(prog.title)}${cycleWeek(prog) ? ` · settimana ${cycleWeek(prog)} di ${prog.weeks}` : ''} · ~${Math.round(estimateSeconds(nw) / 60)} min</div>
       <a class="btn primary block" style="margin-top:12px" href="#/w/${prog.id}/${nw.id}">▶ Vai all'allenamento</a></div>`
       : '<div class="card muted">Nessun programma disponibile per ora.</div>'}

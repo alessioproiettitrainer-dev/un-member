@@ -92,4 +92,5 @@ input[type=search]:focus { border-color: var(--accent); }
 
 .srct { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
 .srct th, .srct td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
-.srct td + td, .srct th + th { text-align: right; width: 90px; }
+.srct td + td, .srct th + th { text-align: right; min-width: 60px; }
+.daily .srct th { font-size: 11px; white-space: nowrap; }

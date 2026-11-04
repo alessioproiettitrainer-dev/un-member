@@ -10,14 +10,19 @@ const ls = {
 };
 const DAY = 864e5;
 // provenienza (link delle pubblicità: ?utm_source=meta&utm_content=reel6#/prova): vale la prima che porta dei dati
+// I parametri si cercano sia prima dell'hash (?utm_source=…#/prova) sia dopo (#/prova?utm_source=…, come li aggiunge Meta
+// nel campo "Parametri URL"). Senza utm, i click id delle piattaforme dicono comunque da dove arriva (fbclid = Meta).
+// Un utm vero sostituisce una provenienza salvata solo dal referrer (es. una visita precedente da Instagram).
 try {
-  if (!ls.get('src', null)) {
-    const q = new URLSearchParams(location.search), o = {};
-    for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']) if (q.get(k)) o[k] = q.get(k).slice(0, 100);
-    const ref = document.referrer && !document.referrer.startsWith(location.origin) ? document.referrer.slice(0, 200) : '';
-    if (ref) o.referrer = ref;
-    if (Object.keys(o).length) ls.set('src', { ...o, firstSeen: new Date().toISOString() });
-  }
+  const q = new URLSearchParams(location.search), hq = new URLSearchParams(location.hash.split('?')[1] || ''), o = {};
+  const get = (k) => q.get(k) || hq.get(k);
+  for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']) if (get(k)) o[k] = get(k).slice(0, 100);
+  if (!o.utm_source) o.utm_source = get('fbclid') ? 'meta' : get('ttclid') ? 'tiktok' : get('gclid') ? 'google' : undefined;
+  if (!o.utm_source) delete o.utm_source;
+  const ref = document.referrer && !document.referrer.startsWith(location.origin) ? document.referrer.slice(0, 200) : '';
+  if (ref) o.referrer = ref;
+  const old = ls.get('src', null);
+  if (Object.keys(o).length && (!old || (o.utm_source && !old.utm_source))) ls.set('src', { ...o, firstSeen: old?.firstSeen || new Date().toISOString() });
 } catch {}
 const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
@@ -31,7 +36,7 @@ async function api(url, method = 'GET', body) {
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
   });
   // il server si sta aggiornando (dura 2-3 minuti): pagina "Stiamo lavorando per voi" invece di un errore
-  if (r.status >= 502 && r.status <= 504) { if (!location.pathname.startsWith('/lavori')) { try { sessionStorage.setItem('backTo', location.pathname + location.hash); } catch {} location.href = '/lavori.html'; } throw new Error('Stiamo aggiornando l\'app'); }
+  if (r.status >= 502 && r.status <= 504) { if (!location.pathname.startsWith('/lavori')) { try { sessionStorage.setItem('backTo', location.pathname + location.search + location.hash); } catch {} location.href = '/lavori.html'; } throw new Error('Stiamo aggiornando l\'app'); }
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && !url.startsWith('/api/auth')) { ME = null; location.hash = '#/login'; throw new Error(j.error || 'Accedi'); }
   if (r.status === 402 && ME) { ME.active = false; paywallView(); const e = new Error(j.error); e.paywall = true; throw e; } // accesso scaduto: resta la schermata per abbonarsi
@@ -143,7 +148,7 @@ window.addEventListener('hashchange', route);
 async function route() {
   stopPlayer();
   stopPoll();
-  const parts = (location.hash.slice(1) || '/').split('/').filter(Boolean);
+  const parts = (location.hash.slice(1).split('?')[0] || '/').split('/').filter(Boolean); // "?utm…" dopo l'hash non rompe la pagina
   // link da mandare per la prova gratuita: #/prova → registrazione e la prova parte da sola
   if (parts[0] === 'prova') {
     ls.set('wantTrial', true);

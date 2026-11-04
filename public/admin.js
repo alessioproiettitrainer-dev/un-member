@@ -229,7 +229,14 @@ function activitySummary() {
   return `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso', 'online')}${tile(today, 'Entrati oggi', 'today')}${tile(week, 'Entrati negli ultimi 7 giorni', 'week')}${tile(`${conv}/${trials}`, 'Prove → abbonati', 'conv')}</div>`;
 }
 // provenienza delle iscrizioni (utm dei link delle pubblicità)
-const srcText = (x) => (x ? [x.utm_source, x.utm_content].filter(Boolean).join(' · ') || (x.referrer ? x.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : '') : '') || 'diretto';
+// utm se c'è ("meta · reel6"), altrimenti il sito da cui arriva (Instagram, Facebook…), altrimenti "diretto"
+const REF_NAMES = [[/instagram/, 'instagram (senza utm)'], [/facebook|fb\.com/, 'facebook (senza utm)'], [/tiktok/, 'tiktok (senza utm)'], [/youtube|youtu\.be/, 'youtube (senza utm)'], [/manychat/, 'manychat'], [/google/, 'google']];
+const srcText = (x) => {
+  if (!x) return 'diretto';
+  if (x.utm_source) return [x.utm_source, x.utm_content].filter(Boolean).join(' · ');
+  const host = String(x.referrer || '').replace(/^https?:\/\/(www\.|l\.|m\.)?/, '').split('/')[0];
+  return host ? (REF_NAMES.find(([r]) => r.test(host))?.[1] || host) : 'diretto';
+};
 function sourceSummary() {
   const days = Number(S.sp || 7), from = new Date(Date.now() - (days - 1) * 864e5).toISOString().slice(0, 10);
   const rows = new Map();
@@ -242,7 +249,21 @@ function sourceSummary() {
   const list = [...rows.values()].sort((a, b) => b.reg - a.reg || b.trial - a.trial);
   return `<div class="card" style="margin-bottom:12px;padding:12px"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Da dove arrivano</b>
     <span>${[[1, 'Oggi'], [7, '7 giorni'], [30, '30 giorni']].map(([d, l]) => `<button class="sbtn ${days === d ? 'acc' : ''}" data-act="src-period" data-d="${d}">${l}</button>`).join(' ')}</span></div>
-    ${list.length ? `<table class="srct"><tr><th>Provenienza (utm_source · utm_content)</th><th>Iscritti</th><th>Prove attivate</th></tr>${list.map((r) => `<tr><td>${esc(r.k)}</td><td>${r.reg}</td><td>${r.trial}</td></tr>`).join('')}</table>` : '<div class="muted small" style="margin-top:6px">Nessuna iscrizione in questo periodo.</div>'}</div>`;
+    ${list.length ? `<table class="srct"><tr><th>Provenienza (utm_source · utm_content)</th><th>Iscritti</th><th>Prove attivate</th></tr>${list.map((r) => `<tr><td>${esc(r.k)}</td><td>${r.reg}</td><td>${r.trial}</td></tr>`).join('')}</table>` : '<div class="muted small" style="margin-top:6px">Nessuna iscrizione in questo periodo.</div>'}
+    ${dailyTable()}</div>`;
+}
+// iscritti giorno per giorno (ultimi 14 giorni), una colonna per provenienza: da confrontare con la spesa delle pubblicità
+function dailyTable() {
+  const days = Array.from({ length: 14 }, (_, i) => new Date(Date.now() - i * 864e5).toISOString().slice(0, 10));
+  const recent = S.users.filter((u) => u.joined >= days[13]);
+  if (!recent.length) return '';
+  const tot = {}; for (const u of recent) { const k = srcText(u.source); tot[k] = (tot[k] || 0) + 1; }
+  const cols = Object.keys(tot).sort((a, b) => tot[b] - tot[a]);
+  const cell = (d, k) => recent.filter((u) => u.joined === d && srcText(u.source) === k).length;
+  return `<details class="daily" style="margin-top:10px" ${S.dailyOpen ? 'open' : ''}><summary class="small" style="cursor:pointer;font-weight:800">Iscritti per giorno (ultimi 14 giorni)</summary>
+    <div style="overflow-x:auto"><table class="srct"><tr><th>Giorno</th>${cols.map((k) => `<th>${esc(k)}</th>`).join('')}<th>Totale</th></tr>
+    ${days.map((d) => { const n = recent.filter((u) => u.joined === d).length; return `<tr><td>${new Date(d + 'T12:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}</td>${cols.map((k) => `<td>${cell(d, k) || ''}</td>`).join('')}<td><b>${n || ''}</b></td></tr>`; }).join('')}
+    <tr><td><b>Totale</b></td>${cols.map((k) => `<td><b>${tot[k]}</b></td>`).join('')}<td><b>${recent.length}</b></td></tr></table></div></details>`;
 }
 function usersView() {
   const q = S.uq.toLowerCase();
@@ -659,6 +680,7 @@ function parentOf(path) {
 }
 
 // ---- eventi ----------------------------------------------------------------
+root.addEventListener('toggle', (e) => { if (e.target.classList?.contains('daily')) S.dailyOpen = e.target.open; }, true); // la tabella per giorno resta aperta
 root.addEventListener('input', (e) => {
   const t = e.target;
   if (t.dataset.peq && S.draft) { const e = new Set(S.draft.equipment || []); t.checked ? e.add(t.dataset.peq) : e.delete(t.dataset.peq); S.draft.equipment = [...e]; S.dirty = true; return; }

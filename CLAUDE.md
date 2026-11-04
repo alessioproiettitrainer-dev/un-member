@@ -60,6 +60,7 @@
   - nel recupero schermo nero, niente sfocato.
 - **Schermo sempre acceso nel player:** `keepAwake()` in `player.js` (Wake Lock rinnovato a ogni ritorno in primo piano, tocco e ogni 15 s; su iPhone o se manca, video muto `public/nosleep.mp4` in loop).
 - **EMOM con 2-3 esercizi nello stesso minuto:** riquadro diviso in colonne, i video girano tutti insieme (anche su iPhone, in prova: se i telefoni vecchi scattano si torna a un video alla volta togliendolo in `splitOf`). Con 4+ esercizi un video alla volta, minimo 8 s ciascuno.
+- **Schermi larghi (≥760px in orizzontale: PC, tablet, TV, telefono girato):** player a 3 colonne (timer e testo a sinistra, video al centro, "Prossimi" a destra, `upList()`), pagine fino a 1100px. Tasto 📺 = istruzioni per trasmettere (duplica schermo / Trasmetti di Chrome). Tastiera: spazio = Fatto, P = pausa, frecce = avanti/indietro; anche tasti multimediali Bluetooth. Il telefono in verticale resta com'era.
 - **EMOM:** niente tasto "Fatto". Gli esercizi girano in loop. A 15 secondi dalla fine compare l'anteprima del prossimo esercizio.
 - **Video:**
   - 4:3, 1280x960, in `video` e in `videoBox`;

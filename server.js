@@ -66,6 +66,16 @@ const inTrial = (u) => !hasAccess(u) && !!u.trialUntil && u.trialUntil >= today(
 const canUse = (u) => hasAccess(u) || inTrial(u);
 const trialAvailable = (u) => !!db.settings.trialEnabled && !hasAccess(u) && !u.trialUntil && !db.trialEmails.includes(trialKey(u.email));
 // In prova si vede una sola settimana: la settimana 1 dei programmi base, la settimana in corso dei cicli.
+// Fasi: un programma può essere diviso in fasi (es. p.stages = [4, 4, 4] = tre fasi da 4 settimane).
+// Allora il campo "week" degli allenamenti è il numero della fase e gli stessi allenamenti si ripetono per tutta la fase.
+const stagesOf = (p) => (Array.isArray(p.stages) ? p.stages.map(Number).filter((n) => n > 0) : []);
+function stageOf(p, week) {
+  const st = stagesOf(p); if (!st.length) return week;
+  let end = 0;
+  for (let i = 0; i < st.length; i++) { end += st[i]; if (week <= end) return i + 1; }
+  return st.length;
+}
+const stageStart = (p, k) => (stagesOf(p).length ? 1 + stagesOf(p).slice(0, k - 1).reduce((a, b) => a + b, 0) : k);
 function trialWeek(p) {
   if (p.kind === 'cycle' && p.startDate) return Math.max(1, Math.floor((Date.now() - new Date(p.startDate).getTime()) / (7 * 864e5)) + 1);
   return 1;
@@ -283,24 +293,24 @@ app.get('/api/programs/:id', member, active, (req, res) => {
   //  - cicli: le settimane passate e quella in corso (le future non si vedono)
   //  - programmi base: sblocco graduale, una settimana in più ogni 7 giorni da quando il membro ha iniziato il programma
   const u = !isAdmin(req) && req.user && req.user.id !== 'admin-preview' ? req.user : null;
-  const trial = u && inTrial(u), tw = trial ? trialWeek(p) : 0;
+  const trial = u && inTrial(u), tw = trial ? stageOf(p, trialWeek(p)) : 0;
   let open = () => true, why = () => '', unlockDate = () => '';
   if (trial) { open = (wk) => wk === tw; why = () => 'trial'; }
-  else if (u && p.kind === 'cycle' && p.startDate) { const cw = trialWeek(p); open = (wk) => wk <= cw; why = () => 'cycle'; }
+  else if (u && p.kind === 'cycle' && p.startDate) { const cw = stageOf(p, trialWeek(p)); open = (wk) => wk <= cw; why = () => 'cycle'; }
   else if (u && db.settings.dripWeeks !== false) {
     const starts = (u.programStarts ||= {});
     // chi lo stava già facendo parte dal primo allenamento fatto, gli altri da oggi
     if (!starts[p.id]) { starts[p.id] = u.history.filter((h) => h.programId === p.id).map((h) => String(h.date).slice(0, 10)).sort()[0] || today(); save(); }
     const days = Math.floor((Date.now() - new Date(starts[p.id] + 'T00:00:00Z').getTime()) / 864e5);
-    const unlocked = Math.floor(days / 7) + 1;
+    const unlocked = stageOf(p, Math.floor(days / 7) + 1);
     open = (wk) => wk <= unlocked; why = () => 'drip';
-    unlockDate = (wk) => addWeeks(starts[p.id], wk - 1);
+    unlockDate = (wk) => addWeeks(starts[p.id], stageStart(p, wk) - 1);
   }
   const workouts = (p.workouts || []).map((w) => {
     const wk = Number(w.week) || 1;
     if (open(wk)) return w;
     const reason = why(wk);
-    return { id: w.id, title: w.title, week: w.week, locked: true, lockReason: reason, unlockOn: reason === 'drip' ? unlockDate(wk) : reason === 'cycle' ? addWeeks(p.startDate, wk - 1) : '', phases: [] };
+    return { id: w.id, title: w.title, week: w.week, locked: true, lockReason: reason, unlockOn: reason === 'drip' ? unlockDate(wk) : reason === 'cycle' ? addWeeks(p.startDate, stageStart(p, wk) - 1) : '', phases: [] };
   });
   for (const w of workouts) for (const ph of w.phases || []) for (const b of ph.blocks || []) for (const it of b.items || []) add(it.exerciseId);
   // tutorial collegati agli esercizi del programma, per il tasto "Tutorial" nel player

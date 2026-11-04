@@ -84,6 +84,7 @@
   - la testimonianza compare solo se `settings.provaTestimonial.text` è valorizzato. **Mai inventare testimonianze.**
 - **Prova finita / scaduti:** solo la schermata per abbonarsi (`paywallView`, senza barra in basso), ricontrollo dell'accesso a ogni ritorno nell'app (`hasAccessNow`).
 - **Programmi a fasi:** `p.stages` (es. [4,4,4]); con le fasi il campo `week` degli allenamenti è il numero della fase, che si ripete per le sue settimane (`stageOf` in server.js e app.js). Categoria `quick` = "20 Minuti Training".
+- **Descrizioni:** ogni esercizio ha `cues` (come si esegue, 1-2 frasi) e `muscles` (muscoli coinvolti), in stile KBMH: brevi. Il vecchio testo è in `cuesOld`. Ogni programma ha in fondo alla descrizione "Cosa allena: … / Cosa non c'è: …". **Quando Alessio aggiunge esercizi o programmi nuovi, scrivi anche questi testi** (guarda gli esercizi usati nei workout).
 - **Membri:** possono cancellare da soli l'account (Profilo → "Elimina il mio account").
 - **Traduzione automatica del browser:** bloccata (notranslate).
 

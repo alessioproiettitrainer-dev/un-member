@@ -48,6 +48,10 @@ function toast(msg, err) {
 
 let SETTINGS = { appName: 'UN-MEMBER', logo: '', tagline: '' };
 let ME = null;
+let meAt = 0; // quando ho chiesto /api/me l'ultima volta
+// accesso valido adesso: oltre a quello che dice il server, la prova scade a fine giornata anche se l'app è rimasta aperta
+const hasAccessNow = () => !!ME?.active && (ME.paid || !ME.trialUntil || ME.trialUntil >= todayIso());
+async function refreshMe() { try { ME = await api('/api/me'); meAt = Date.now(); } catch {} }
 const progCache = new Map();
 const getProgram = async (id) => progCache.get(id) || progCache.set(id, await api(`/api/programs/${id}`)).get(id);
 
@@ -126,6 +130,12 @@ async function refreshBadge() {
   } catch {}
 }
 setInterval(() => document.visibilityState === 'visible' && refreshBadge(), 30000);
+// app riaperta dopo ore (rimasta in background): ricontrollo l'accesso, e se la prova è finita si chiude tutto
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !ME || ME.id === 'admin-preview') return;
+  if (Date.now() - meAt > 60e3) await refreshMe();
+  if (!hasAccessNow() && !location.hash.startsWith('#/abbonati')) { stopPlayer(); progCache.clear(); paywallView(); }
+});
 function fail(e) { page('', `<a class="back" href="#/">‹ Indietro</a><div class="empty">${esc(e.message)}</div>`); }
 
 // ---- router ------------------------------------------------------------------
@@ -145,15 +155,15 @@ async function route() {
   if (parts[0] === 'forgot') return forgotView();
   if (parts[0] === 'reset' && parts[1]) return resetView(parts[1]);
   if (!ME) {
-    try { ME = await api('/api/me'); } catch { return; }
-  }
+    try { ME = await api('/api/me'); meAt = Date.now(); } catch { return; }
+  } else if (Date.now() - meAt > 60e3 && ME.id !== 'admin-preview') await refreshMe(); // stato dell'abbonamento sempre fresco
   // arrivato dal link della prova: la attiva appena entra (se è ancora disponibile per la sua email)
   if (ls.get('wantTrial', false)) {
     ls.set('wantTrial', false);
     if (ME.trialAvailable) { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast(`Settimana di prova attiva: buon allenamento!`); } catch (err) { toast(err.message, true); } }
   }
   if (parts[0] === 'abbonati') return plansView();
-  if (!ME.active && parts[0] !== 'profile') return paywallView();
+  if (!hasAccessNow()) { progCache.clear(); return paywallView(); } // prova finita o scaduto: solo la schermata per abbonarsi
   try {
     if (parts[0] === 'train') return await trainView();
     if (parts[0] === 'tutorials') return await tutorialsView(decodeURIComponent(parts[1] || ''));
@@ -996,7 +1006,10 @@ function plansView() {
 function paywallView() {
   const expired = !!ME.accessUntil, trialOver = !expired && (!!ME.trialUntil || !!ME.trialUsed);
   const days = Number(SETTINGS.trialDays) || 7;
-  page('', `<div class="topbar">${brand(24)}</div>
+  stopPoll();
+  document.querySelectorAll('.tutmodal, .photoview, .welcomeview').forEach((m) => m.remove()); // via finestre rimaste aperte sopra
+  // schermata che non si chiude: niente barra in basso né altre pagine, solo abbonarsi (o uscire)
+  $app.innerHTML = `<div class="wrap paywall"><div class="topbar">${brand(24)}</div>
     <div class="h1">${expired ? 'Abbonamento <em>scaduto</em>' : trialOver ? (ME.trialUsed ? 'Prova già <em>usata</em>' : 'Prova <em>finita</em>') : ME.trialAvailable ? `Prova gratis <em>${days} giorni</em>` : 'Quasi <em>dentro</em>'}</div>
     ${ME.trialAvailable ? `<div class="card trialcard">
       <p style="margin-top:0"><b>Allenati con noi gratis per ${days} giorni.</b> Hai accesso a una settimana di allenamenti con video, timer e voce guida, alla community e ai tuoi progressi.</p>
@@ -1013,10 +1026,11 @@ function paywallView() {
       ${SETTINGS.supportEmail ? `<a class="btn block" style="margin-top:8px" href="mailto:${esc(SETTINGS.supportEmail)}">Scrivici</a>` : ''}
       <button class="btn block" style="margin-top:8px" id="recheck">Ho già pagato, ricontrolla</button>
     </div>
-    <a class="sbtn" href="#/profile">Vai al profilo</a>`);
+    <div style="text-align:center;margin:18px 0 8px"><button class="linkbtn muted small" id="pwout">Esci dall'account</button></div></div>`;
+  document.getElementById('pwout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };
   const st = document.getElementById('starttrial');
   if (st) st.onclick = async () => { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast('Prova attivata: buon allenamento!'); location.hash = '#/'; route(); } catch (err) { toast(err.message, true); } };
-  document.getElementById('recheck').onclick = async () => { ME = await api('/api/me'); if (ME.active) { toast('Accesso attivo!'); route(); } else toast('Non ancora attivo: riprova più tardi', true); };
+  document.getElementById('recheck').onclick = async () => { await refreshMe(); if (hasAccessNow()) { toast('Accesso attivo!'); route(); } else toast('Non ancora attivo: riprova più tardi', true); };
 }
 
 // ---- tutorial --------------------------------------------------------------------

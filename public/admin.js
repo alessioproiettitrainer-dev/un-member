@@ -542,14 +542,17 @@ function programsView() {
   </div>`;
 }
 
+const stagesTxt = (p) => (Array.isArray(p.stages) && p.stages.length ? p.stages.join(', ') : '');
 function programEditor(p) {
   return `
     <div class="grid2"><div class="f"><label>Titolo</label><input type="text" data-b="title" value="${esc(p.title)}"></div>
       <div class="f"><label>Sottotitolo</label><input type="text" data-b="subtitle" value="${esc(p.subtitle)}"></div></div>
     <div class="grid2"><div class="f"><label>Livello</label><select data-b="level">${['Principiante', 'Intermedio', 'Intermedio/Avanzato', 'Avanzato'].map((l) => `<option ${p.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-      <div class="f"><label>Settimane</label><input type="number" min="0" data-b="weeks" value="${esc(p.weeks)}"></div>
+      <div class="f"><label>Settimane</label><input type="number" min="0" data-b="weeks" value="${esc(p.weeks)}" ${stagesTxt(p) ? 'disabled title="Con le fasi si calcolano da sole"' : ''}></div>
+      <div class="f"><label>Fasi (facoltativo): settimane di ogni fase</label><input type="text" data-act-input="stages" value="${esc(stagesTxt(p))}" placeholder="es. 4, 4, 4 = Fase 1, 2 e 3 da 4 settimane">
+        <div class="muted small">Con le fasi, nel campo "Fase" di ogni allenamento metti 1, 2, 3…: gli allenamenti di una fase si ripetono ogni settimana per tutta la sua durata, poi si sblocca la fase dopo. Vuoto = settimane normali.</div></div>
       <div class="f"><label>Tipo</label><select data-b="kind"><option value="base" ${p.kind !== 'cycle' ? 'selected' : ''}>Programma fisso (sempre disponibile)</option><option value="cycle" ${p.kind === 'cycle' ? 'selected' : ''}>Programma del mese (dura N settimane da una data)</option></select></div>
-      <div class="f"><label>Categoria (sezione in Allenamenti)</label><select data-b="category">${[['kettlebell', 'Kettlebell'], ['trx', 'TRX'], ['calisthenics', 'Calisthenics']].map(([v, l]) => `<option value="${v}" ${(p.category || 'kettlebell') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="f"><label>Categoria (sezione in Allenamenti)</label><select data-b="category">${[['kettlebell', 'Kettlebell'], ['trx', 'TRX'], ['calisthenics', 'Calisthenics'], ['quick', '20 Minuti Training']].map(([v, l]) => `<option value="${v}" ${(p.category || 'kettlebell') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="f"><label>Attrezzatura che serve</label><div class="row" style="gap:10px;flex-wrap:wrap">${[['kb1', '1 kettlebell'], ['kb2', '2 kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici'], ['bw', 'Corpo libero']].map(([v, l]) => `<label class="chk"><input type="checkbox" data-peq="${v}" ${(p.equipment || []).includes(v) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
         <div class="muted small">Chi non ha questi attrezzi vede il programma in fondo, tra "serve altra attrezzatura". Il questionario lo usa per consigliare da dove partire.</div></div>
       ${p.kind === 'cycle' ? `<div class="f"><label>Inizio del ciclo</label><input type="date" data-b="startDate" value="${esc(p.startDate)}"></div>
@@ -568,7 +571,7 @@ function workoutEditor(w, wi) {
   const open = S.openWk[w.id];
   const P = `workouts.${wi}`;
   return `<div class="wk"><div class="hd" data-act="w-toggle" data-wid="${w.id}">
-      <span>${open ? '▾' : '▸'}</span><div class="t">${w.week ? `S${esc(w.week)} · ` : ''}${esc(w.title)}</div>
+      <span>${open ? '▾' : '▸'}</span><div class="t">${w.week ? `${stagesTxt(S.draft) ? 'F' : 'S'}${esc(w.week)} · ` : ''}${esc(w.title)}</div>
       <span class="muted small">~${Math.round(estimateSeconds(w) / 60)} min</span>
       <button class="sbtn ghost" data-act="w-up" data-wi="${wi}">↑</button><button class="sbtn ghost" data-act="w-down" data-wi="${wi}">↓</button>
       <button class="sbtn ghost" data-act="w-dup" data-wi="${wi}">Duplica</button>
@@ -576,7 +579,7 @@ function workoutEditor(w, wi) {
       <button class="sbtn ghost danger" data-act="w-del" data-wi="${wi}">✕</button></div>
     ${open ? `<div class="bd">
       <div class="grid2"><div class="f"><label>Titolo</label><input type="text" data-b="${P}.title" value="${esc(w.title)}"></div>
-        <div class="f"><label>Settimana</label><input type="number" min="0" data-b="${P}.week" value="${esc(w.week)}"></div></div>
+        <div class="f"><label>${stagesTxt(S.draft) ? 'Fase' : 'Settimana'}</label><input type="number" min="0" data-b="${P}.week" value="${esc(w.week)}"></div></div>
       <div class="f"><label>Descrizione</label><input type="text" data-b="${P}.description" value="${esc(w.description)}"></div>
       ${(w.phases || []).map((ph, pi) => phaseEditor(ph, `${P}.phases.${pi}`)).join('')}
       <div class="row" style="margin-top:12px">${Object.entries(PHASE_TYPES).map(([k, v]) => `<button class="sbtn" data-act="ph-add" data-path="${P}" data-type="${k}">+ ${v}</button>`).join('')}</div>
@@ -720,6 +723,11 @@ function softRender() {
 }
 
 root.addEventListener('change', async (e) => {
+  if (e.target.dataset.actInput === 'stages' && S.draft) { // fasi: "4, 4, 4" → [4, 4, 4], e le settimane totali si calcolano da sole
+    const st = (e.target.value.match(/\d+/g) || []).map(Number).filter((n) => n > 0);
+    S.draft.stages = st; if (st.length) S.draft.weeks = st.reduce((x, y) => x + y, 0);
+    S.dirty = true; return softRender();
+  }
   const t = e.target;
   if (t.id === 'vzoom') {
     await call('PUT', '/api/admin/settings', { videoZoom: Number(t.value) });

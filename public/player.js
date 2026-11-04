@@ -108,7 +108,7 @@ export async function startPlayer(root, program, workout, opts) {
   P = {
     root, p: program, w: workout, steps, opts, idx: 0, running: true, endAt: 0, swStart: 0, swAcc: 0, remaining: 0,
     started: Date.now(), ladderStart: {}, focus: 0, lastBeep: null, amrap: {}, fortime: {}, scores: {}, awaiting: false, g: null, lastTick: performance.now(),
-    subs: store.get('subs', {}), voice: store.get('voice', true), full: false,
+    subs: store.get('subs', {}), voice: store.get('voice', true), full: false, tz: Number(store.get('tz', 0)) || 0,
   };
   keepAwake();
   document.addEventListener('visibilitychange', onVisible);
@@ -377,6 +377,15 @@ function controls() {
   if (P.g) return `<button class="btn sq" data-act="prev">⏮</button>${pause(!!P.g.finished)}${P.g.finished ? '' : '<button class="btn primary" data-act="gnext">Fatto ›</button>'}<button class="btn sq" data-act="next">⏭</button>`;
   return `<button class="btn sq" data-act="prev">⏮</button>${pause(true)}<button class="btn sq" data-act="next">⏭</button>`;
 }
+// barra sottile di tutto l'allenamento (riscaldamento, workout, defaticamento) + tasto per saltare riscaldamento/defaticamento
+function wholeBar() {
+  const n = P.steps.length, s = P.steps[P.idx], parts = [];
+  for (const st of P.steps) { const last = parts[parts.length - 1]; if (last && last.t === st.phaseType) last.n++; else parts.push({ t: st.phaseType, n: 1 }); }
+  let k = 0;
+  const segs = parts.map((x) => { const from = k; k += x.n; const fill = Math.max(0, Math.min(1, (P.idx + 1 - from) / x.n)); return `<i style="flex:${x.n}"><b style="width:${Math.round(fill * 100)}%"></b></i>`; }).join('');
+  const skip = (s.phaseType === 'warmup' || s.phaseType === 'cooldown') && n > 1 ? `<button class="skipph" data-act="skipph">Salta ${s.phaseType === 'warmup' ? 'riscaldamento' : 'defaticamento'} ⏭</button>` : '';
+  return `<div class="wbar">${segs}</div>${skip}`;
+}
 function renderControls() {
   const c = P.root.querySelector('.p-ctrl');
   if (c) c.innerHTML = controls();
@@ -420,7 +429,7 @@ function render() {
       : g.finished
       ? `<div class="lab">${esc(s.label)}</div><div class="reps">Round finiti!</div><div class="note">Premi FINE per salvare il tuo tempo.</div>`
       : splitOf(s)
-      ? `<div class="lab">${esc(s.label)} · nello stesso minuto</div>
+      ? `<div class="lab">${esc(s.label)} · nello stesso intervallo</div>
          <div class="splitlist">${items.map((it) => `<div><b>${esc(it.reps || (it.time ? it.time + 's' : ''))}</b><span>${esc(exOf(it.exerciseId).name)}</span></div>`).join('')}</div>
          <div class="gbar"><i></i></div>`
       : `<div class="lab">${esc(s.label)}${s.emom ? (items.length > 1 ? ` · ${g.i + 1} di ${items.length}` : '') : ` · giro ${g.round + 1}`}</div>
@@ -433,7 +442,7 @@ function render() {
   } else {
     now = s.rest && !s.ready
       ? `<div class="lab rest-lab">${s.pause ? 'Pausa tra i blocchi' : 'Recupero'}</div><div class="reps">Respira</div>${nextUp(focusItem)}${s.pause && s.nextBlock ? `<div class="note">Poi: ${esc(s.nextBlock)}${s.summary ? ` · ${esc(s.summary)}` : ''}</div>` : ''}`
-      : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div><div class="reps">${esc(focusItem.reps || (s.kind === 'timed' ? fmt(s.dur) : ''))}</div><div class="name">${esc(fe.name)}</div>`;
+      : `<div class="lab">${esc(s.ready ? 'Preparati · si parte con' : s.label)}</div>${focusItem.reps ? `<div class="reps">${esc(focusItem.reps)}</div>` : ''}<div class="name">${esc(fe.name)}</div>`;
   }
 
   // "Dopo": il prossimo esercizio in una riga sopra il video, mentre si lavora (nel recupero c'è già l'anteprima)
@@ -448,16 +457,18 @@ function render() {
     : afterIt ? `<span>${esc(afterIt.reps || (afterIt.time ? afterIt.time + ' sec' : ''))}</span><b>${esc(exOf(afterIt.exerciseId).name)}</b>` : `<b>${esc(after.trim())}</b>`;
   const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt">${afterTxt}</div></div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
-  P.root.innerHTML = `<div class="player ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
+  P.root.innerHTML = `<div class="player tz${P.tz} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     <div class="p-top">
       <button class="icon" data-act="close" aria-label="Chiudi">✕</button>
       <div class="ttl">${s.pause && s.nextBlock && s.nextBlock !== s.block ? `<small>Recupero · poi ${esc(s.nextPhase || s.phase)}</small>${esc(s.nextBlock)}` : `<small>${esc(s.phase)}</small>${esc(s.block)}`}</div>
-      <button class="icon ${P.voice ? 'on' : ''}" data-act="voice" aria-label="Voce">${P.voice ? '🔊' : '🔈'}</button>
+      <span class="row" style="gap:6px"><button class="icon tz" data-act="tz" aria-label="Grandezza del testo">A<small>${['', '+', '++'][P.tz]}</small></button>
+      <button class="icon ${P.voice ? 'on' : ''}" data-act="voice" aria-label="Voce">${P.voice ? '🔊' : '🔈'}</button></span>
     </div>
     <div class="p-scroll">
+      ${wholeBar()}
       <div class="timer ${mode}">
         <div class="tinfo"><span>${esc(info[1])}</span><b>${esc(String(info[0]))}</b></div>
-        <div class="tclock"><div class="big" id="clock">${clockText()}</div><small>${s.kind === 'stopwatch' ? (s.cap ? `Tempo · cap ${fmt(s.cap)}` : 'Tempo') : s.kind === 'manual' ? 'Al tuo ritmo' : 'Secondi rimasti'}</small></div>
+        <div class="tclock"><div class="big" id="clock">${clockText()}</div><small>${s.kind === 'stopwatch' ? (s.cap ? `Tempo · cap ${fmt(s.cap)}` : 'Tempo') : s.kind === 'manual' ? 'Al tuo ritmo' : 'Tempo rimasto'}</small></div>
       </div>
       ${!s.ready && bs.length > 1 ? `<div class="bar">${bs.map((x, k) => `<i class="${k < pos ? 'done' : k === pos ? 'cur' : ''}"></i>`).join('')}</div>` : '<div style="height:12px"></div>'}
       <div class="now ${s.rest ? 'rest' : ''}">
@@ -549,6 +560,14 @@ function onClick(ev) {
   }
   switch (t.dataset.act) {
     case 'close': if (confirm('Vuoi uscire dall\'allenamento?')) { const o = P.opts; stopPlayer(); o.onExit?.(); } break;
+    case 'tz': P.tz = (P.tz + 1) % 3; store.set('tz', P.tz); render(); break;
+    case 'skipph': {
+      // salta tutto il riscaldamento (o il defaticamento): si va al primo passo della parte dopo
+      const ph = s.phaseType, nm = ph === 'warmup' ? 'il riscaldamento' : 'il defaticamento';
+      if (!confirm(`Vuoi saltare ${nm}?`)) break;
+      let j = P.idx; while (j < P.steps.length && P.steps[j].phaseType === ph) j++;
+      P.running = true; enterStep(j); break;
+    }
     case 'voice': P.voice = !P.voice; store.set('voice', P.voice); if (!P.voice) speechSynthesis?.cancel?.(); render(); break;
     case 'pause': togglePause(); break;
     case 'tut': {

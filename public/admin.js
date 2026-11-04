@@ -571,7 +571,7 @@ function workoutEditor(w, wi) {
   const open = S.openWk[w.id];
   const P = `workouts.${wi}`;
   return `<div class="wk"><div class="hd" data-act="w-toggle" data-wid="${w.id}">
-      <span>${open ? '▾' : '▸'}</span><div class="t">${w.week ? `${stagesTxt(S.draft) ? 'F' : 'S'}${esc(w.week)} · ` : ''}${esc(w.title)}</div>
+      <span>${open ? '▾' : '▸'}</span><div class="t">${w.week ? `${stagesTxt(S.draft) ? 'F' : 'S'}${esc(w.week)} · ` : ''}${esc(w.title)}${w.optional ? ' <span class="muted small">(opzionale)</span>' : ''}</div>
       <span class="muted small">~${Math.round(estimateSeconds(w) / 60)} min</span>
       <button class="sbtn ghost" data-act="w-up" data-wi="${wi}">↑</button><button class="sbtn ghost" data-act="w-down" data-wi="${wi}">↓</button>
       <button class="sbtn ghost" data-act="w-dup" data-wi="${wi}">Duplica</button>
@@ -580,6 +580,7 @@ function workoutEditor(w, wi) {
     ${open ? `<div class="bd">
       <div class="grid2"><div class="f"><label>Titolo</label><input type="text" data-b="${P}.title" value="${esc(w.title)}"></div>
         <div class="f"><label>${stagesTxt(S.draft) ? 'Fase' : 'Settimana'}</label><input type="number" min="0" data-b="${P}.week" value="${esc(w.week)}"></div></div>
+      <label class="chk"><input type="checkbox" data-b="${P}.optional" ${w.optional ? 'checked' : ''}> Opzionale (in "Oggi" vengono proposti prima gli allenamenti principali; nel programma ha l'etichetta "Opzionale")</label>
       <div class="f"><label>Descrizione</label><input type="text" data-b="${P}.description" value="${esc(w.description)}"></div>
       ${(w.phases || []).map((ph, pi) => phaseEditor(ph, `${P}.phases.${pi}`)).join('')}
       <div class="row" style="margin-top:12px">${Object.entries(PHASE_TYPES).map(([k, v]) => `<button class="sbtn" data-act="ph-add" data-path="${P}" data-type="${k}">+ ${v}</button>`).join('')}</div>

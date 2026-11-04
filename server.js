@@ -310,7 +310,7 @@ app.get('/api/programs/:id', member, active, (req, res) => {
     const wk = Number(w.week) || 1;
     if (open(wk)) return w;
     const reason = why(wk);
-    return { id: w.id, title: w.title, week: w.week, locked: true, lockReason: reason, unlockOn: reason === 'drip' ? unlockDate(wk) : reason === 'cycle' ? addWeeks(p.startDate, stageStart(p, wk) - 1) : '', phases: [] };
+    return { id: w.id, title: w.title, week: w.week, optional: !!w.optional, locked: true, lockReason: reason, unlockOn: reason === 'drip' ? unlockDate(wk) : reason === 'cycle' ? addWeeks(p.startDate, stageStart(p, wk) - 1) : '', phases: [] };
   });
   for (const w of workouts) for (const ph of w.phases || []) for (const b of ph.blocks || []) for (const it of b.items || []) add(it.exerciseId);
   // tutorial collegati agli esercizi del programma, per il tasto "Tutorial" nel player

@@ -46,6 +46,7 @@
   - Prima dei test fai un backup di `data/db.json` e rimettilo alla fine: il db locale non va nel repository.
 - **Test visivi:** Playwright in `/opt/node22/lib/node_modules/playwright/index.mjs`. Chromium headless non riproduce i video H.264: usa copie `.webm`.
 - **Deploy:** `git push origin main`, poi Render pubblica da solo.
+  - **Prima di ogni push su `main` controlla chi è nell'app** (regola di Alessio): `GET /api/admin/live` (header `x-admin-key`) → `inApp`, `inWorkout`, nomi; Alessio/coach non sono contati. Se qualcuno si sta allenando, aspetta e riprova dopo. Lo stesso riquadro è nel pannello, in Membri (verde/giallo/rosso). L'app manda un segnale ogni minuto (`/api/me/ping`, con il titolo dell'allenamento se il player è aperto), tenuto solo in memoria.
   - Le modifiche visibili ai clienti vanno mostrate ad Alessio con screenshot da telefono (390x844) **prima** del push. Nel frattempo si lavora su un ramo.
 - **Variabili d'ambiente:** su Render (Environment), mai nel codice: il repository è pubblico. L'elenco è nella sezione 9.
 - **Chiamate al server vero dalla sessione:** `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node -e "fetch(...)"` con header `x-admin-key`. Prendi la chiave da `.env` (`ADMIN_KEY`); se il file non c'è, chiedila ad Alessio. Non scriverla in nessun file che va su git.

@@ -347,6 +347,10 @@ me.use((req, res, next) => {
   next();
 });
 me.get('/', (req, res) => res.json(publicUser(req.user)));
+// ogni minuto l'app dice "sono aperta" (e se c'è un allenamento in corso): serve a non pubblicare modifiche mentre qualcuno si allena
+const LIVE = new Map(); // id → { at, workout } (solo in memoria, non nel db)
+me.post('/ping', (req, res) => { LIVE.set(req.user.id, { at: Date.now(), workout: String(req.body?.workout || '').slice(0, 80) }); res.json({ ok: true }); });
+const liveOf = (u) => { const l = LIVE.get(u.id); return l && Date.now() - l.at < 3 * 60e3 ? l : null; };
 // video di benvenuto: si ricorda quale video ha già guardato (o chiuso); se cambia il video, ricompare
 // messaggi da mostrare una volta sola (es. "da dove partire" alla prima visita di Allenamenti)
 me.post('/seen', (req, res) => {
@@ -730,6 +734,11 @@ admin.use((req, res, next) => {
 });
 
 admin.get('/ping', (req, res) => res.json({ ok: true, role: req.role, name: req.who }));
+// prima di pubblicare: chi ha l'app aperta adesso e chi si sta allenando (escluso il coach/Alessio)
+admin.get('/live', (req, res) => {
+  const l = db.users.filter((u) => liveOf(u) && !qtTester(u)).map((u) => ({ name: u.name, workout: liveOf(u).workout }));
+  res.json({ inApp: l.length, inWorkout: l.filter((x) => x.workout).length, users: l });
+});
 admin.put('/settings', (req, res) => {
   db.settings = { ...db.settings, ...req.body };
   save();
@@ -822,6 +831,7 @@ admin.get('/users', (req, res) => res.json(db.users.map((u) => ({
   profile: { sex: u.profile?.sex, birthYear: u.profile?.birthYear, heightCm: u.profile?.heightCm, goal: u.profile?.goal, trainingDays: u.profile?.trainingDays }, quiz: u.quiz || null,
   weight: u.weights.at(-1)?.kg || '',
   source: u.source || null,
+  inApp: !!liveOf(u), inWorkout: liveOf(u)?.workout || '', owner: qtTester(u),
   lastSeen: u.lastSeen || '', visits: u.visits || 0, convertedFromTrial: u.convertedFromTrial || '', trialStart: u.trialStart || '',
   days7: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10)).length,
   days30: (u.activeDays || []).filter((d) => d >= new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10)).length,

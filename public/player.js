@@ -108,6 +108,7 @@ function mediaKeys(on) {
   set('nexttrack', () => pressAct('gnext') || pressAct('done') || pressAct('next')); set('previoustrack', () => pressAct('prev'));
 }
 
+export const playerOpen = () => (P ? P.w?.title || 'Allenamento' : '');
 export function stopPlayer() {
   if (!P) return;
   P.root.removeEventListener('click', onClick);

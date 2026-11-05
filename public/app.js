@@ -1,5 +1,5 @@
 import { blockSummary, embedUrl, estimateSeconds, fmt, PHASE_TYPES, setPace } from './engine.js';
-import { startPlayer, stopPlayer } from './player.js';
+import { playerOpen, startPlayer, stopPlayer } from './player.js';
 import { FOODS } from './foods.js';
 import { qualityTest, QT_EX, qtPoints } from './qtest.js';
 
@@ -60,6 +60,9 @@ let ME = null;
 let meAt = 0; // quando ho chiesto /api/me l'ultima volta
 // accesso valido adesso: oltre a quello che dice il server, la prova scade a fine giornata anche se l'app è rimasta aperta
 const hasAccessNow = () => !!ME?.active && (ME.paid || !ME.trialUntil || ME.trialUntil >= todayIso());
+// "sono aperta" ogni minuto (e subito quando si torna nell'app): così prima di pubblicare si vede chi si sta allenando
+const ping = () => { if (ME?.id && ME.id !== 'admin-preview' && document.visibilityState === 'visible') fetch('/api/me/ping', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: playerOpen() }) }).catch(() => {}); };
+setInterval(ping, 60e3); document.addEventListener('visibilitychange', ping); setTimeout(ping, 5e3);
 async function refreshMe() { try { ME = await api('/api/me'); meAt = Date.now(); } catch {} }
 const progCache = new Map();
 const getProgram = async (id) => progCache.get(id) || progCache.set(id, await api(`/api/programs/${id}`)).get(id);

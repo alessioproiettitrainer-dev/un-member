@@ -226,7 +226,10 @@ function activitySummary() {
   const week = S.users.filter((u) => d(u, 7 * 864e5)).length, trials = S.users.filter((u) => u.trialStart).length, conv = S.users.filter((u) => u.convertedFromTrial).length;
   // i riquadri sono anche filtri: un tocco mostra solo quei membri, un altro tocco torna a tutti
   const tile = (n, l, k) => `<button data-uf="${S.uf === k ? 'all' : k}" style="flex:1;min-width:120px;text-align:left;background:var(--card-2,#1c1c20);border-radius:12px;padding:10px 12px;border:2px solid ${S.uf === k ? 'var(--accent,#ff7a00)' : 'transparent'};color:inherit;cursor:pointer"><div style="font-size:24px;font-weight:900">${n}</div><div class="muted small">${l}</div></button>`;
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso', 'online')}${tile(today, 'Entrati oggi', 'today')}${tile(week, 'Entrati negli ultimi 7 giorni', 'week')}${tile(`${conv}/${trials}`, 'Prove → abbonati', 'conv')}</div>`;
+  const live = S.users.filter((u) => u.inApp && !u.owner), lw = live.filter((u) => u.inWorkout);
+  const liveBox = `<div class="card" style="margin-bottom:12px;padding:12px;border:2px solid ${lw.length ? '#ff4d4d' : live.length ? '#ffd166' : '#3ccf7a'}"><b>${lw.length ? `🔴 ${lw.length} in allenamento adesso` : live.length ? `🟡 ${live.length} con l'app aperta, nessuno in allenamento` : '🟢 Nessuno nell\'app adesso'}</b>
+    <div class="muted small">Prima di pubblicare modifiche: meglio quando è verde (o almeno nessuno in allenamento). Tu non sei contato.${live.length ? ' · ' + live.map((u) => esc(u.name) + (u.inWorkout ? ` (${esc(u.inWorkout)})` : '')).join(', ') : ''}</div></div>`;
+  return liveBox + `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${tile(online, 'Online adesso', 'online')}${tile(today, 'Entrati oggi', 'today')}${tile(week, 'Entrati negli ultimi 7 giorni', 'week')}${tile(`${conv}/${trials}`, 'Prove → abbonati', 'conv')}</div>`;
 }
 // provenienza delle iscrizioni (utm dei link delle pubblicità)
 // utm se c'è ("meta · reel6"), altrimenti il sito da cui arriva (Instagram, Facebook…), altrimenti "diretto"

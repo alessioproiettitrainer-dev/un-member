@@ -27,7 +27,7 @@ try {
 } catch {}
 // Quality Test con la fotocamera: per ora lo vedono solo il coach, l'admin e chi apre un link con ?qtest=1 (prove)
 try { if (/[?&]qtest=1/.test(location.search + location.hash)) ls.set('qtest', true); } catch {}
-const qtOn = () => !!(ME?.coach || ls.get('adminKey', '') || ls.get('qtest', false));
+const qtOn = () => !!(ME?.qtest || ME?.coach || ls.get('adminKey', '') || ls.get('qtest', false));
 const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
 const WD = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];

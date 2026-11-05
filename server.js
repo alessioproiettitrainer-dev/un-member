@@ -151,10 +151,13 @@ function member(req, res, next) {
   if (req.user || isAdmin(req)) return next();
   res.status(401).json({ error: 'Accedi per continuare' });
 }
+// chi vede già il Quality Test (in prova): il coach e queste email (salvate come impronta sha256, il repository è pubblico)
+const QT_TESTERS = new Set(['5fe1b29f0b5f4fd4f026372a81c95215471202bb691c7e7607d7ece53036bb2c', ...String(process.env.QTEST_EMAILS || '').split(',').filter(Boolean).map((e) => crypto.createHash('sha256').update(e.trim().toLowerCase()).digest('hex'))]);
+const qtTester = (u) => isCoach(u) || QT_TESTERS.has(crypto.createHash('sha256').update(String(u.email || '').toLowerCase()).digest('hex'));
 const publicUser = (u) => {
   const { password, accessLog, ...rest } = u;
   const c = u.community || {};
-  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u), trialUsed: !hasAccess(u) && !u.trialUntil && db.trialEmails.includes(trialKey(u.email)), coach: isCoach(u),
+  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u), trialUsed: !hasAccess(u) && !u.trialUntil && db.trialEmails.includes(trialKey(u.email)), coach: isCoach(u), qtest: qtTester(u),
     community: { joined: !!c.joined, bio: c.bio || '', avatar: c.avatar ? `/api/avatars/${c.avatar}` : '', blocked: c.blocked || [], banned: !!c.banned } };
 };
 // Contenuti riservati a chi ha l'abbonamento attivo (l'admin passa sempre).

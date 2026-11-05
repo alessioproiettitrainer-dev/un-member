@@ -40,6 +40,7 @@
   - `admin.html` + `admin.js` + `admin.css` (pannello `/admin`);
   - `style.css`, `sw.js`, `lavori.html` (pagina "Stiamo lavorando per voi" quando il server risponde 502), `img/` (foto del coach, logo UN-COACH, schermate della pagina della prova).
 - **`tools/video/`:** pipeline dei video (vedi sezione 5).
+- **`public/timer/`:** UN-TIMER, app gratuita a sé (su `/timer/`, manifest e service worker suoi, funziona offline): EMOM, AMRAP, AFAP, Tabata + sezione "Workout" che porta a `#/prova` con `utm_source=untimer`.
 
 ## 4. Come si avvia e si pubblica
 - **In locale:** `npm install`, poi `ADMIN_KEY=test123 PORT=3000 node server.js`. Pannello: `http://localhost:3000/admin`.
@@ -107,6 +108,7 @@
 - **Video ancora da girare** (oggi ci sono quelli vecchi verticali): elastici, Bear Crawl/Cat/Ape/Kong, Quod Gecko, Quod Press Jump, Half Swop, High Bridge, Lateral/Drop/Switch Lunge, Hollow Pullover/Tuck/Negative, L-Leg/Straddle Lift, stretching, circles, Split Squat KT/2KT, Bulgarian Goblet, 360 Press, Big Halo, Goblet Twist, ATW Lunge, Deadlift 2KT Outside, Renegade Row + Push Up, EMOM Clean+Press/Squat.
   - Da rifare: Knee L-Sit, Clean 1 Arm SX, Push Press 1H SX.
   - Circa 40 tenute hanno ancora un piccolo salto nel loop.
+- **UN-TIMER (sul ramo, non ancora su main):** da decidere: pubblicazione su Play Store (TWA con Bubblewrap, account sviluppatore 25 $) e App Store; dominio suo o `/timer/`.
 - **In programma:** nuovi programmi TRX e calisthenics, testimonianza vera per la pagina della prova (testo e foto li manda Alessio).
 - **Quality Test da provare dal telefono:** piegamenti e burpee provati su video veri (14/14 e 15/16); trazioni e toes to bar senza video di prova. Da decidere: aprirlo a tutti, eventuale livello sulla card.
 - **Da verificare:** che la tastiera del telefono non copra il pulsante della pagina della prova dentro i browser di Instagram e TikTok. Non si poteva simulare: deve controllarlo Alessio dal telefono.

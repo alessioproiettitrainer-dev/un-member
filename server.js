@@ -103,6 +103,8 @@ const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use('/uploads', express.static(UPLOADS, { maxAge: '7d' }));
 app.use(express.static(path.join(__dirname, 'public')));
+// riconoscimento dei movimenti per il Quality Test (gira sul telefono): libreria da node_modules, niente CDN esterni
+app.use('/vendor/mediapipe', express.static(path.join(__dirname, 'node_modules/@mediapipe/tasks-vision'), { maxAge: '30d' }));
 
 // ---- sessioni membri (cookie httpOnly) -------------------------------------
 function cookies(req) {
@@ -152,7 +154,7 @@ function member(req, res, next) {
 const publicUser = (u) => {
   const { password, accessLog, ...rest } = u;
   const c = u.community || {};
-  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u), trialUsed: !hasAccess(u) && !u.trialUntil && db.trialEmails.includes(trialKey(u.email)),
+  return { ...rest, nutrition: { ...DEFAULT_NUTRITION, ...(u.nutrition || {}) }, active: canUse(u), paid: hasAccess(u), trial: inTrial(u), trialAvailable: trialAvailable(u), trialUsed: !hasAccess(u) && !u.trialUntil && db.trialEmails.includes(trialKey(u.email)), coach: isCoach(u),
     community: { joined: !!c.joined, bio: c.bio || '', avatar: c.avatar ? `/api/avatars/${c.avatar}` : '', blocked: c.blocked || [], banned: !!c.banned } };
 };
 // Contenuti riservati a chi ha l'abbonamento attivo (l'admin passa sempre).
@@ -502,6 +504,11 @@ const photoUpload = multer({
 me.post('/photos', photoUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Carica una foto' });
   const p = { id: newId(), file: req.file.filename, date: req.body.date || today(), kind: req.body.kind || 'progress' };
+  // card del Quality Test: prova e ripetizioni contate dalla fotocamera
+  if (p.kind === 'qtest' && ['pushups', 'pullups', 't2b', 'burpees'].includes(req.body.qtEx)) {
+    const n = (v) => Math.min(500, Math.max(0, Math.floor(Number(v) || 0)));
+    p.qt = { ex: req.body.qtEx, valid: n(req.body.qtValid), bad: n(req.body.qtBad) };
+  }
   req.user.photos.push(p);
   save();
   res.json(p);

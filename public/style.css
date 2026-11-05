@@ -643,3 +643,61 @@ button.ex { width: 100%; text-align: left; background: none; color: inherit; cur
   .player .uplist .upi b { font-size: 14px; }
   .player .p-ctrl .btn { min-height: 40px; }
 }
+
+/* Quality Test: la fotocamera conta le ripetizioni valide (public/qtest.js) */
+.qtbtn { margin-top: 8px; flex-direction: column; gap: 2px; min-height: 58px; background: rgba(255, 122, 0, .12); color: var(--accent); border: 1px solid rgba(255, 122, 0, .35); }
+.qtbtn span { font-size: 11px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.qtcards { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; padding-bottom: 4px; }
+.qtcards > div { position: relative; flex: 0 0 96px; }
+.qtcards img { width: 96px; aspect-ratio: 4/5; object-fit: cover; border-radius: 10px; display: block; }
+.qtcards span { display: block; font-size: 11px; font-weight: 800; color: var(--muted); margin-top: 4px; }
+.qtcards .x { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0, 0, 0, .6); color: #fff; font-size: 11px; }
+.qtopt { display: block; width: 100%; text-align: left; }
+body.qt-open { overflow: hidden; }
+.qt { position: fixed; inset: 0; z-index: 70; background: var(--bg); overflow-y: auto; padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom)); }
+.qt-top { display: flex; align-items: center; gap: 12px; padding: 4px 16px 12px; }
+.qt-x { width: 36px; height: 36px; border-radius: 50%; background: var(--card-2); font-weight: 900; flex: 0 0 36px; }
+.qt-t { font-weight: 900; text-transform: uppercase; font-size: 15px; letter-spacing: .5px; }
+.qt-t small { display: block; color: var(--accent); font-size: 11px; letter-spacing: 1px; }
+.qt-cam { position: relative; margin: 0 16px; border-radius: 18px; overflow: hidden; aspect-ratio: 3/4; max-height: 56dvh; background: radial-gradient(120% 80% at 50% 30%, #2a2a30, #121215); }
+.qt-cam video, .qt-cam canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+.qt-final .qt-cam { display: none; }
+.qt-shot .qt-cam::after { content: ''; position: absolute; inset: 0; background: #fff; }
+.qt-badge { position: absolute; top: 12px; left: 12px; font-size: 11px; font-weight: 800; background: rgba(0, 0, 0, .7); padding: 6px 10px; border-radius: 99px; letter-spacing: .4px; }
+.qt-badge:empty { display: none; }
+.qt-badge.ok { color: var(--ok); }
+.qt-badge.warn { color: #ffd166; }
+.qt-toast { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); font-weight: 900; font-size: 13px; padding: 8px 14px; border-radius: 99px; white-space: nowrap; text-transform: uppercase; opacity: 0; transition: opacity .2s; }
+.qt-toast.on { opacity: 1; }
+.qt-toast.ok { background: var(--ok); color: #04210f; }
+.qt-toast.bad { background: #ff4d4d; color: #fff; }
+.qt-depth { position: absolute; left: 12px; top: 56px; bottom: 56px; width: 14px; border-radius: 99px; background: rgba(255, 255, 255, .12); }
+.qt-depth i { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 99px; background: var(--accent); }
+.qt-depth b { position: absolute; left: -6px; right: -6px; top: 0; height: 3px; background: #fff; }
+.qt-count { position: absolute; right: 12px; bottom: 12px; text-align: right; background: rgba(0, 0, 0, .75); border-radius: 16px; padding: 6px 14px; }
+.qt-count b { font-size: 60px; font-weight: 900; line-height: 1; color: var(--accent); }
+.qt-count span { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.qt-body { margin: 14px 16px 0; background: var(--card); border-radius: 18px; padding: 16px; }
+.qt-final .qt-body { margin-top: 0; background: none; padding: 0; }
+.qt-pill { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; padding: 5px 10px; border-radius: 99px; background: rgba(255, 122, 0, .15); color: var(--accent); }
+.qt-h { font-weight: 900; text-transform: uppercase; font-size: 18px; line-height: 1.2; margin: 8px 0 6px; }
+.qt-m { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.qt-big { font-size: 96px; font-weight: 900; text-align: center; color: var(--accent); line-height: 1.1; }
+.qt-timer { font-weight: 900; font-size: 40px; text-align: center; letter-spacing: 1px; }
+.qt-stats { display: flex; gap: 8px; margin-top: 12px; }
+.qt-stats:empty { display: none; }
+.qt-stats div { flex: 1; background: var(--card-2); border-radius: 14px; padding: 10px 12px; }
+.qt-stats b { display: block; font-size: 22px; font-weight: 900; }
+.qt-stats span { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .4px; }
+.qt-stats .ok { color: var(--ok); }
+.qt-stats .bad { color: #ff4d4d; }
+.qt-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; margin-top: 12px; border-radius: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; background: var(--card-2); font-size: 14px; }
+.qt-btn.p { background: var(--accent); color: var(--accent-ink); }
+.qt-btn:disabled { opacity: .5; }
+.qt-seg { display: flex; background: var(--card-2); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+.qt-seg button { flex: 1; padding: 9px; border-radius: 9px; font-weight: 800; font-size: 12px; text-transform: uppercase; }
+.qt-seg .on { background: var(--accent); color: var(--accent-ink); }
+.qt-card img { display: block; width: 100%; max-height: 62dvh; object-fit: contain; border-radius: 16px; background: #000; }
+.qt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 2px; }
+.qt-grid .qt-btn { font-size: 12px; min-height: 48px; }
+@media (min-width: 760px) and (orientation: landscape) { .qt { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: auto 1fr; align-content: start; max-width: 1100px; margin: 0 auto; } .qt-top { grid-column: 1 / -1; } .qt-cam { max-height: 80dvh; } .qt-body { margin-top: 0; } .qt-final .qt-body { grid-column: 1 / -1; max-width: 420px; justify-self: center; } }

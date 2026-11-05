@@ -86,6 +86,7 @@
 - **Prova finita / scaduti:** solo la schermata per abbonarsi (`paywallView`, senza barra in basso), ricontrollo dell'accesso a ogni ritorno nell'app (`hasAccessNow`).
 - **Programmi a fasi:** `p.stages` (es. [4,4,4]); con le fasi il campo `week` degli allenamenti è il numero della fase, che si ripete per le sue settimane (`stageOf` in server.js e app.js). Categoria `quick` = "20 Minuti Training".
 - **Descrizioni:** ogni esercizio ha `cues` (come si esegue, 1-2 frasi) e `muscles` (muscoli coinvolti), in stile KBMH: brevi. Il vecchio testo è in `cuesOld`. Ogni programma ha in fondo alla descrizione "Cosa allena: … / Cosa non c'è: …". **Quando Alessio aggiunge esercizi o programmi nuovi, scrivi anche questi testi** (guarda gli esercizi usati nei workout).
+- **Quality Test** (`public/qtest.js`): la fotocamera conta le ripetizioni valide di piegamenti, trazioni strict, toes to bar strict e burpee 5' (il complex resta a mano). MediaPipe Pose gira sul telefono (libreria da `node_modules/@mediapipe/tasks-vision` servita su `/vendor/mediapipe`, modello da storage.googleapis.com), il video non esce dal telefono. Prima 1 ripetizione di riferimento, che può solo rendere più severi i minimi fissi. Alla fine la card (post 4:5 / storia 9:16) → Community, Profilo (foto `kind: 'qtest'` con `qt`, precompila "Nuovo test" dello stesso giorno), Condividi. Per ora visibile solo a coach, admin e a chi apre un link con `?qtest=1`.
 - **Membri:** possono cancellare da soli l'account (Profilo → "Elimina il mio account").
 - **Traduzione automatica del browser:** bloccata (notranslate).
 
@@ -107,6 +108,7 @@
   - Da rifare: Knee L-Sit, Clean 1 Arm SX, Push Press 1H SX.
   - Circa 40 tenute hanno ancora un piccolo salto nel loop.
 - **In programma:** nuovi programmi TRX e calisthenics, testimonianza vera per la pagina della prova (testo e foto li manda Alessio).
+- **Quality Test da provare dal telefono:** piegamenti e burpee provati su video veri (14/14 e 15/16); trazioni e toes to bar senza video di prova. Da decidere: aprirlo a tutti, eventuale livello sulla card.
 - **Da verificare:** che la tastiera del telefono non copra il pulsante della pagina della prova dentro i browser di Instagram e TikTok. Non si poteva simulare: deve controllarlo Alessio dal telefono.
 
 ## 8. Istruzioni per le prossime sessioni

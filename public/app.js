@@ -1,6 +1,7 @@
 import { blockSummary, embedUrl, estimateSeconds, fmt, PHASE_TYPES, setPace } from './engine.js';
 import { startPlayer, stopPlayer } from './player.js';
 import { FOODS } from './foods.js';
+import { qualityTest, QT_EX, qtPoints } from './qtest.js';
 
 const $app = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -24,6 +25,9 @@ try {
   const old = ls.get('src', null);
   if (Object.keys(o).length && (!old || (o.utm_source && !old.utm_source))) ls.set('src', { ...o, firstSeen: old?.firstSeen || new Date().toISOString() });
 } catch {}
+// Quality Test con la fotocamera: per ora lo vedono solo il coach, l'admin e chi apre un link con ?qtest=1 (prove)
+try { if (/[?&]qtest=1/.test(location.search + location.hash)) ls.set('qtest', true); } catch {}
+const qtOn = () => !!(ME?.coach || ls.get('adminKey', '') || ls.get('qtest', false));
 const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
 const WD = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
@@ -680,8 +684,21 @@ function levelCard() {
       <div class="ltparts">${LT_TESTS.map(([k, l]) => `<div><span>${l}</span><b>${last.parts[k]}</b></div>`).join('')}</div>`
     : `<b>Scopri il tuo livello</b><div class="muted small" style="margin-top:4px">5 prove: complex con 2 kettlebell, piegamenti, trazioni, toes to bar e burpee. Rifallo ogni 2-3 mesi per vedere quanto sei migliorato.</div>`}
     <div class="row" style="margin-top:12px;gap:8px"><button class="btn primary" id="ltnew" style="flex:1">${last ? 'Nuovo test' : 'Fai il test'}</button><button class="btn" id="lthow">Come funziona</button></div>
+    ${qtOn() ? `<button class="btn block qtbtn" id="qtnew">📷 Quality Test <span>la fotocamera conta le ripetizioni valide</span></button>` : ''}
+    ${(() => { const qs = ME.photos.filter((x) => x.kind === 'qtest').sort((a, b) => b.date.localeCompare(a.date)); return qs.length ? `<div class="qtcards">${qs.map((ph) => `<div><a href="/api/me/photos/${ph.file}" target="_blank"><img src="/api/me/photos/${ph.file}" alt="" loading="lazy"></a><span>${ph.qt ? `${ph.qt.valid} ${esc(QT_EX[ph.qt.ex]?.short || '')}` : ''}</span><button class="x" data-delph="${ph.id}" aria-label="Elimina">✕</button></div>`).join('')}</div>` : ''; })()}
     ${ts.length > 1 ? `<details class="lthist"><summary>Test precedenti (${ts.length - 1})</summary>${ts.slice(1).map((x) => `<div class="row between"><span>${new Date(x.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</span><span>${x.total} punti ${ltBadge(x.level)} <button class="x" data-ltdel="${x.id}" aria-label="Elimina">✕</button></span></div>`).join('')}</details>` : ''}
   </div>`;
+}
+function qtSheet() {
+  const m = document.createElement('div');
+  m.className = 'tutmodal introsheet quizsheet ltsheet';
+  m.innerHTML = `<div class="sc-box"><div class="row between"><div class="h1" style="font-size:24px;margin:0">Quality <em>Test</em></div><button class="icon" data-close>✕</button></div>
+    <div class="muted small">Appoggia il telefono, fai 1 ripetizione perfetta come riferimento e parti: la fotocamera conta solo quelle fatte bene. Alla fine la tua card da condividere. Il video resta sul telefono.</div>
+    ${Object.entries(QT_EX).map(([k, e]) => `<button class="intro-opt qtopt" data-qt="${k}"><b>${esc(e.name)}</b><div class="muted small">${esc(e.how)}</div></button>`).join('')}
+    <div class="muted small" style="margin-top:10px">Il complex con le kettlebell si scrive a mano in "Nuovo test".</div></div>`;
+  document.body.append(m);
+  m.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => m.remove()));
+  m.querySelectorAll('[data-qt]').forEach((b) => (b.onclick = () => { m.remove(); qualityTest({ ex: b.dataset.qt, me: ME, api, toast, onSaved: (p) => { ME.photos.push(p); if (location.hash.startsWith('#/progress')) progressView(); } }); }));
 }
 function ltHow() {
   const m = document.createElement('div');
@@ -708,7 +725,9 @@ function ltSheet() {
   const sex = (ME.profile.sex || ME.quiz?.sex || '').toLowerCase();
   const kbs = [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48];
   const kbSel = `<select name="kb"><option value="">Non completato</option>${kbs.map((k) => `<option value="${k}">2 x ${k} kg</option>`).join('')}</select>`;
-  const numIn = (name, label) => `<label>${label}<input type="number" inputmode="numeric" min="0" name="${name}" placeholder="ripetizioni"></label>`;
+  const qtToday = ME.photos.filter((x) => x.kind === 'qtest' && x.qt && x.date === todayIso());
+  const qtVal = (k) => qtToday.filter((x) => x.qt.ex === k).map((x) => x.qt.valid).sort((a, b) => b - a)[0] ?? '';
+  const numIn = (name, label) => `<label>${label}<input type="number" inputmode="numeric" min="0" name="${name}" value="${qtVal(name)}" placeholder="ripetizioni"></label>`;
   m.innerHTML = `<form class="sc-box" id="ltform"><div class="row between"><div class="h1" style="font-size:24px;margin:0">I tuoi <em>risultati</em></div><button type="button" class="icon" data-close>✕</button></div>
     <div class="muted small">Scrivi cosa hai fatto: il punteggio si calcola da solo.</div>
     <div class="qlab">Su di te</div>
@@ -719,6 +738,7 @@ function ltSheet() {
     <div class="muted small">La coppia più pesante con cui l'hai finito.</div>
     <div class="qlab">Le altre prove</div>
     <div class="qgrid">${numIn('pushups', 'Piegamenti')}${numIn('pullups', 'Trazioni')}${numIn('t2b', 'Toes to bar')}${numIn('burpees', 'Burpee 5\'')}</div>
+    ${qtToday.length ? `<div class="muted small">📷 Già scritte le ripetizioni valide dei Quality Test di oggi.</div>` : ''}
     <div class="ltprev" id="ltprev"></div>
     <button class="btn primary" style="width:100%;margin-top:14px">Salva il risultato</button></form>`;
   document.body.append(m);
@@ -749,7 +769,7 @@ function progressView(month, day) {
   const mins = Math.round(h.reduce((a, x) => a + x.seconds, 0) / 60);
   const memberDays = Math.floor((Date.now() - new Date(ME.joined).getTime()) / DAY) + 1;
   const ws = ME.weights;
-  const photos = ME.photos.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const photos = ME.photos.filter((x) => x.kind !== 'qtest').sort((a, b) => a.date.localeCompare(b.date));
   const before = photos.find((x) => x.kind === 'before') || photos[0];
   const after = [...photos].reverse().find((x) => x.kind === 'after') || (photos.length > 1 ? photos.at(-1) : null);
   const src = (ph) => `/api/me/photos/${ph.file}`;
@@ -774,6 +794,7 @@ function progressView(month, day) {
     ${(() => { const pr = personalRecords(); return pr.length ? `<div class="h2">I miei record</div>${pr.map(({ sc, h: x, times }) => `<div class="rec"><div><b>${esc(sc.block)}</b><div class="muted small">${esc(x.workoutTitle)} · ${new Date(x.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}${times > 1 ? ` · fatto ${times} volte` : ''}</div></div><span class="pill accent">${esc(scoreText(sc))}</span></div>`).join('')}` : ''; })()}`);
   document.getElementById('ltnew').onclick = ltSheet;
   document.getElementById('lthow').onclick = ltHow;
+  const qb = document.getElementById('qtnew'); if (qb) qb.onclick = qtSheet;
   $app.querySelectorAll('[data-ltdel]').forEach((b) => (b.onclick = async () => {
     if (!confirm('Eliminare questo test?')) return;
     try { ME.levelTests = await api(`/api/me/leveltest/${b.dataset.ltdel}`, 'DELETE'); progressView(); } catch (err) { toast(err.message, true); }

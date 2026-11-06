@@ -23,7 +23,7 @@ L'app iOS è già pronta in `untimer-app/ios/`: stessa app di Android (timer den
 ## PC (Windows e Mac)
 Il timer funziona già nel browser del PC (Chrome, Edge, Safari): tastiera inclusa (**spazio** = +1 giro o pausa, **P** = pausa) e schermata per schermi larghi. Va solo messo online:
 
-1. **Sito (gratis):** Render → New → **Static Site** → repository `un-member` → Publish Directory `untimer` → nome `un-timer`. Indirizzo tipo `https://un-timer.onrender.com`. Fa anche da pagina privacy (`/privacy.html`) per Google e Apple.
+1. **Sito (gratis):** Render → New → **Static Site** → repository `un-member` → Publish Directory `untimer` → nome `un-timer`. **Fatto (6/11):** https://un-timer.onrender.com Fa anche da pagina privacy (`/privacy.html`) per Google e Apple.
 2. **Installabile come app:** da Chrome o Edge sul PC compare l'icona "Installa UN-TIMER" nella barra degli indirizzi: si apre in una finestra sua, con l'icona nel menu Start / Dock, e funziona anche offline.
 3. **Microsoft Store (facoltativo, gratis per gli sviluppatori singoli):** quando il sito è online, da pwabuilder.com genero il pacchetto per lo Store di Windows.
 

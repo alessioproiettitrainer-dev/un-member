@@ -20,7 +20,7 @@ L'app ha **tutti i file del timer dentro** (Capacitor, cartella `untimer-app/`):
 6. Dopo i 14 giorni: **Richiedi accesso alla produzione** (domande su com'è andato il test) → Produzione → nuova release con lo stesso `.aab` (o uno aggiornato) → revisione Google (di solito 1-7 giorni).
 
 ## Risposte per "Configura l'app"
-- **Norme sulla privacy (URL):** `https://<indirizzo-render>/privacy.html` (pagina pronta, email inclusa). Vedi in fondo dove pubblicarla.
+- **Norme sulla privacy (URL):** `https://un-timer.onrender.com/privacy.html` (pagina pronta, email inclusa). Vedi in fondo dove pubblicarla.
 - **Accesso all'app:** tutte le funzioni sono disponibili senza restrizioni (niente login).
 - **Annunci:** No, l'app non contiene annunci.
 - **Classificazione dei contenuti:** questionario IARC → categoria "Tutte le altre app" → rispondi **No** a tutto (niente violenza, sesso, droghe, gioco d'azzardo, contenuti generati dagli utenti, condivisione posizione, acquisti). Risultato atteso: PEGI 3 / Per tutti.

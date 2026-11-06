@@ -1,0 +1,111 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=block">
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#0a0a0c;font-family:Montserrat,sans-serif;color:#f4f4f5}
+.abs{position:absolute;pointer-events:none}
+#glow{inset:0;background:radial-gradient(900px 760px at 50% 60%,rgba(255,122,0,.30),transparent 70%)}
+#grain{inset:0;opacity:.06;background-image:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)}
+/* scritte in alto: parole che saltano fuori */
+#cap{left:0;right:0;top:240px;text-align:center;padding:0 60px}
+#cap small{display:inline-block;font-weight:900;font-size:32px;letter-spacing:.16em;color:#0a0a0c;background:#ff7a00;padding:6px 18px;border-radius:10px;margin-bottom:16px;text-transform:uppercase}
+#cap .t{font-weight:900;font-size:66px;line-height:1.04;text-transform:uppercase}
+.w{display:inline-block;white-space:pre}
+.hl{color:#ff7a00}
+/* aggancio */
+#hook{left:0;right:0;top:620px;text-align:center;padding:0 70px}
+#hook .pov{font-weight:900;font-size:120px;color:#ff7a00;line-height:1}
+#hook .l{font-weight:900;font-size:84px;line-height:1.08;text-transform:uppercase;margin-top:22px}
+/* logo */
+#logo{left:50%;top:640px;transform:translateX(-50%);text-align:center}
+#logo svg{width:520px}#logo b{display:block;font-weight:900;font-size:86px;letter-spacing:.32em;margin-right:-.32em;margin-top:28px}
+.stamp{display:inline-block;border:8px solid #35d07f;color:#35d07f;font-weight:900;font-size:64px;padding:10px 34px;border-radius:18px;letter-spacing:.04em;transform:rotate(-6deg);background:rgba(10,10,12,.85)}
+#badge{left:0;right:0;top:1270px;text-align:center}
+/* telefono */
+#phone{pointer-events:auto;left:50%;top:560px;width:576px;height:1190px;margin-left:-288px;border-radius:72px;background:#1b1b20;padding:16px;
+  box-shadow:0 0 0 3px #2e2e36,0 40px 120px rgba(0,0,0,.75),0 0 160px rgba(255,122,0,.28)}
+#screen{width:544px;height:1158px;border-radius:58px;overflow:hidden;position:relative;background:#0c0c0e}
+#screen iframe{border:0;width:390px;height:830px;transform:scale(1.3949);transform-origin:0 0;position:absolute;left:0;top:0}
+#tap{pointer-events:none;position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.35);border:4px solid #fff;opacity:0;transform:translate(-50%,-50%)}
+#sticker{left:800px;top:590px;transform:rotate(12deg)}
+#sticker .stamp{font-size:30px;border-width:5px;padding:8px 16px;transform:none}
+/* gratis per sempre */
+#free{left:0;right:0;top:560px;text-align:center;padding:0 60px}
+#free .a{font-weight:900;font-size:170px;line-height:1;color:#35d07f}
+#free .b{font-weight:900;font-size:76px;line-height:1.05;text-transform:uppercase;margin-top:26px}
+#free ul{list-style:none;padding:0;margin:60px 0 0;display:grid;gap:22px}
+#free li{font-weight:800;font-size:46px;background:#18181c;border:2px solid #2e2e36;border-radius:22px;padding:18px 26px}
+/* finale */
+#final{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;text-align:center;padding:0 70px;background:#0a0a0c}
+#final svg{width:340px}#final .tm{font-weight:900;font-size:54px;letter-spacing:.32em;margin-right:-.32em}
+#final .big{font-weight:900;font-size:96px;line-height:1;text-transform:uppercase;margin-top:30px}
+#final .big em{font-style:normal;color:#ff7a00}
+#final .and{display:inline-block;background:#35d07f;color:#08130c;font-weight:900;font-size:56px;padding:10px 38px;border-radius:60px}
+#final .dm{font-weight:800;font-size:46px;color:#d4d4d8}#final .dm b{color:#ff7a00;font-weight:900}
+#final .free{font-weight:900;font-size:36px;color:#35d07f;letter-spacing:.04em}
+#flash{inset:0;background:#fff;opacity:0}
+</style></head><body>
+<div id="glow" class="abs"></div><div id="grain" class="abs"></div>
+<div id="hook" class="abs"><div class="pov" id="pov">POV:</div><div class="l" id="hl"></div></div>
+<div id="logo" class="abs"><svg viewBox="0 0 924 516"><path fill="#fff" d="M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z"/></svg><b>TIMER</b></div>
+<div id="badge" class="abs"><span class="stamp">GRATIS. PER SEMPRE.</span></div>
+<div id="cap" class="abs"><small id="k"></small><div class="t" id="h"></div></div>
+<div id="phone" class="abs"><div id="screen"><iframe id="f" src="app/index.html#home"></iframe><div id="tap"></div></div></div>
+<div id="sticker" class="abs"><span class="stamp">GRATIS PER SEMPRE</span></div>
+<div id="free" class="abs"><div class="a" id="fa">GRATIS.</div><div class="b" id="fb">E sarà <span class="hl">sempre</span> gratis.</div>
+  <ul><li id="b1">🚫 Niente pubblicità</li><li id="b2">👤 Niente account</li><li id="b3">📴 Funziona offline</li></ul></div>
+<div id="final" class="abs">
+  <svg viewBox="0 0 924 516"><path fill="#fff" d="M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z"/></svg>
+  <div class="tm">TIMER</div>
+  <div class="big" id="fbig">Cerco <em>12</em><br>beta tester</div>
+  <div class="and" id="fand">ANDROID</div>
+  <div class="dm" id="fdm">Scrivimi <b>TESTER</b> in DM 👇</div>
+  <div class="free" id="ffree">GRATIS · PER SEMPRE</div>
+</div>
+<div id="flash" class="abs"></div>
+<script>
+// tutto è guidato da render(t): stessa animazione a ogni registrazione, fotogramma per fotogramma
+const $ = (id) => document.getElementById(id);
+const cl = (x) => Math.max(0, Math.min(1, x));
+const outBack = (x) => { x = cl(x); const c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const outCubic = (x) => 1 - Math.pow(1 - cl(x), 3);
+const S = { cap: null, hook: [], show: {}, phone: { y0: 1500, t0: 1e9, out: 1e9 }, punch: [], flash: [] };
+window.S = S;
+function words(el, txt) { // *parola* = arancione, | = a capo
+  el.innerHTML = txt.split('|').map((line) => line.trim().split(/\s+/).map((w) => (/^\*.*\*$/.test(w) ? `<span class="w hl">${w.slice(1, -1)}</span>` : `<span class="w">${w}</span>`)).join(' ')).join('<br>'); }
+window.setCap = (t, k, h) => { $('k').textContent = k; words($('h'), h); S.cap = { t }; $('k').style.display = k ? '' : 'none'; };
+window.setHook = (t, h) => { words($('hl'), h); S.hookT = t; };
+window.render = (t) => {
+  // aggancio
+  const hv = S.show.hook; $('hook').style.opacity = hv && t < hv[1] ? 1 : 0;
+  if (hv) { $('pov').style.transform = `scale(${outBack((t - hv[0]) / 0.25)})`; [...$('hl').querySelectorAll('.w')].forEach((w, i) => { const a = (t - S.hookT - i * 0.11) / 0.22; w.style.opacity = a > 0 ? 1 : 0; w.style.transform = `translateY(${(1 - outBack(a)) * 40}px) scale(${0.6 + 0.4 * outBack(a)})`; }); }
+  // logo che sbatte + timbro
+  const lv = S.show.logo; const lo = lv && t >= lv[0] && t < lv[1];
+  $('logo').style.opacity = lo ? 1 : 0; if (lo) { const a = (t - lv[0]) / 0.3; $('logo').style.transform = `translateX(-50%) scale(${1.7 - 0.7 * outCubic(a)})`; }
+  const bv = S.show.badge; const bo = bv && t >= bv[0] && t < bv[1];
+  $('badge').style.opacity = bo ? 1 : 0; if (bo) $('badge').querySelector('.stamp').style.transform = `rotate(-6deg) scale(${2.2 - 1.2 * outBack((t - bv[0]) / 0.22)})`;
+  // scritta in alto, parola per parola
+  const cv = S.cap; $('cap').style.opacity = cv && S.show.cap && t >= S.show.cap[0] && t < S.show.cap[1] ? 1 : 0;
+  if (cv) { const ka = (t - cv.t) / 0.2; $('k').style.transform = `translateX(${(1 - outCubic(ka)) * -300}px)`; $('k').style.opacity = cl(ka);
+    [...$('h').querySelectorAll('.w')].forEach((w, i) => { const a = (t - cv.t - 0.08 - i * 0.07) / 0.22; w.style.opacity = a > 0 ? 1 : 0; w.style.transform = `translateY(${(1 - outBack(a)) * 50}px) scale(${0.5 + 0.5 * outBack(a)})`; }); }
+  // telefono: entra dal basso, piccoli "punch" di zoom, esce in basso
+  const P = S.phone; let y = 1500, sc = 1, rot = 0;
+  if (t >= P.t0) { const a = outCubic((t - P.t0) / 0.55); y = (1 - a) * 1500; rot = (1 - a) * 8; }
+  if (t >= P.out) { const a = cl((t - P.out) / 0.35); y = a * a * 1600; }
+  for (const [t0, s] of S.punch) { const a = (t - t0) / 0.4; if (a >= 0 && a < 1) sc *= 1 + s * Math.sin(Math.PI * a); }
+  $('phone').style.transform = `translateY(${y}px) rotate(${rot}deg) scale(${sc})`;
+  const sv = S.show.sticker; const so = sv && t >= sv[0] && t < sv[1]; $('sticker').style.opacity = so ? 1 : 0;
+  if (so) $('sticker').style.transform = `rotate(${12 + Math.sin(t * 3) * 3}deg) scale(${outBack((t - sv[0]) / 0.3)})`;
+  // gratis per sempre
+  const fv = S.show.free; const fo = fv && t >= fv[0] && t < fv[1]; $('free').style.opacity = fo ? 1 : 0;
+  if (fo) { const d = t - fv[0]; $('fa').style.transform = `scale(${2 - outBack(d / 0.25)})`; $('fb').style.opacity = cl((d - 0.45) / 0.15); $('fb').style.transform = `translateY(${(1 - outCubic((d - 0.45) / 0.3)) * 60}px)`;
+    ['b1', 'b2', 'b3'].forEach((id, i) => { const a = (d - 1.0 - i * 0.28) / 0.25; $(id).style.opacity = a > 0 ? 1 : 0; $(id).style.transform = `translateX(${(1 - outBack(a)) * (i % 2 ? 400 : -400)}px)`; }); }
+  // finale
+  const zv = S.show.final; const zo = zv && t >= zv[0]; $('final').style.opacity = zo ? 1 : 0;
+  if (zo) { const d = t - zv[0]; $('fbig').style.transform = `scale(${1.9 - 0.9 * outBack(d / 0.28)})`;
+    [['fand', 0.45], ['fdm', 0.75], ['ffree', 1.05]].forEach(([id, s]) => { const a = (d - s) / 0.25; $(id).style.opacity = a > 0 ? 1 : 0; $(id).style.transform = `scale(${0.4 + 0.6 * outBack(a)})`; }); }
+  // lampo bianco tra le scene
+  let fl = 0; for (const t0 of S.flash) { const a = (t - t0) / 0.18; if (a >= 0 && a < 1) fl = Math.max(fl, 0.75 * (1 - a)); } $('flash').style.opacity = fl;
+  $('glow').style.opacity = 0.8 + 0.2 * Math.sin(t * 2.2);
+};
+render(0);
+</script></body></html>

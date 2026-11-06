@@ -1,7 +1,7 @@
 {
   "name": "UN-TIMER",
   "short_name": "UN-TIMER",
-  "description": "Timer gratuito per EMOM, AMRAP, AFAP e Interval Timer",
+  "description": "Timer gratuito per EMOM, AMRAP, AFAP e HIIT",
   "start_url": "./",
   "scope": "./",
   "id": "./",

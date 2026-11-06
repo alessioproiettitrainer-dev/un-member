@@ -1,4 +1,4 @@
-// UN-TIMER: app a sé, gratuita. Timer EMOM, AMRAP, AFAP e IT (Interval Timer), senza video e senza account.
+// UN-TIMER: app a sé, gratuita. Timer EMOM, AMRAP, AFAP e HIIT, senza video e senza account.
 // Tutto gira sul telefono: impostazioni e timer salvati restano nel localStorage.
 const NAME = 'UN-TIMER'; // nome dell'app (si cambia qui e in index.html / manifest.json)
 const $ = (s, r = document) => r.querySelector(s);
@@ -16,7 +16,7 @@ const MODES = {
   emom: { name: 'EMOM', col: '#ffc21a', sub: 'Ogni X secondi, per X round', def: { every: 60, rounds: 10, slots: [{ text: '', rest: false }] } },
   amrap: { name: 'AMRAP', col: '#ff7a00', sub: 'Più giri possibili nel tempo', def: { minutes: 12 } },
   afap: { name: 'AFAP', col: '#ff4d6d', sub: 'Il più veloce possibile', def: { cap: 0, items: [] } },
-  it: { name: 'IT', col: '#35d07f', sub: 'Interval Timer: lavoro / recupero', def: { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 60 } },
+  it: { name: 'HIIT', col: '#35d07f', sub: 'Lavoro / recupero a intervalli', def: { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 60 } },
 };
 const cfgOf = (m) => ({ ...clone(MODES[m].def), ...ls.get('cfg_' + m, {}) });
 const opts = () => ({ voice: true, beep: true, prep: 10, ...ls.get('opts', {}) });

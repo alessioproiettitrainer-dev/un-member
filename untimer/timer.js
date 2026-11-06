@@ -63,30 +63,50 @@ function say(t) {
 // Ogni momento ha più frasi, scelte a caso. Se c'è la registrazione (voce/<momento>-<n>.mp3, elencata in AUDIO)
 // parte quella, altrimenti la legge la voce del telefono. Massimo una frase ogni 6 secondi.
 const COACH = {
+  // tutti i timer
+  pronti: ['Preparate, se parte!', 'Mettete in posizione!', 'Pronto? Mo se comincia.'],
   via: ['Daje, partiamo!', 'Vai, è tutto tuo!', 'Daje che se comincia!'],
+  pausa: ['Pausa. Riparti quando sei pronto.', "Fermo 'n attimo, poi se riparte."],
+  riprendi: ['Riprendiamo, daje!', 'Rientra, forza!'],
   meta: ['Metà fatta, nun mollà!', 'Semo a metà, tieni botta!', "Metà fatta, mo' viene il bello!"],
   min1: ['Ultimo minuto, mo o mai più!', 'Manca un minuto, daje tutto!', 'Un minuto, svuota er serbatoio!'],
   sec10: ['Dieci secondi, spigni!', 'Ultimi dieci, nun te fermà!', 'Dieci secondi, daje daje daje!'],
-  ungiro: ["Er giro ce lo fai, daje!", "Manca solo 'n giro, chiudilo!", 'Ce stai dentro, chiudi sto giro!'],
-  lento: ["Oh, nun te fermà, daje!", 'Respira e riparti!', "Forza, che nun è finita!"],
-  ultimo: ["Ultimo round, dacce dentro!", "Ultimo, poi te riposi!", "L'ultimo, fallo bene!"],
+  ultimo: ['Ultimo round, dacce dentro!', 'Ultimo, poi te riposi!', "L'ultimo, fallo bene!"],
+  fine: ['Grande! Daje!', "Fatto! Sei 'na bestia!", 'Bravo! Mo riposa.', 'Finito! Oggi te lo sei guadagnato.'],
+  // EMOM e HIIT
+  giroemom: ["N'antro minuto, vai!", 'Sotto, riparti!', 'Su, che se ricomincia!'],
+  lavoro: ['Vai!', 'Spigni!', 'Dai tutto!'],
   recupero: ['Recupera, respira.', 'Fiato, che se riparte.', 'Respira, sciogli le spalle.'],
+  serie: ['Serie finita, bravo! Recupera bene.', 'Una serie in meno! Respira.'],
+  // AMRAP
+  giro: ["Bravo, n'antro giro!", "Così se fa!", 'Giro chiuso, avanti!'],
+  veloce: ['Stai a volà!', "Che ritmo, nun calà!"],
+  lento: ["Oh, nun te fermà, daje!", 'Respira e riparti!', "Forza, che nun è finita!"],
+  ungiro: ["Er giro ce lo fai, daje!", "Manca solo 'n giro, chiudilo!", 'Ce stai dentro, chiudi sto giro!'],
+  // AFAP
   afap: ['Forza che ce stai!', 'Tieni duro, daje!', 'Nun mollà, testa bassa e pedalà!'],
-  fine: ['Grande! Daje!', "Fatto! Sei 'na bestia!", 'Bravo! Mo riposa.'],
+  esfatto: ['Uno in meno!', 'Via questo, sotto col prossimo!', 'Fatto, avanti!'],
+  esultimo: ["Ultimo esercizio, chiudi!", "È l'ultimo, svuotate!"],
+  // conto alla rovescia (facoltativo): conto-3 = "Tre", conto-2 = "Due", conto-1 = "Uno"
+  conto: ['Tre', 'Due', 'Uno'],
 };
-const AUDIO = new Set([]); // es. 'via-1', 'sec10-2': i file registrati da Alessio in voce/
+const AUDIO = new Set([]); // es. 'via-1', 'sec10-2': i file registrati da Alessio in voce/ (aggiungerli anche a sw.js)
 let coachAt = 0, coachAu = null;
-function coach(ev) {
+// la voce del telefono legge male il romano: qualche parola in italiano
+const tts = (t) => t.replace(/\bnun\b/gi, 'non').replace(/\bspigni\b/gi, 'spingi').replace(/\bsemo\b/gi, 'siamo').replace(/n'antro/gi, 'un altro')
+  .replace(/\bse\b(?= (parte|comincia|riparte|ricomincia|fa))/gi, 'si').replace(/\bPreparate\b/, 'Preparati').replace(/\bMettete\b/, 'Mettiti').replace(/svuotate/, 'svuotati').replace(/\ber\b/gi, 'il').replace(/ 'n /g, ' un ');
+function coach(ev, fixed) {
   const o = opts(), list = COACH[ev];
   if (!o.voice || !list || (o.push === false && ev !== 'fine')) return false;
   const now = Date.now();
-  if (now - coachAt < 6000 && ev !== 'fine') return false;
+  const n = fixed ?? Math.floor(Math.random() * list.length), id = `${ev}-${n + 1}`;
+  if (ev === 'conto' && !AUDIO.has(id)) return false; // il conto con la voce del telefono no: bastano i bip
+  if (now - coachAt < 6000 && !['fine', 'conto', 'pausa', 'riprendi'].includes(ev)) return false;
   coachAt = now;
-  const n = Math.floor(Math.random() * list.length), id = `${ev}-${n + 1}`;
   if (AUDIO.has(id)) {
     window.speechSynthesis?.cancel(); coachAu?.pause();
     coachAu = new Audio(`voce/${id}.mp3`); coachAu.play().catch(() => say(list[n]));
-  } else say(list[n].replace(/\bnun\b/gi, 'non').replace(/\bspigni\b/g, 'spingi').replace(/\bsemo\b/gi, 'siamo').replace(/\bse\b(?= (comincia|riparte))/g, 'si'));
+  } else say(tts(list[n]));
   return true;
 }
 
@@ -291,6 +311,9 @@ function run() {
   if ($('#plus')) $('#plus').onclick = () => {
     if (R.S[R.i].kind !== 'work' || R.pauseAt) return;
     R.laps.push(workTime()); beep(1200, 80); navigator.vibrate?.(30);
+    // giro più veloce della media dei precedenti: "stai a volà"; altrimenti ogni 2 giri un "bravo"
+    const L = R.laps, last = L.at(-1) - (L.at(-2) || 0), prevAvg = L.length > 1 ? L.at(-2) / (L.length - 1) : 0;
+    if (prevAvg && last < prevAvg * 0.9) coach('veloce'); else if (L.length % 2 === 0) coach('giro');
     $('#rc').textContent = `${R.laps.length} ${R.laps.length === 1 ? 'giro' : 'giri'} · ultimo ${fmt(R.laps.at(-1) - (R.laps.at(-2) || 0))}`;
   };
   if ($('#fin')) $('#fin').onclick = () => finish();
@@ -298,16 +321,20 @@ function run() {
   app.querySelectorAll('[data-add]').forEach((b) => (b.onclick = () => {
     if (R.S[R.i].kind !== 'work' || R.pauseAt) return;
     const it = R.items[b.dataset.add]; it.n = Math.min(it.reps, it.n + Number(b.dataset.v)); beep(1200, 60); navigator.vibrate?.(20);
-    if (it.n >= it.reps) it.ok = true;
+    if (it.n >= it.reps && !it.ok) { it.ok = true; itemDone(); }
     drawItems();
   }));
   app.querySelectorAll('[data-ok]').forEach((b) => (b.onclick = () => {
     if (R.S[R.i].kind !== 'work' || R.pauseAt) return;
-    const it = R.items[b.dataset.ok]; it.ok = !it.ok; if (it.ok && it.reps) it.n = it.reps; drawItems();
+    const it = R.items[b.dataset.ok]; it.ok = !it.ok; if (it.ok && it.reps) it.n = it.reps; if (it.ok) itemDone(); drawItems();
   }));
   keepAwake();
   R.iv = setInterval(tick, 100);
   tick();
+}
+function itemDone() {
+  const left = R.items.filter((it) => !it.ok).length;
+  if (left === 1) coach('esultimo'); else if (left > 1) coach('esfatto');
 }
 function drawItems() {
   R.items.forEach((it, j) => {
@@ -320,24 +347,26 @@ function drawItems() {
 function jump() { R.t0 -= (R.S[R.i].dur - elapsed()) * 1000; tick(); }
 function togglePause() {
   if (!R) return;
-  if (R.pauseAt) { R.paused += performance.now() - R.pauseAt; R.pauseAt = 0; say('Via'); }
-  else { R.pauseAt = performance.now(); window.speechSynthesis?.cancel(); }
+  if (R.pauseAt) { R.paused += performance.now() - R.pauseAt; R.pauseAt = 0; coach('riprendi') || say('Via'); }
+  else { R.pauseAt = performance.now(); window.speechSynthesis?.cancel(); coach('pausa'); }
   $('#pause').textContent = R.pauseAt ? 'RIPRENDI' : 'PAUSA';
   document.body.classList.toggle('paused', !!R.pauseAt);
 }
 function enter(i) {
   const s = R.S[i];
-  if (s.kind === 'prep') return say('Preparati');
+  if (s.kind === 'prep') return coach('pronti') || say('Preparati');
   beep(s.kind === 'rest' ? 520 : 1320, 450);
-  if (s.kind === 'rest') return (s.long || s.dur >= 30) && coach('recupero') ? null : say(s.long ? `Recupero, ${secTxt(s.dur).replace('min', 'minuti').replace('s', ' secondi')}` : 'Recupero');
+  if (s.kind === 'rest') return coach(s.long ? 'serie' : 'recupero') || say(s.long ? `Recupero, ${secTxt(s.dur).replace('min', 'minuti').replace('s', ' secondi')}` : 'Recupero');
   const lastWork = !R.S.slice(i + 1).some((x) => x.kind === 'work'), first = !R.S.slice(0, i).some((x) => x.kind === 'work');
   if (lastWork && s.of > 1) return coach('ultimo') || say(s.text ? `Ultimo! ${s.text}` : 'Ultimo round!');
-  if (R.m === 'emom') return first && !s.text ? coach('via') || say('Via!') : say(s.text || '');
-  if (R.m === 'it') return s.round === 1 && s.sets > 1 && !first ? say(`Serie ${s.set}, via!`) : first ? coach('via') || say('Via!') : null;
+  // EMOM: se c'è scritto l'esercizio si legge quello, altrimenti a inizio giro (un giro sì e uno no) una spinta
+  if (R.m === 'emom') return s.text ? say(s.text) : first ? coach('via') || say('Via!') : R.S[i - 1]?.round !== s.round && s.round % 2 === 0 ? coach('giroemom') : null;
+  if (R.m === 'it') return s.round === 1 && s.sets > 1 && !first ? say(`Serie ${s.set}, via!`) : first ? coach('via') || say('Via!') : coach('lavoro');
   coach('via') || say('Via!');
 }
 function tick() {
   if (!R || R.done || location.hash !== '#run') return;
+  if (!R.started) { R.started = 1; enter(R.i); }
   let s = R.S[R.i], e = elapsed();
   // tratti finiti (anche più d'uno, se il telefono era in background): avanti
   while (e >= s.dur) {
@@ -345,10 +374,9 @@ function tick() {
     if (++R.i >= R.S.length) return finish(true);
     s = R.S[R.i]; e = elapsed(); R.lastSec = null; enter(R.i);
   }
-  if (!R.started) { R.started = 1; enter(R.i); }
   const left = s.dur - e, sec = Math.ceil(left);
   if (sec !== R.lastSec && R.lastSec != null && !R.pauseAt) {
-    if (sec <= 3 && sec >= 1) beep(880, 140);
+    if (sec <= 3 && sec >= 1 && !coach('conto', 3 - sec)) beep(880, 140);
     if (s.kind === 'work') motivate(s, e, left, sec);
   }
   const es = Math.floor(e);

@@ -100,8 +100,8 @@ function segments(m, c) {
 }
 
 // ---------- pezzi di pagina ----------
-// logo UN-COACH (le tre barre) + "TIMER" in Montserrat Black
-const LOGO = '<svg viewBox="338 0 1721 1341" aria-hidden="true"><g fill="currentColor"><rect x="338" width="476" height="1003"/><rect x="1152" width="94" height="1341"/><rect x="1584" y="338" width="476" height="1003"/></g></svg>';
+// logo UN (U + N squadrate) + "TIMER" in Montserrat Black
+const LOGO = '<svg viewBox="0 0 924 516" aria-hidden="true"><path fill="currentColor" d="M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z"/></svg>';
 const logo = (big) => `<div class="logo ${big ? 'big' : ''}">${LOGO}<b>TIMER</b></div>`;
 // menu laterale (☰), al posto della barra in basso
 const menuBtn = '<button class="burger" id="burger" aria-label="Menu"><i></i><i></i><i></i></button>';

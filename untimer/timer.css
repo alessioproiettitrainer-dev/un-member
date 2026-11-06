@@ -173,10 +173,10 @@ h2 { font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--muted)
 .burger { background: none; width: 48px; height: 48px; display: grid; align-content: center; gap: 6px; padding: 0 10px 0 2px; }
 .burger i { display: block; height: 3px; border-radius: 2px; background: var(--text); }
 .logo { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text); }
-.logo svg { width: 64px; height: auto; }
+.logo svg { width: 90px; height: auto; }
 .logo b { font-weight: 900; letter-spacing: .32em; margin-right: -.32em; font-size: 18px; }
 .logo.big { margin: 6vh 0 7vh; gap: 16px; }
-.logo.big svg { width: 120px; }
+.logo.big svg { width: 190px; }
 .logo.big b { font-size: 30px; }
 .pills { display: grid; gap: 14px; }
 .pill { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 76px; border-radius: 40px;

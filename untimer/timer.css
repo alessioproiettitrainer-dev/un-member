@@ -225,3 +225,6 @@ h2 { font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--muted)
 .lg button { padding: 0 12px; }
 .lg button[data-redo] { font-size: 22px; color: var(--c); }
 h2 { text-transform: uppercase; }
+
+.chips.lang button { font-size: 15px; }
+.field .chips + .muted { margin: 10px 0 0; }

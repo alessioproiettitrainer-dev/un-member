@@ -55,3 +55,33 @@ Vuoi allenamenti già pronti, con video e programmi? Dentro l'app trovi la prova
 - `icona-512.png` – icona 512x512
 - `feature-1024x500.png` – immagine in evidenza
 - `1-home.png` … `5-diario.png` – schermate telefono 1080x2160 (dati di esempio inventati)
+
+## Store listing (English)
+Su Play Console: "Aggiungi traduzioni" → Inglese (Stati Uniti), poi incolla questi testi.
+
+**Name:** UN-TIMER
+
+**Short description (max 80):**
+Free EMOM, AMRAP, For Time & HIIT timer. With a coach that pushes you.
+
+**Full description:**
+UN-TIMER is the workout timer built by coach Alessio · UN-COACH. Free, no account, no ads.
+
+EMOM – Every 30, 45, 60, 90 seconds or whatever you want. Stack multiple intervals in one round (minute 1 swings, minute 2 burpees, minute 3 rest…) and pick your rounds.
+
+AMRAP – Set the time, write the workout and tap "+1 ROUND" every round. At the end, log what you did of the unfinished round too.
+
+AFAP / For Time – Write your exercises with reps (100 burpees, 50 swings…), log reps as you go and check off what's done. Time cap if you want one.
+
+HIIT – Work and rest for as many rounds as you like. Repeat the whole thing with rest between sets: 6 Tabatas back to back? Done.
+
+Plus:
+• Voice coach that pushes you at the right moments ("One more round, close it out!")
+• Beeps in the last seconds
+• Screen stays on while the timer runs
+• Save your favorite timers
+• Automatic log: every workout with date, time and result
+• Works offline
+• English or Italian (with an optional Roman-dialect coach)
+
+**Category:** Health & Fitness · **Ads:** No · **Price:** Free

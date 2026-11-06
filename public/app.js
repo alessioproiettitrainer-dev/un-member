@@ -93,10 +93,15 @@ function tabbar(on) {
 }
 const previewBar = () => (ME?.id === 'admin-preview' ? `<div class="pvbar">Anteprima admin: qui le modifiche non vengono salvate. <a href="#/register">Iscriviti come membro</a> o <a href="#/login">accedi</a> per usare l'app come i tuoi clienti.</div>` : '');
 // Piani di abbonamento: ognuno apre direttamente il suo link di pagamento (se non ci sono piani, il link del sito)
-const plans = () => (SETTINGS.plans || []).filter((x) => x.url && x.title);
-const hasPlans = () => plans().length > 0 || !!SETTINGS.shopUrl;
+// app Android del Play Store (apre il sito con ?app=android): niente prezzi né link di pagamento esterni, lo vietano le regole di Google Play.
+// sessionStorage e non localStorage: lo spazio è lo stesso di Chrome, così sul sito aperto dal browser i piani restano.
+try { if (/[?&]app=android/.test(location.search) || document.referrer.startsWith('android-app://')) sessionStorage.setItem('android', '1'); } catch {}
+const ANDROID = (() => { try { return sessionStorage.getItem('android') === '1'; } catch { return false; } })();
+const plans = () => (ANDROID ? [] : (SETTINGS.plans || []).filter((x) => x.url && x.title));
+const hasPlans = () => !ANDROID && (plans().length > 0 || !!SETTINGS.shopUrl);
 function plansHtml() {
   const list = plans();
+  if (ANDROID) return '';
   if (!list.length) return SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Scegli il tuo abbonamento')}</a>` : '';
   return `<div class="plans">${list.map((x) => `<a class="plan ${x.best ? 'best' : ''}" href="${esc(x.url)}" target="_blank" rel="noopener">
     ${x.best ? '<span class="tag">Consigliato</span>' : ''}<div class="pt">${esc(x.title)}</div>
@@ -174,7 +179,7 @@ async function route() {
     ls.set('wantTrial', false);
     if (ME.trialAvailable) { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast(`Settimana di prova attiva: buon allenamento!`); } catch (err) { toast(err.message, true); } }
   }
-  if (parts[0] === 'abbonati') return plansView();
+  if (parts[0] === 'abbonati') return ANDROID ? (location.hash = '#/') : plansView();
   if (!hasAccessNow()) { progCache.clear(); return paywallView(); } // prova finita o scaduto: solo la schermata per abbonarsi
   try {
     if (parts[0] === 'train') return await trainView();
@@ -1004,7 +1009,7 @@ function profileView() {
     <div id="coachbtn"></div>
     ${welcomeSrc() ? '<button class="btn block" style="margin-top:12px" id="rewatch">▶ Rivedi il video di benvenuto</button>' : ''}
     <button class="btn block" style="margin-top:12px" id="logout">Esci</button>
-    <div style="text-align:center;margin:22px 0 6px"><button class="linkbtn muted small" id="delacc">Elimina il mio account</button></div>`);
+    <div style="text-align:center;margin:22px 0 6px"><button class="linkbtn muted small" id="delacc">Elimina il mio account</button> · <a class="muted small" href="/privacy" target="_blank" rel="noopener">Privacy</a></div>`);
   coachInfo().then((c) => { const el = document.getElementById('coachbtn'); if (el && c.coachRoom) el.innerHTML = `<a class="btn block" style="margin-top:12px" href="#/chat/${c.coachRoom}">💬 Scrivi ad Alessio${c.coach ? ` <span class="badge">${c.coach}</span>` : ''}</a>`; });
   const rw = document.getElementById('rewatch');
   if (rw) rw.onclick = () => welcomePlayer();
@@ -1059,15 +1064,19 @@ function paywallView() {
       <p class="muted small">Nessun pagamento e nessun rinnovo automatico: alla fine decidi tu se abbonarti.</p>
       <button class="btn primary block" id="starttrial">Inizia la prova gratuita</button></div>` : ''}
     <div class="card">
+      ${ANDROID ? `<p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Progressi e storico restano salvati.`
+        : trialOver ? 'La tua settimana di prova è finita. Progressi e storico restano salvati.'
+        : ME.trialAvailable ? '' : 'Il tuo account è creato. Per sbloccare programmi e allenamenti serve un accesso attivo.'}</p>
+      <p class="muted small">Hai già un accesso attivo? Entra con la stessa email (<b>${esc(ME.email)}</b>).</p>` : `
       <p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Rinnova per tornare ai tuoi allenamenti: progressi e storico restano salvati.`
         : trialOver ? `<span style="white-space:pre-line">${esc(SETTINGS.trialEndText || 'La tua settimana di prova è finita. Abbonati per sbloccare tutti i programmi e continuare da dove sei arrivato: progressi e storico restano salvati.')}</span>`
         : ME.trialAvailable ? 'Vuoi già tutto? Con l\'abbonamento sblocchi subito tutti i programmi e tutte le settimane.'
         : 'Il tuo account è creato. Per sbloccare programmi, challenge e allenamenti serve un abbonamento attivo.'}</p>
-      <p class="muted small">Hai già pagato? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>
+      <p class="muted small">Hai già pagato? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>`}
       ${plansHtml()}
-      ${SETTINGS.extraAppUrl ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
+      ${SETTINGS.extraAppUrl && !ANDROID ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
       ${SETTINGS.supportEmail ? `<a class="btn block" style="margin-top:8px" href="mailto:${esc(SETTINGS.supportEmail)}">Scrivici</a>` : ''}
-      <button class="btn block" style="margin-top:8px" id="recheck">Ho già pagato, ricontrolla</button>
+      <button class="btn block" style="margin-top:8px" id="recheck">${ANDROID ? 'Ricontrolla il mio accesso' : 'Ho già pagato, ricontrolla'}</button>
     </div>
     <div style="text-align:center;margin:18px 0 8px"><button class="linkbtn muted small" id="pwout">Esci dall'account</button></div></div>`;
   document.getElementById('pwout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };

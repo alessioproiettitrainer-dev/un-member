@@ -1151,6 +1151,30 @@ app.get('/disiscriviti', (req, res) => {
   if (isUnsub(e)) return res.send(unsubPage('Sei già cancellato', `<b>${escHtml(e)}</b> non riceve più le nostre email.`, `<form method="post" action="/disiscriviti?${q}&undo=1"><button class="s">Mi sono sbagliato, voglio riceverle</button></form>`));
   res.send(unsubPage('Non vuoi più ricevere le email?', `Togliamo <b>${escHtml(e)}</b> dalle email di UN-MEMBER (novità, promemoria, offerte). L'app e il tuo account restano come sono.`, `<form method="post" action="/disiscriviti?${q}"><button>Sì, cancellami</button></form>`));
 });
+// ---- pagine richieste dal Play Store: privacy, cancellazione account, collegamento app Android ↔ sito
+// impronta del certificato dell'app Android (chiave di caricamento; quella di Google Play si aggiunge con ANDROID_SHA256 o qui)
+const ANDROID_SHA256 = ['48:25:43:8B:6A:4F:50:DA:6B:32:61:32:D7:B3:8D:6F:A9:99:73:30:24:FF:4E:22:9E:DF:5B:47:DF:A7:07:80', ...String(process.env.ANDROID_SHA256 || '').split(',').map((x) => x.trim()).filter(Boolean)];
+app.get('/.well-known/assetlinks.json', (req, res) => res.json([{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: 'com.uncoach.unmember', sha256_cert_fingerprints: ANDROID_SHA256 } }]));
+const infoPage = (title, html) => `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · UN-MEMBER</title>
+<style>body{margin:0;background:#0c0c0e;color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;padding:20px;line-height:1.55}.c{max-width:720px;margin:0 auto}h1{font-size:26px}h2{font-size:17px;margin-top:26px;color:#ff7a00}p,li{color:#c9c9cf}a{color:#ff7a00}</style></head><body><div class="c">${html}</div></body></html>`;
+const contact = () => escHtml(db.settings.supportEmail || process.env.GMAIL_USER || '');
+app.get('/privacy', (req, res) => res.send(infoPage('Privacy', `<h1>Informativa privacy di UN-MEMBER</h1>
+<p>UN-MEMBER è l'app di allenamento di Alessio Proietti (UN-COACH). Qui trovi quali dati usiamo, perché e come cancellarli. Per qualsiasi domanda: <a href="mailto:${contact()}">${contact()}</a>.</p>
+<h2>Quali dati raccogliamo</h2><ul>
+<li><b>Account:</b> nome, email e password (salvata cifrata).</li>
+<li><b>Profilo e progressi</b>, solo se li inserisci tu: sesso, anno di nascita, altezza, peso, obiettivo, risposte al questionario iniziale, allenamenti fatti, risultati dei test, diario del cibo, foto dei progressi (le vedi solo tu).</li>
+<li><b>Community:</b> messaggi, foto e immagine del profilo che pubblichi nella chat di gruppo o nei messaggi privati.</li>
+<li><b>Utilizzo:</b> data dell'ultimo accesso e giorni in cui usi l'app; da quale pubblicità o link sei arrivato (parametri utm).</li>
+<li><b>Fotocamera (Quality Test):</b> le immagini vengono analizzate solo sul tuo telefono per contare le ripetizioni e non vengono inviate né salvate. Se scegli di pubblicare o salvare la card finale, salviamo solo quell'immagine.</li></ul>
+<h2>Perché li usiamo</h2><ul><li>Farti usare l'app: allenamenti, progressi, community.</li><li>Gestire il tuo accesso (prova gratuita e abbonamento) e risponderti.</li><li>Mandarti email di servizio e promemoria; da ogni email puoi cancellarti con "Cancellati qui".</li></ul>
+<p>Non vendiamo i tuoi dati e non usiamo strumenti pubblicitari o di tracciamento dentro l'app.</p>
+<h2>Chi ci aiuta</h2><ul><li><b>Render</b> (hosting del server e dei dati).</li><li><b>Google (Gmail)</b> per spedire e ricevere le email.</li><li>I pagamenti, se ti abboni, avvengono fuori dall'app su piattaforme di pagamento (per esempio Stripe) con le loro informative.</li></ul>
+<h2>Per quanto tempo</h2><p>Finché hai l'account. Quando lo cancelli eliminiamo profilo, progressi e foto. I messaggi già scritti nella community restano visibili come "Ex membro" e teniamo solo la tua email con la data della cancellazione.</p>
+<h2>I tuoi diritti</h2><p>Puoi chiedere accesso, correzione o cancellazione dei tuoi dati scrivendo a <a href="mailto:${contact()}">${contact()}</a>, e puoi rivolgerti al Garante per la protezione dei dati personali. Per cancellare l'account: <a href="/elimina-account">come eliminare l'account</a>.</p>`)));
+app.get('/elimina-account', (req, res) => res.send(infoPage('Elimina account', `<h1>Eliminare l'account UN-MEMBER</h1>
+<h2>Dall'app</h2><ol><li>Apri l'app e vai su <b>Profilo</b>.</li><li>In fondo tocca <b>"Elimina il mio account"</b>.</li><li>Scrivi <b>ELIMINA</b> per confermare.</li></ol>
+<h2>Senza app</h2><p>Scrivi a <a href="mailto:${contact()}?subject=Elimina%20il%20mio%20account">${contact()}</a> dall'email con cui sei iscritto, con oggetto "Elimina il mio account": lo cancelliamo entro 7 giorni.</p>
+<h2>Cosa viene cancellato</h2><p>Profilo, progressi, allenamenti, diario del cibo e foto. I messaggi già scritti nella community restano visibili come "Ex membro"; teniamo solo la tua email con la data della cancellazione. Dettagli nella <a href="/privacy">privacy</a>.</p>`)));
 // POST: tasto della pagina oppure "Annulla iscrizione" di Gmail (List-Unsubscribe-Post)
 app.post('/disiscriviti', express.urlencoded({ extended: false }), (req, res) => {
   const e = String(req.query.e || '').toLowerCase(), t = String(req.query.t || '');

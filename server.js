@@ -656,7 +656,7 @@ cm.post('/chat/:room', (req, res) => {
   save();
   res.json(msgOut(m));
   notifyCoach(req.user, r, m);
-  if (r.other) pushTo(r.other, { title: `💬 ${req.user.name}`, body: text.slice(0, 120), url: `/#/chat/dm-${req.user.id}`, tag: `dm-${req.user.id}` }, 'chat');
+  chatPush(req.user, r, m);
 });
 // ---- foto in chat: il telefono le riduce prima (≈1280 px), qui un tetto di 3 MB e 10 foto al giorno a testa
 const PHOTO_DIR = path.join(DATA_DIR, 'chatphotos');
@@ -683,6 +683,7 @@ cm.post('/chat/:room/photo', chatPhotoUpload.single('file'), (req, res) => {
   save();
   res.json(msgOut(m));
   notifyCoach(req.user, r, m);
+  chatPush(req.user, r, m);
 });
 // nomi casuali e lunghi: si vedono solo dall'app (membro, admin o staff)
 app.get('/api/chatphotos/:file', (req, res) => {
@@ -1314,7 +1315,7 @@ me.post('/push', (req, res) => {
 me.put('/push', (req, res) => {
   const p = (req.user.push ||= { subs: [], hour: 9 });
   if (req.body?.hour != null) p.hour = Math.min(21, Math.max(6, Math.floor(Number(req.body.hour)) || 9));
-  if (Array.isArray(req.body?.off)) p.off = req.body.off.filter((k) => ['workout', 'missed', 'chat'].includes(k));
+  if (Array.isArray(req.body?.off)) p.off = req.body.off.filter((k) => ['workout', 'missed', 'chat', 'group'].includes(k));
   save(); res.json(pushState(req.user));
 });
 me.delete('/push', (req, res) => {
@@ -1323,6 +1324,19 @@ me.delete('/push', (req, res) => {
   save(); res.json(pushState(req.user));
 });
 me.post('/push/test', async (req, res) => res.json({ sent: await pushTo(req.user, { title: 'Notifiche attive ✅', body: 'Daje! Da oggi ti ricordo io gli allenamenti 💪', url: '/#/' }) }));
+// chat: in privato subito; nel gruppo raggruppate (una ogni 3 ore, 30 minuti se scrive il coach) e solo a chi non l'ha già letta
+function chatPush(from, r, m) {
+  const body = (m.photo ? `📷 ${m.text || 'Foto'}` : m.text).slice(0, 120);
+  if (r.other) return pushTo(r.other, { title: `💬 ${isCoach(from) ? 'Alessio' : from.name}`, body, url: `/#/chat/dm-${from.id}`, tag: `dm-${from.id}` }, 'chat');
+  if (r.key !== 'general') return;
+  const coach = isCoach(from), gap = (coach ? 30 : 180) * 60e3, now = Date.now();
+  for (const u of db.users) {
+    const p = u.push;
+    if (u.id === from.id || !p?.subs?.length || !inCommunity(u) || !canUse(u) || blockedBy(u, from.id) || (u.lastRead?.general || 0) >= m.ts || now - (p.lastGroup || 0) < gap) continue;
+    p.lastGroup = now;
+    pushTo(u, { title: coach ? '📣 Alessio nella chat di gruppo' : '💬 Chat di gruppo', body: coach ? body : `${from.name}: ${body}`, url: '/#/community/chat', tag: 'group' }, 'group');
+  }
+}
 const pushState = (u) => ({ subs: (u.push?.subs || []).map((x) => x.endpoint), hour: u.push?.hour ?? 9, off: u.push?.off || [] });
 // l'app dice al server qual è il prossimo allenamento (lo calcola lei), per il promemoria del mattino
 me.put('/next', (req, res) => { req.user.nextWo = { title: String(req.body?.title || '').slice(0, 80), program: String(req.body?.program || '').slice(0, 80) }; res.json({ ok: true }); });

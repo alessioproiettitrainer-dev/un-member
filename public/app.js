@@ -87,9 +87,9 @@ async function pushCard(el) {
   const on = await pushOn(), p = ME.push || { hour: 9, off: [] }, off = new Set(p.off || []);
   const hours = Array.from({ length: 16 }, (_, i) => i + 6);
   el.innerHTML = `<div class="card"><div class="row between"><b>🔔 Notifiche</b><span class="pill ${on ? 'accent' : ''}">${on ? 'Attive' : 'Spente'}</span></div>
-    <div class="muted small" style="margin-top:4px">Ti ricordo l'allenamento del giorno, ti do una spinta se salti qualche giorno e ti avviso quando il coach ti scrive.</div>
+    <div class="muted small" style="margin-top:4px">Ti ricordo l'allenamento del giorno, ti do una spinta se salti qualche giorno e ti avviso dei messaggi in chat.</div>
     ${on ? `<label style="margin-top:10px;display:block">Orario del promemoria<select id="phour">${hours.map((h) => `<option value="${h}" ${h === (p.hour ?? 9) ? 'selected' : ''}>${h}:00</option>`).join('')}</select></label>
-      <div class="qchips" style="margin-top:10px">${[['workout', 'Allenamento del giorno'], ['missed', 'Se salto qualche giorno'], ['chat', 'Messaggi']].map(([k, l]) => `<button type="button" class="qchip ${off.has(k) ? '' : 'on'}" data-pk="${k}">${l}</button>`).join('')}</div>
+      <div class="qchips" style="margin-top:10px">${[['workout', 'Allenamento del giorno'], ['missed', 'Se salto qualche giorno'], ['chat', 'Messaggi privati'], ['group', 'Chat di gruppo']].map(([k, l]) => `<button type="button" class="qchip ${off.has(k) ? '' : 'on'}" data-pk="${k}">${l}</button>`).join('')}</div>
       <button class="btn block" style="margin-top:12px" id="poff">Spegni le notifiche</button>`
     : `<button class="btn primary block" style="margin-top:12px" id="pon">Attiva le notifiche</button>
       ${IOS && !STANDALONE ? '<div class="muted small" style="margin-top:8px">Su iPhone: prima aggiungi l\'app alla schermata Home (Condividi → "Aggiungi alla schermata Home") e aprila da lì.</div>' : ''}`}</div>`;

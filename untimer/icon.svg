@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#0c0c0e"/>
-  <rect x="226" y="70" width="60" height="34" rx="10" fill="#ff7a00"/>
-  <circle cx="256" cy="280" r="150" fill="none" stroke="#ff7a00" stroke-width="34"/>
-  <path d="M256 280 V170" stroke="#ff7a00" stroke-width="30" stroke-linecap="round"/>
-  <text x="256" y="355" text-anchor="middle" font-family="Montserrat, Arial Black, sans-serif" font-weight="900" font-size="74" fill="#f4f4f5">UN</text>
+  <g transform="translate(136 96) scale(0.1395)" fill="#fff"><rect x="0" y="0" width="476" height="1003"/><rect x="814" y="0" width="94" height="1341"/><rect x="1246" y="338" width="476" height="1003"/></g>
+  <text x="256" y="372" text-anchor="middle" font-family="Montserrat, Arial Black, sans-serif" font-weight="900" font-size="64" letter-spacing="14" fill="#ffffff">TIMER</text>
 </svg>

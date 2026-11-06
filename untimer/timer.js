@@ -13,10 +13,10 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const PROVA = 'https://un-member.onrender.com/?utm_source=untimer&utm_medium=app&utm_campaign=timer#/prova';
 
 const MODES = {
-  emom: { name: 'EMOM', sub: 'Ogni X secondi, per X round', def: { every: 60, rounds: 10, slots: [{ text: '', rest: false }] } },
-  amrap: { name: 'AMRAP', sub: 'Più giri possibili nel tempo', def: { minutes: 12 } },
-  afap: { name: 'AFAP', sub: 'Il più veloce possibile', def: { cap: 0, items: [] } },
-  it: { name: 'IT', sub: 'Interval Timer: lavoro / recupero', def: { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 60 } },
+  emom: { name: 'EMOM', col: '#ffc21a', sub: 'Ogni X secondi, per X round', def: { every: 60, rounds: 10, slots: [{ text: '', rest: false }] } },
+  amrap: { name: 'AMRAP', col: '#ff7a00', sub: 'Più giri possibili nel tempo', def: { minutes: 12 } },
+  afap: { name: 'AFAP', col: '#ff4d6d', sub: 'Il più veloce possibile', def: { cap: 0, items: [] } },
+  it: { name: 'IT', col: '#35d07f', sub: 'Interval Timer: lavoro / recupero', def: { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 60 } },
 };
 const cfgOf = (m) => ({ ...clone(MODES[m].def), ...ls.get('cfg_' + m, {}) });
 const opts = () => ({ voice: true, beep: true, prep: 10, ...ls.get('opts', {}) });
@@ -100,25 +100,43 @@ function segments(m, c) {
 }
 
 // ---------- pezzi di pagina ----------
-function nav(tab) {
-  return `<nav class="tabs"><a href="#home" class="${tab === 'timer' ? 'on' : ''}"><span>⏱</span>Timer</a>
-    <a href="#workout" class="${tab === 'workout' ? 'on' : ''}"><span>🔥</span>Workout</a>
-    <a href="#impostazioni" class="${tab === 'opts' ? 'on' : ''}"><span>⚙︎</span>Impostazioni</a></nav>`;
+// logo UN-COACH (le tre barre) + "TIMER" in Montserrat Black
+const LOGO = '<svg viewBox="338 0 1721 1341" aria-hidden="true"><g fill="currentColor"><rect x="338" width="476" height="1003"/><rect x="1152" width="94" height="1341"/><rect x="1584" y="338" width="476" height="1003"/></g></svg>';
+const logo = (big) => `<div class="logo ${big ? 'big' : ''}">${LOGO}<b>TIMER</b></div>`;
+// menu laterale (☰), al posto della barra in basso
+const menuBtn = '<button class="burger" id="burger" aria-label="Menu"><i></i><i></i><i></i></button>';
+function openMenu() {
+  const d = Object.assign(document.createElement('div'), { className: 'drawer' });
+  d.innerHTML = `<aside><div class="dlogo">${logo()}</div>
+    <a href="#home">⏱<span>Timer</span></a><a href="#salvati">★<span>I miei timer</span></a>
+    <a href="#workout">🔥<span>Prova i nostri workout</span></a><a href="#impostazioni">⚙︎<span>Impostazioni</span></a></aside>`;
+  d.onclick = (e) => { if (e.target === d || e.target.closest('a')) d.remove(); };
+  document.body.append(d);
 }
-const brand = `<div class="brand"><b>${NAME.split('-')[0]}</b>-${NAME.split('-')[1] || ''}</div>`;
+const back = (title) => `<header class="top"><a href="#home" class="back" aria-label="Indietro">‹</a><h1>${title}</h1></header>`;
 const stepper = (k, label, val, shown) => `<div class="field"><label>${label}</label>
   <div class="stepper"><button data-k="${k}" data-d="-1">−</button><output>${shown ?? val}</output><button data-k="${k}" data-d="1">+</button></div></div>`;
 
 function home() {
+  const n = ls.get('saved', []).length;
+  app.innerHTML = `<main class="home"><header class="hbar">${menuBtn}</header>
+    ${logo(true)}
+    <div class="pills">${Object.entries(MODES).map(([k, m]) => `<a class="pill" href="#set-${k}" style="--c:${m.col}"><b>${m.name}</b><span>${m.sub}</span></a>`).join('')}</div>
+    <div class="hfoot"><a href="#salvati">★ I MIEI TIMER${n ? ` <em>${n}</em>` : ''}</a><a href="#workout" class="hpromo">Vuoi provare i nostri workout? <b>Prova gratis ›</b></a></div>
+  </main>`;
+  $('#burger').onclick = openMenu;
+}
+
+function savedPage() {
   const saved = ls.get('saved', []);
-  app.innerHTML = `<main class="page">${brand}
-    <div class="modes">${Object.entries(MODES).map(([k, m]) => `<a class="mode m-${k}" href="#set-${k}"><b>${m.name}</b><span>${m.sub}</span></a>`).join('')}</div>
-    ${saved.length ? `<h2>I MIEI TIMER</h2><div class="saved">${saved.map((s, i) => `<div class="sv"><a href="#set-${s.m}-${i}"><small>${MODES[s.m].name}</small><b>${esc(s.name)}</b><span>${summary(s.m, s.c)}</span></a><button data-del="${i}" aria-label="Elimina">✕</button></div>`).join('')}</div>` : ''}
-  </main>${nav('timer')}`;
+  app.innerHTML = `<main class="page">${back('I MIEI TIMER')}
+    ${saved.length ? `<div class="saved">${saved.map((s, i) => `<div class="sv" style="--c:${MODES[s.m].col}"><a href="#set-${s.m}-${i}"><small>${MODES[s.m].name}</small><b>${esc(s.name)}</b><span>${summary(s.m, s.c)}</span></a><button data-del="${i}" aria-label="Elimina">✕</button></div>`).join('')}</div>`
+    : '<p class="muted">Ancora niente. Prepara un timer e premi "Salva questo timer": lo ritrovi qui, pronto da far partire.</p>'}
+  </main>`;
   app.querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
     const s = ls.get('saved', []);
     if (!(await ask(`Eliminare "${s[b.dataset.del].name}"?`, { ok: 'Elimina' }))) return;
-    s.splice(b.dataset.del, 1); ls.set('saved', s); home();
+    s.splice(b.dataset.del, 1); ls.set('saved', s); savedPage();
   }));
 }
 
@@ -152,11 +170,11 @@ function setup(m, savedIdx) {
     if (m === 'it') body = `<div class="pair">${stepper('work', 'Lavoro', c.work, secTxt(c.work))}${stepper('rest', 'Recupero', c.rest, secTxt(c.rest))}</div>
       ${stepper('rounds', 'Round', c.rounds)}
       <div class="pair">${stepper('sets', 'Ripeti tutto (serie)', c.sets, `${c.sets}×`)}${c.sets > 1 ? stepper('setRest', 'Recupero tra le serie', c.setRest, secTxt(c.setRest)) : ''}</div>`;
-    app.innerHTML = `<main class="page"><header class="top"><a href="#home" class="back">‹</a><h1>${saved ? esc(saved.name) : M.name}</h1></header>
+    app.innerHTML = `<main class="page" style="--accent:${M.col}">${back(saved ? esc(saved.name) : M.name)}
       <p class="muted">${M.sub}</p>${body}
       <p class="sum">${summary(m, c)}</p>
       <button class="go" id="go">VIA</button>
-      <button class="ghost" id="save">${saved ? '💾 Salva modifiche' : '💾 Salva questo timer'}</button></main>${nav('timer')}`;
+      <button class="ghost" id="save">${saved ? '💾 Salva modifiche' : '💾 Salva questo timer'}</button></main>`;
     // numeri
     app.querySelectorAll('.stepper button').forEach((b) => (b.onclick = () => {
       const k = b.dataset.k, [st, min, max] = STEP[k];
@@ -180,7 +198,7 @@ function setup(m, savedIdx) {
       if (saved) { s[savedIdx] = { ...saved, c: clean(m, c) }; ls.set('saved', s); toast('Salvato'); return; }
       const name = await ask('Come lo chiami?', { ok: 'Salva', input: `${M.name} ${summary(m, c).split(' · ')[0]}` });
       if (!name) return;
-      s.unshift({ name: name.slice(0, 40), m, c: clean(m, c) }); ls.set('saved', s); toast('Salvato in "I miei timer"');
+      s.unshift({ name: name.slice(0, 40), m, c: clean(m, c) }); ls.set('saved', s); toast('Salvato in "I miei timer" ★');
     };
   };
   draw();
@@ -191,7 +209,7 @@ const clean = (m, c) => (m === 'afap' ? { ...clone(c), items: c.items.filter((it
 let askEl = null;
 const closeAsk = () => { askEl?.remove(); askEl = null; };
 function ask(text, { ok = 'Sì', input = null } = {}) {
-  closeAsk();
+  closeAsk(); document.querySelector('.drawer')?.remove();
   return new Promise((res) => {
     askEl = Object.assign(document.createElement('div'), { className: 'ask' });
     askEl.innerHTML = `<div class="askbox"><p>${esc(text)}</p>${input != null ? `<input id="askin" maxlength="40" value="${esc(input)}">` : ''}
@@ -223,7 +241,7 @@ const workTime = () => R.S.slice(0, R.i).filter((s) => s.kind !== 'prep').reduce
 function run() {
   if (!R) return (location.hash = '#home');
   const afapList = R.m === 'afap' && R.items.length;
-  app.innerHTML = `<main class="run ${afapList ? 'withlist' : ''}">
+  app.innerHTML = `<main class="run ${afapList ? 'withlist' : ''}" style="--accent:${MODES[R.m].col}">
     <header class="rtop"><button class="x" id="stop">✕</button><b>${esc(R.title || MODES[R.m].name)}</b><span id="rr"></span></header>
     <div class="clock"><small id="lab"></small><div id="t">0:00</div><div id="txt"></div><div class="bar"><i id="bar"></i></div><p id="info"></p></div>
     ${afapList ? `<div class="checklist">${R.items.map((it, j) => `<div class="ck" data-i="${j}"><button class="box" data-ok="${j}"></button>
@@ -336,7 +354,7 @@ function end() {
   const big = m === 'afap' ? result : m === 'amrap' && laps.length ? `${laps.length} ${laps.length === 1 ? 'giro' : 'giri'}` : 'FATTO!';
   const lapList = laps.length ? `<div class="laps">${laps.map((t, j) => `<span><em>${j + 1}</em>${fmt(t - (laps[j - 1] || 0))}</span>`).join('')}</div>` : '';
   const itemList = items.length ? `<div class="laps items">${items.map((it) => `<span class="${it.ok ? 'ok' : ''}">${it.ok ? '✓' : '·'} ${esc(it.name || 'Esercizio')}${it.reps ? ` ${it.n}/${it.reps}` : ''}</span>`).join('')}</div>` : '';
-  app.innerHTML = `<main class="page end"><div class="done">💪</div><h1>DAJE!</h1>
+  app.innerHTML = `<main class="page end" style="--accent:${MODES[m].col}"><div class="done">💪</div><h1>DAJE!</h1>
     <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b>${big}</b>${lapList}${itemList}</div>
     <div class="row"><button id="again" class="go">RIFAI</button><a class="btn" href="#home">HOME</a></div>
     <a class="promo" href="${PROVA}" target="_blank" rel="noopener"><div><small>VUOI UN WORKOUT GIÀ PRONTO?</small><b>PROVA I NOSTRI ALLENAMENTI</b></div><i>›</i></a></main>`;
@@ -345,23 +363,23 @@ function end() {
 
 // "Workout": l'unico posto dove si parla di UN-MEMBER, con un link esterno
 function workout() {
-  app.innerHTML = `<main class="page">${brand}
+  app.innerHTML = `<main class="page">${back('WORKOUT')}
     <section class="wk"><h1>VUOI PROVARE I NOSTRI WORKOUT?</h1>
       <p>${NAME} è gratis e resta gratis. Se vuoi anche gli allenamenti già pronti, li trovi su <b>UN-MEMBER</b>, l'app di Alessio · UN-COACH.</p>
       <ul><li>🎥 Video di ogni esercizio</li><li>⏱ Timer e voce che ti guidano</li><li>🏋️ Kettlebell, TRX e corpo libero, a casa o al parco</li><li>📅 La tua settimana pronta ogni giorno</li></ul>
       <a class="go" href="${PROVA}" target="_blank" rel="noopener">PROVA 7 GIORNI GRATIS</a>
-    </section></main>${nav('workout')}`;
+    </section></main>`;
 }
 
 function settings() {
   const o = opts();
   const draw = () => {
-    app.innerHTML = `<main class="page"><header class="top"><h1>IMPOSTAZIONI</h1></header>
+    app.innerHTML = `<main class="page">${back('IMPOSTAZIONI')}
       <label class="sw"><span>Voce</span><input type="checkbox" id="voice" ${o.voice ? 'checked' : ''}></label>
       <label class="sw"><span>Bip</span><input type="checkbox" id="beep" ${o.beep ? 'checked' : ''}></label>
       <div class="field"><label>Conto alla rovescia prima di partire</label>
         <div class="chips">${[0, 5, 10, 15].map((v) => `<button data-p="${v}" class="${o.prep === v ? 'on' : ''}">${v ? v + 's' : 'No'}</button>`).join('')}</div></div>
-      <p class="muted small">${NAME} è gratuito, funziona anche senza internet e non raccoglie dati: tutto resta sul tuo telefono.</p></main>${nav('opts')}`;
+      <p class="muted small">${NAME} è gratuito, funziona anche senza internet e non raccoglie dati: tutto resta sul tuo telefono.</p></main>`;
     $('#voice').onchange = (e) => { o.voice = e.target.checked; ls.set('opts', o); if (o.voice) say('Voce attiva'); };
     $('#beep').onchange = (e) => { o.beep = e.target.checked; ls.set('opts', o); beep(); };
     app.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => { o.prep = Number(b.dataset.p); ls.set('opts', o); draw(); }));
@@ -374,13 +392,14 @@ function route() {
   const h = location.hash.slice(1) || 'home';
   if (h !== 'run' && h !== 'fine' && R && !R.done) stop(false);
   if (h !== 'run') { delete document.body.dataset.kind; document.body.classList.remove('paused'); }
-  closeAsk();
+  closeAsk(); document.querySelector('.drawer')?.remove();
   window.scrollTo(0, 0);
   if (h === 'run') return run();
   if (h === 'fine') return end();
   const sm = h.match(/^set-(\w+?)(?:-(\d+))?$/);
   if (sm) return setup(sm[1], sm[2] != null ? Number(sm[2]) : null);
   if (h === 'workout') return workout();
+  if (h === 'salvati') return savedPage();
   if (h === 'impostazioni') return settings();
   home();
 }

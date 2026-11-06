@@ -1,7 +1,7 @@
 # UN-TIMER su Android (Google Play)
 
 ## Come è fatta l'app Android
-L'app ha **tutti i file del timer dentro** (Capacitor, cartella `untimer-android/`): niente sito da tenere online, funziona offline da subito.
+L'app ha **tutti i file del timer dentro** (Capacitor, cartella `untimer-app/`): niente sito da tenere online, funziona offline da subito.
 - Nome pacchetto: `com.uncoach.untimer` (non si cambia più dopo il primo caricamento).
 - Android 7 e successivi, target Android 16 (API 36), come chiede Google.
 - Schermo acceso col sistema di Android, voce del telefono (nomi esercizi EMOM) con la sintesi vocale di Android.

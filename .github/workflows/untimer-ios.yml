@@ -1,0 +1,52 @@
+# UN-TIMER per iPhone/iPad: GitHub costruisce l'app su un Mac (gratis per i repository pubblici).
+# - a ogni modifica di untimer/ o untimer-app/: controlla che l'app iOS si costruisca (senza firma)
+# - a mano ("Run workflow" con carica = si): firma e carica su App Store Connect / TestFlight.
+#   Servono i segreti del repository: APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (testo della chiave .p8)
+name: UN-TIMER iOS
+on:
+  push:
+    paths: ['untimer/**', 'untimer-app/**', '.github/workflows/untimer-ios.yml']
+  workflow_dispatch:
+    inputs:
+      carica:
+        description: 'Firma e carica su TestFlight (si/no)'
+        default: 'no'
+jobs:
+  ios:
+    runs-on: macos-15
+    defaults: { run: { working-directory: untimer-app } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npx cap sync ios
+      - name: Costruzione di prova (simulatore, senza firma)
+        run: xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -20
+      - name: Firma e carico su TestFlight
+        if: github.event.inputs.carica == 'si'
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          test -n "$TEAM" -a -n "$KID" -a -n "$ISS" -a -n "$P8" || { echo "Mancano i segreti Apple"; exit 1; }
+          echo "$P8" > "$RUNNER_TEMP/key.p8"
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $RUNNER_TEMP/key.p8 -authenticationKeyID $KID -authenticationKeyIssuerID $ISS"
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/UN-TIMER.xcarchive" DEVELOPMENT_TEAM=$TEAM CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} archive $AUTH | tail -20
+          cat > "$RUNNER_TEMP/export.plist" <<PL
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PL
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/UN-TIMER.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/out" $AUTH | tail -20
+          rm -f "$RUNNER_TEMP/key.p8"

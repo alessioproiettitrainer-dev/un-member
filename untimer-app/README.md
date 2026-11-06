@@ -1,4 +1,4 @@
-# UN-TIMER per Android
+# UN-TIMER per Android, iPhone e iPad
 
 App Capacitor che impacchetta la cartella `../untimer` (il timer web) dentro l'app. Niente sito da tenere online.
 
@@ -14,3 +14,9 @@ App Capacitor che impacchetta la cartella `../untimer` (il timer web) dentro l'a
 - `MainActivity`: suoni senza tocco (`setMediaPlaybackRequiresUserGesture(false)`).
 - Icone e schermata di avvio: logo UN + TIMER (rigenerate con uno script Playwright dalla sessione del 6/11).
 - Se Maven Central risponde 429: in `android/build.gradle` c'è già la copia di Google come primo repository.
+
+## iPhone e iPad (cartella `ios/`)
+- Stesso nome pacchetto `com.uncoach.untimer`, iPhone + iPad (iOS 15+), ruota su iPad.
+- `AppDelegate.swift`: sessione audio "playback" + "mixWithOthers" (si sente col silenzioso, non ferma la musica).
+- Si costruisce solo su Mac: lo fa GitHub (`.github/workflows/untimer-ios.yml`). A ogni modifica: costruzione di prova.
+  Per caricare su TestFlight/App Store: Actions → "UN-TIMER iOS" → Run workflow → carica = si (servono i segreti Apple, vedi `untimer-store/APP-STORE.md`).

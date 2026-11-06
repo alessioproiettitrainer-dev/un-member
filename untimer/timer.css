@@ -150,13 +150,28 @@ h2 { font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--muted)
 .laps.items { flex-direction: column; align-items: stretch; text-align: left; }
 .laps.items .ok { color: #3ccf7a; }
 
-/* schermi larghi / telefono girato: timer più grande, comandi a lato */
+/* schermi larghi (PC, iPad, tablet, telefono girato): timer gigante a sinistra, lista e comandi a destra */
 @media (min-width: 760px) and (orientation: landscape) {
-  .run { display: grid; grid-template-columns: 1fr 320px; grid-template-rows: auto 1fr; gap: 0 24px; }
-  .rtop { grid-column: 1 / -1; }
-  .ctrl { justify-content: center; }
-  #t { font-size: min(22vw, 55vh); }
+  .run { display: grid; grid-template-columns: 1fr minmax(320px, 34vw); grid-template-rows: auto 1fr auto;
+    grid-template-areas: "top top" "clock side" "clock ctrl"; gap: 0 32px; height: 100dvh; }
+  .rtop { grid-area: top; }
+  .clock, .withlist .clock { grid-area: clock; padding: 0; }
+  .wod, .checklist { grid-area: side; align-self: center; max-height: 100%; }
+  .ctrl { grid-area: ctrl; padding-bottom: 8px; }
+  .run:not(.withlist) .ctrl { grid-row: 2 / 4; justify-content: flex-end; }
+  #t, .withlist #t { font-size: min(21vw, 52vh); }
+  .clock small { font-size: 28px; } #txt { font-size: 34px; } #info { font-size: 18px; }
 }
+/* schermi grandi: home e pagine più grandi */
+@media (min-width: 760px) {
+  .home { max-width: 640px; }
+  .logo.big svg { width: 220px; } .logo.big b { font-size: 38px; }
+  .pills { gap: 16px; } .pill { min-height: 76px; } .pill b { font-size: 36px; } .pill span { font-size: 15px; }
+  .hfoot a { font-size: 19px; }
+  .page { max-width: 680px; padding-top: 32px; }
+  .modes, .saved { gap: 14px; }
+}
+
 
 /* finestra di conferma */
 .ask { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
@@ -231,3 +246,7 @@ h2 { text-transform: uppercase; }
 
 /* Death EMOM: STOP rosso */
 .ctrl .fin.stopd { background: #ff3b3b !important; color: #fff; }
+
+/* promemoria tastiera: solo dove c'è un mouse (PC) */
+.keys { display: none; margin: 0; text-align: center; color: var(--muted); font-size: 13px; }
+@media (hover: hover) and (pointer: fine) { .keys { display: block; } }

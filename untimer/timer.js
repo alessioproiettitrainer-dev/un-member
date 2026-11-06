@@ -389,6 +389,7 @@ function run() {
         <div class="nm"><b>${esc(it.name || `${T('Esercizio', 'Exercise')} ${j + 1}`)}</b><span>${it.reps ? `<i>0</i> / ${it.reps}` : ''}</span></div>
         ${it.reps ? [1, 5, 10].map((v) => `<button class="pl" data-add="${j}" data-v="${v}">+${v}</button>`).join('') : ''}</div>`).join('')}</div>` : ''}
     <div class="ctrl">${R.S.some((s) => s.laps) ? `<button class="round" id="plus">${T('+1 GIRO', '+1 ROUND')}<small id="rc">${T('0 giri', '0 rounds')}</small></button>` : ''}
+      <p class="keys">${R.S.some((s) => s.laps) ? T('Spazio = +1 giro · P = pausa', 'Space = +1 round · P = pause') : T('Spazio o P = pausa', 'Space or P = pause')}</p>
       <div class="row"><button id="pause">${T('PAUSA', 'PAUSE')}</button>${R.m === 'afap' ? `<button id="fin" class="fin">${T('FINITO', 'DONE')}</button>` : R.c.death ? `<button id="fin" class="fin stopd">STOP</button>` : `<button id="skip">${T('SALTA', 'SKIP')} ›</button>`}</div></div></main>`;
   $('#stop').onclick = async () => { if (await ask(T('Vuoi chiudere il timer?', 'Stop the timer?'), { ok: T('Chiudi', 'Stop') })) stop(); };
   $('#pause').onclick = togglePause;

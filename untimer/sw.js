@@ -1,7 +1,7 @@
 // UN-TIMER: tutto in cache, così il timer funziona anche senza rete (palestra, parco).
 // Prima la rete (versione nuova), se non c'è la copia salvata.
-const C = 'untimer-v5';
-const FILES = ['./', 'timer.css', 'timer.js', 'manifest.json', 'icon.svg', 'icon-192.png', 'nosleep.mp4'];
+const C = 'untimer-v6';
+const FILES = ['./', 'privacy.html', 'timer.css', 'timer.js', 'manifest.json', 'icon.svg', 'icon-192.png', 'nosleep.mp4'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(C).then((c) => c.addAll(FILES))); });
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', (e) => {

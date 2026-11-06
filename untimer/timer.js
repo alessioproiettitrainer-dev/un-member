@@ -28,8 +28,8 @@ const emomTotal = (c) => c.every * c.slots.length * c.rounds;
 const itTotal = (c) => ((c.work + c.rest) * c.rounds - c.rest) * c.sets + (c.sets - 1) * c.setRest;
 function summary(m, c) {
   if (m === 'emom') return `ogni ${secTxt(c.every)}${c.slots.length > 1 ? ` · ${c.slots.length} intervalli a giro` : ''} · ${c.rounds} round · ${fmt(emomTotal(c))}`;
-  if (m === 'amrap') return `${c.minutes} ${c.minutes === 1 ? 'minuto' : 'minuti'}${c.items?.length ? ` · ${c.items.length} esercizi` : ''}`;
-  if (m === 'afap') return `${c.items.length ? `${c.items.length} esercizi · ` : ''}${c.cap ? `time cap ${c.cap} min` : 'senza time cap'}`;
+  if (m === 'amrap') return `${c.minutes} ${c.minutes === 1 ? 'minuto' : 'minuti'}${c.items?.length ? ` · ${c.items.length} ${c.items.length === 1 ? 'esercizio' : 'esercizi'}` : ''}`;
+  if (m === 'afap') return `${c.items.length ? `${c.items.length} ${c.items.length === 1 ? 'esercizio' : 'esercizi'} · ` : ''}${c.cap ? `time cap ${c.cap} min` : 'senza time cap'}`;
   return `${c.work}s / ${c.rest}s × ${c.rounds}${c.sets > 1 ? ` · ${c.sets} serie (${secTxt(c.setRest)} tra le serie)` : ''} · ${fmt(itTotal(c))}`;
 }
 
@@ -57,6 +57,37 @@ function say(t) {
   if (VOICE) u.voice = VOICE;
   u.lang = 'it-IT';
   speechSynthesis.speak(u);
+}
+
+// ---------- voce del coach (Alessio, romana) ----------
+// Ogni momento ha più frasi, scelte a caso. Se c'è la registrazione (voce/<momento>-<n>.mp3, elencata in AUDIO)
+// parte quella, altrimenti la legge la voce del telefono. Massimo una frase ogni 6 secondi.
+const COACH = {
+  via: ['Daje, partiamo!', 'Vai, è tutto tuo!', 'Daje che se comincia!'],
+  meta: ['Metà fatta, nun mollà!', 'Semo a metà, tieni botta!', "Metà fatta, mo' viene il bello!"],
+  min1: ['Ultimo minuto, mo o mai più!', 'Manca un minuto, daje tutto!', 'Un minuto, svuota er serbatoio!'],
+  sec10: ['Dieci secondi, spigni!', 'Ultimi dieci, nun te fermà!', 'Dieci secondi, daje daje daje!'],
+  ungiro: ["Er giro ce lo fai, daje!", "Manca solo 'n giro, chiudilo!", 'Ce stai dentro, chiudi sto giro!'],
+  lento: ["Oh, nun te fermà, daje!", 'Respira e riparti!', "Forza, che nun è finita!"],
+  ultimo: ["Ultimo round, dacce dentro!", "Ultimo, poi te riposi!", "L'ultimo, fallo bene!"],
+  recupero: ['Recupera, respira.', 'Fiato, che se riparte.', 'Respira, sciogli le spalle.'],
+  afap: ['Forza che ce stai!', 'Tieni duro, daje!', 'Nun mollà, testa bassa e pedalà!'],
+  fine: ['Grande! Daje!', "Fatto! Sei 'na bestia!", 'Bravo! Mo riposa.'],
+};
+const AUDIO = new Set([]); // es. 'via-1', 'sec10-2': i file registrati da Alessio in voce/
+let coachAt = 0, coachAu = null;
+function coach(ev) {
+  const o = opts(), list = COACH[ev];
+  if (!o.voice || !list || (o.push === false && ev !== 'fine')) return false;
+  const now = Date.now();
+  if (now - coachAt < 6000 && ev !== 'fine') return false;
+  coachAt = now;
+  const n = Math.floor(Math.random() * list.length), id = `${ev}-${n + 1}`;
+  if (AUDIO.has(id)) {
+    window.speechSynthesis?.cancel(); coachAu?.pause();
+    coachAu = new Audio(`voce/${id}.mp3`); coachAu.play().catch(() => say(list[n]));
+  } else say(list[n].replace(/\bnun\b/gi, 'non').replace(/\bspigni\b/g, 'spingi').replace(/\bsemo\b/gi, 'siamo').replace(/\bse\b(?= (comincia|riparte))/g, 'si'));
+  return true;
 }
 
 // ---------- schermo sempre acceso ----------
@@ -298,11 +329,12 @@ function enter(i) {
   const s = R.S[i];
   if (s.kind === 'prep') return say('Preparati');
   beep(s.kind === 'rest' ? 520 : 1320, 450);
-  if (s.kind === 'rest') return say(s.long ? `Recupero, ${secTxt(s.dur).replace('min', 'minuti').replace('s', ' secondi')}` : 'Recupero');
-  const lastWork = !R.S.slice(i + 1).some((x) => x.kind === 'work');
-  if (R.m === 'emom') return say(lastWork && s.of > 1 ? `Ultimo! ${s.text}` : s.text || (R.S[i - 1]?.kind === 'prep' || i === 0 ? 'Via!' : ''));
-  if (R.m === 'it') return say(s.round === 1 ? (s.sets > 1 ? `Serie ${s.set}, via!` : 'Via!') : s.round === s.of ? 'Ultimo round!' : '');
-  say('Via!');
+  if (s.kind === 'rest') return (s.long || s.dur >= 30) && coach('recupero') ? null : say(s.long ? `Recupero, ${secTxt(s.dur).replace('min', 'minuti').replace('s', ' secondi')}` : 'Recupero');
+  const lastWork = !R.S.slice(i + 1).some((x) => x.kind === 'work'), first = !R.S.slice(0, i).some((x) => x.kind === 'work');
+  if (lastWork && s.of > 1) return coach('ultimo') || say(s.text ? `Ultimo! ${s.text}` : 'Ultimo round!');
+  if (R.m === 'emom') return first && !s.text ? coach('via') || say('Via!') : say(s.text || '');
+  if (R.m === 'it') return s.round === 1 && s.sets > 1 && !first ? say(`Serie ${s.set}, via!`) : first ? coach('via') || say('Via!') : null;
+  coach('via') || say('Via!');
 }
 function tick() {
   if (!R || R.done || location.hash !== '#run') return;
@@ -317,9 +349,10 @@ function tick() {
   const left = s.dur - e, sec = Math.ceil(left);
   if (sec !== R.lastSec && R.lastSec != null && !R.pauseAt) {
     if (sec <= 3 && sec >= 1) beep(880, 140);
-    if (s.kind === 'work' && s.dur >= 240 && sec === 60) say('Un minuto alla fine');
-    else if (s.kind === 'work' && s.dur >= 600 && sec === Math.round(s.dur / 2)) say('Metà tempo');
+    if (s.kind === 'work') motivate(s, e, left, sec);
   }
+  const es = Math.floor(e);
+  if (s.up && es !== R.lastUp && !R.pauseAt) { R.lastUp = es; if (es > 0 && es % 180 === 0) coach('afap'); } // AFAP: una spinta ogni 3 minuti
   R.lastSec = sec;
   $('#t').textContent = s.up ? fmt(Math.floor(e)) : fmt(left);
   $('#lab').textContent = s.label;
@@ -328,6 +361,19 @@ function tick() {
   $('#bar').style.width = `${s.dur === Infinity ? 0 : Math.min(100, (e / s.dur) * 100)}%`;
   $('#info').textContent = s.kind === 'prep' ? `${summary(R.m, R.c)} · tocca per partire subito` : s.up ? (s.dur !== Infinity ? `Time cap ${fmt(s.dur)}` : '') : R.m === 'amrap' ? `di ${fmt(s.dur)}` : nextInfo();
   document.body.dataset.kind = s.kind + (!s.up && left <= 3.05 && s.kind !== 'prep' ? ' last' : '');
+}
+// spinte del coach nei tratti lunghi (AMRAP, AFAP col cap, intervalli lunghi)
+function motivate(s, e, left, sec) {
+  if (s.dur < 60) return;
+  if (sec === 10 && s.dur >= 120) return coach('sec10');
+  if (s.dur >= 240 && sec === 60) return coach('min1') || say('Un minuto alla fine');
+  if (s.dur >= 480 && sec === Math.round(s.dur / 2)) return coach('meta');
+  if (R.m !== 'amrap' || !R.laps.length) return;
+  // AMRAP: il ritmo medio dice se il giro in corso si chiude prima della fine
+  const done = workTime(), avg = R.laps.at(-1) / R.laps.length, cur = done - R.laps.at(-1);
+  if (!R.saidGiro && left > 12 && left < avg && cur + left >= avg * 0.85) { R.saidGiro = 1; return coach('ungiro'); }
+  // giro molto più lento del solito: una spinta (una volta per giro)
+  if (R.saidLento !== R.laps.length && cur > Math.max(45, avg * 1.6) && left > 20) { R.saidLento = R.laps.length; coach('lento'); }
 }
 function nextInfo() {
   const n = R.S[R.i + 1];
@@ -341,7 +387,7 @@ function finish(timeUp) {
   R.done = true; clearInterval(R.iv);
   if (R.m === 'afap') R.result = timeUp ? 'TIME CAP' : fmt(Math.floor(elapsed()));
   beep(1320, 300); setTimeout(() => beep(1760, 500), 320);
-  say('Finito! Daje!');
+  coach('fine') || say('Finito! Daje!');
   sleepOk();
   R.when = Date.now(); R.dur = workTime();
   if (R.m === 'amrap') { R.rounds = R.laps.length; R.items.forEach((it) => (it.n = 0)); }
@@ -435,11 +481,13 @@ function settings() {
   const draw = () => {
     app.innerHTML = `<main class="page">${back('IMPOSTAZIONI')}
       <label class="sw"><span>Voce</span><input type="checkbox" id="voice" ${o.voice ? 'checked' : ''}></label>
+      <label class="sw"><span>Spinte del coach (voce romana)</span><input type="checkbox" id="push" ${o.push !== false ? 'checked' : ''}></label>
       <label class="sw"><span>Bip</span><input type="checkbox" id="beep" ${o.beep ? 'checked' : ''}></label>
       <div class="field"><label>Conto alla rovescia prima di partire</label>
         <div class="chips">${[0, 5, 10, 15].map((v) => `<button data-p="${v}" class="${o.prep === v ? 'on' : ''}">${v ? v + 's' : 'No'}</button>`).join('')}</div></div>
-      <p class="muted small">${NAME} è gratuito, funziona anche senza internet e non raccoglie dati: tutto resta sul tuo telefono.</p></main>`;
+      <p class="muted small">${NAME} è gratuito, funziona anche senza internet e non raccoglie dati: tutto resta sul tuo telefono. <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p></main>`;
     $('#voice').onchange = (e) => { o.voice = e.target.checked; ls.set('opts', o); if (o.voice) say('Voce attiva'); };
+    $('#push').onchange = (e) => { o.push = e.target.checked; ls.set('opts', o); if (o.push) { coachAt = 0; coach('via'); } };
     $('#beep').onchange = (e) => { o.beep = e.target.checked; ls.set('opts', o); beep(); };
     app.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => { o.prep = Number(b.dataset.p); ls.set('opts', o); draw(); }));
   };

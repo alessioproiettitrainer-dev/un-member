@@ -10,3 +10,4 @@ data/avatars/
 .env
 .env.*
 !.env.example
+PlayStore/

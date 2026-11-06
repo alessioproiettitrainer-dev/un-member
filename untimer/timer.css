@@ -228,3 +228,6 @@ h2 { text-transform: uppercase; }
 
 .chips.lang button { font-size: 15px; }
 .field .chips + .muted { margin: 10px 0 0; }
+
+/* Death EMOM: STOP rosso */
+.ctrl .fin.stopd { background: #ff3b3b !important; color: #fff; }

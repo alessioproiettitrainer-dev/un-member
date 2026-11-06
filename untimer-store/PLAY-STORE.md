@@ -29,7 +29,7 @@ Timer gratis per EMOM, AMRAP, AFAP e HIIT. Con il coach che ti spinge, in romano
 **Descrizione completa:**
 UN-TIMER è il timer per i tuoi workout, fatto da Alessio · UN-COACH. Gratis, senza account e senza pubblicità.
 
-EMOM – Ogni 30, 45, 60, 90 secondi o quanto vuoi tu. Metti più intervalli in un giro (minuto 1 swing, minuto 2 burpees, minuto 3 recupero…) e scegli i round.
+EMOM – Ogni 30, 45, 60, 90 secondi o quanto vuoi tu. Metti più intervalli in un giro (minuto 1 swing, minuto 2 burpees, minuto 3 recupero…) e scegli i round. Oppure Death EMOM: round infiniti finché non dici basta, con le ripetizioni che salgono a ogni giro.
 
 AMRAP – Scegli il tempo, scrivi il workout e premi "+1 GIRO" a ogni giro. Alla fine segni anche cosa hai fatto del giro non finito.
 
@@ -67,7 +67,7 @@ Free EMOM, AMRAP, For Time & HIIT timer. With a coach that pushes you.
 **Full description:**
 UN-TIMER is the workout timer built by coach Alessio · UN-COACH. Free, no account, no ads.
 
-EMOM – Every 30, 45, 60, 90 seconds or whatever you want. Stack multiple intervals in one round (minute 1 swings, minute 2 burpees, minute 3 rest…) and pick your rounds.
+EMOM – Every 30, 45, 60, 90 seconds or whatever you want. Stack multiple intervals in one round (minute 1 swings, minute 2 burpees, minute 3 rest…) and pick your rounds. Or go Death EMOM: endless rounds, reps climbing every round, until you call it.
 
 AMRAP – Set the time, write the workout and tap "+1 ROUND" every round. At the end, log what you did of the unfinished round too.
 

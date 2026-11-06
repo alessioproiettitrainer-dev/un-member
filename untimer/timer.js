@@ -21,7 +21,7 @@ const LOC = () => T('it-IT', 'en-US');
 document.documentElement.lang = T('it', 'en');
 
 const MODES = {
-  emom: { name: 'EMOM', col: '#ffc21a', sub: () => T('Ogni X secondi, per X round', 'Every X seconds, for X rounds'), def: { every: 60, rounds: 10, slots: [{ text: '', rest: false }] } },
+  emom: { name: 'EMOM', col: '#ffc21a', sub: () => T('Ogni X secondi, per X round', 'Every X seconds, for X rounds'), def: { every: 60, rounds: 10, slots: [{ text: '', rest: false }], death: false, start: 1, step: 1 } },
   amrap: { name: 'AMRAP', col: '#ff7a00', sub: () => T('Più giri possibili nel tempo', 'As many rounds as possible'), def: { minutes: 12, items: [] } },
   afap: { name: 'AFAP', col: '#ff4d6d', sub: () => T('Il più veloce possibile', 'As fast as possible'), def: { cap: 0, items: [] } },
   it: { name: 'HIIT', col: '#35d07f', sub: () => T('Lavoro / recupero a intervalli', 'Work / rest intervals'), def: { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 60 } },
@@ -36,6 +36,7 @@ const emomTotal = (c) => c.every * c.slots.length * c.rounds;
 const itTotal = (c) => ((c.work + c.rest) * c.rounds - c.rest) * c.sets + (c.sets - 1) * c.setRest;
 function summary(m, c) {
   const ex = (n) => pl(n, T('esercizio', 'exercise'), T('esercizi', 'exercises'));
+  if (m === 'emom' && c.death) return `Death EMOM · ${T('ogni', 'every')} ${secTxt(c.every)}${c.slots.length > 1 ? ` · ${c.slots.length} ${T('intervalli a giro', 'intervals per round')}` : ''}${c.start ? ` · ${T('da', 'from')} ${c.start} ${T('rip', 'reps')} +${c.step}` : ''} · ${T('round infiniti', 'endless rounds')}`;
   if (m === 'emom') return `${T('ogni', 'every')} ${secTxt(c.every)}${c.slots.length > 1 ? ` · ${c.slots.length} ${T('intervalli a giro', 'intervals per round')}` : ''} · ${pl(c.rounds, 'round', 'rounds').replace(/rounds$/, T('round', 'rounds'))} · ${fmt(emomTotal(c))}`;
   if (m === 'amrap') return `${pl(c.minutes, T('minuto', 'minute'), T('minuti', 'minutes'))}${c.items?.length ? ` · ${ex(c.items.length)}` : ''}`;
   if (m === 'afap') return `${c.items.length ? `${ex(c.items.length)} · ` : ''}${c.cap ? `time cap ${c.cap} min` : T('senza time cap', 'no time cap')}`;
@@ -201,8 +202,11 @@ document.addEventListener('visibilitychange', () => { keepAwake(); if (R && !R.d
 function segments(m, c) {
   const S = [], prep = opts().prep;
   if (prep) S.push({ kind: 'prep', dur: prep, label: T('PREPARATI', 'GET READY') });
-  if (m === 'emom') for (let r = 1; r <= c.rounds; r++) c.slots.forEach((sl, j) => S.push({
-    kind: sl.rest ? 'rest' : 'work', dur: c.every, round: r, of: c.rounds, text: sl.text,
+  // Death EMOM: round "infiniti" (300 giri) finché non premono STOP; con la scala le ripetizioni crescono a ogni giro
+  const reps = (r) => (c.death && c.start ? c.start + (r - 1) * c.step : 0);
+  if (m === 'emom') for (let r = 1; r <= (c.death ? 300 : c.rounds); r++) c.slots.forEach((sl, j) => S.push({
+    kind: sl.rest ? 'rest' : 'work', dur: c.every, round: r, of: c.death ? 0 : c.rounds, death: c.death, reps: sl.rest ? 0 : reps(r),
+    text: !sl.rest && reps(r) ? `${reps(r)} ${sl.text || T('rip', 'reps')}` : sl.text,
     rnd: !sl.rest && c.slots.length === 1, label: sl.rest ? T('RECUPERO', 'REST') : c.slots.length > 1 ? slotName(c, j).toUpperCase() : 'EMOM' }));
   if (m === 'amrap') S.push({ kind: 'work', dur: c.minutes * 60, label: 'AMRAP', laps: true });
   if (m === 'afap') S.push({ kind: 'work', dur: c.cap ? c.cap * 60 : Infinity, label: 'AFAP', up: true, laps: !c.items.length });
@@ -259,7 +263,7 @@ function savedPage() {
 
 // passi dei numeri: secondi a 5 alla volta, round e minuti a 1
 const STEP = {
-  every: [5, 10, 600], rounds: [1, 1, 99], minutes: [1, 1, 120], cap: [1, 0, 120],
+  every: [5, 10, 600], rounds: [1, 1, 99], minutes: [1, 1, 120], cap: [1, 0, 120], start: [1, 0, 100], step: [1, 1, 20],
   work: [5, 5, 600], rest: [5, 0, 600], sets: [1, 1, 20], setRest: [5, 0, 600],
 };
 function setup(m, savedIdx) {
@@ -277,7 +281,12 @@ function setup(m, savedIdx) {
           ${sl.rest ? `<span class="restlab">${T('RECUPERO', 'REST')}</span>` : `<input data-slot="${j}" value="${esc(sl.text)}" placeholder="${slotName(c, j)}: ${T('esercizio (facoltativo)', 'exercise (optional)')}" maxlength="60">`}
           <button data-rest="${j}" class="tg ${sl.rest ? 'on' : ''}" title="${T('Recupero', 'Rest')}">💤</button>${c.slots.length > 1 ? `<button data-rm="${j}" class="rm">✕</button>` : ''}</div>`).join('')}</div>
         <div class="row2"><button class="add" data-addslot="0">+ ${T('Intervallo', 'Interval')}</button><button class="add" data-addslot="1">+ ${T('Recupero', 'Rest')}</button></div></div>
-      ${stepper('rounds', T('Round (giri completi)', 'Rounds'), c.rounds)}`;
+      <div class="field"><label>Round</label>
+        <div class="chips"><button data-death="0" class="${c.death ? '' : 'on'}">${T('Numero fisso', 'Fixed')}</button><button data-death="1" class="${c.death ? 'on' : ''}">${T('Infiniti · Death EMOM', 'Endless · Death EMOM')}</button></div>
+        ${c.death ? `<p class="muted small">${T('Va avanti finché non premi STOP. Alla fine vedi quanti round hai chiuso.', 'Runs until you hit STOP. At the end you see how many rounds you made.')}</p>` : ''}</div>
+      ${c.death ? `<div class="pair">${stepper('start', T('Rip. al 1° giro', 'Reps, round 1'), c.start, c.start || T('no', 'off'))}${c.start ? stepper('step', T('In più ogni giro', 'Add each round'), c.step, `+${c.step}`) : ''}</div>
+        <p class="muted small">${c.start ? T(`Giro 1: ${c.start} rip · giro 2: ${c.start + c.step} · giro 3: ${c.start + 2 * c.step}…`, `Round 1: ${c.start} reps · round 2: ${c.start + c.step} · round 3: ${c.start + 2 * c.step}…`) : T('Senza scala: stesse ripetizioni a ogni giro.', 'No ladder: same reps every round.')}</p>`
+        : stepper('rounds', T('Round (giri completi)', 'Rounds'), c.rounds)}`;
     const items = (label, hint) => `<div class="field"><label>${label}</label>
         <div class="list">${c.items.map((it, j) => `<div class="li"><input data-reps="${j}" class="reps" type="number" inputmode="numeric" value="${it.reps || ''}" placeholder="${T('rip', 'reps')}">
           <input data-name="${j}" value="${esc(it.name)}" placeholder="${T('Esercizio', 'Exercise')}" maxlength="40"><button data-rmi="${j}" class="rm">✕</button></div>`).join('') || `<p class="muted small">${hint}</p>`}</div>
@@ -300,6 +309,7 @@ function setup(m, savedIdx) {
       c[k] = Math.min(max, Math.max(min, c[k] + st * Number(b.dataset.d))); keep(); draw();
     }));
     // EMOM
+    app.querySelectorAll('[data-death]').forEach((b) => (b.onclick = () => { c.death = b.dataset.death === '1'; keep(); draw(); }));
     app.querySelectorAll('[data-every]').forEach((b) => (b.onclick = () => { c.every = Number(b.dataset.every); keep(); draw(); }));
     app.querySelectorAll('[data-slot]').forEach((i) => (i.oninput = () => { c.slots[i.dataset.slot].text = i.value; keep(); }));
     app.querySelectorAll('[data-rest]').forEach((b) => (b.onclick = () => { const sl = c.slots[b.dataset.rest]; sl.rest = !sl.rest; keep(); draw(); }));
@@ -369,7 +379,7 @@ function run() {
         <div class="nm"><b>${esc(it.name || `${T('Esercizio', 'Exercise')} ${j + 1}`)}</b><span>${it.reps ? `<i>0</i> / ${it.reps}` : ''}</span></div>
         ${it.reps ? [1, 5, 10].map((v) => `<button class="pl" data-add="${j}" data-v="${v}">+${v}</button>`).join('') : ''}</div>`).join('')}</div>` : ''}
     <div class="ctrl">${R.S.some((s) => s.laps) ? `<button class="round" id="plus">${T('+1 GIRO', '+1 ROUND')}<small id="rc">${T('0 giri', '0 rounds')}</small></button>` : ''}
-      <div class="row"><button id="pause">${T('PAUSA', 'PAUSE')}</button>${R.m === 'afap' ? `<button id="fin" class="fin">${T('FINITO', 'DONE')}</button>` : `<button id="skip">${T('SALTA', 'SKIP')} ›</button>`}</div></div></main>`;
+      <div class="row"><button id="pause">${T('PAUSA', 'PAUSE')}</button>${R.m === 'afap' ? `<button id="fin" class="fin">${T('FINITO', 'DONE')}</button>` : R.c.death ? `<button id="fin" class="fin stopd">STOP</button>` : `<button id="skip">${T('SALTA', 'SKIP')} ›</button>`}</div></div></main>`;
   $('#stop').onclick = async () => { if (await ask(T('Vuoi chiudere il timer?', 'Stop the timer?'), { ok: T('Chiudi', 'Stop') })) stop(); };
   $('#pause').onclick = togglePause;
   // durante il "preparati" un tocco sul timer fa partire subito
@@ -424,7 +434,7 @@ function enter(i) {
   beep(s.kind === 'rest' ? 520 : 1320, 450);
   if (s.kind === 'rest') return coach(s.long ? 'serie' : 'recupero') || say(T('Recupero', 'Rest'));
   const lastWork = !R.S.slice(i + 1).some((x) => x.kind === 'work'), first = !R.S.slice(0, i).some((x) => x.kind === 'work');
-  if (lastWork && s.of > 1) return coach('ultimo') || say(s.text ? `${T('Ultimo!', 'Last one!')} ${s.text}` : T('Ultimo round!', 'Last round!'));
+  if (lastWork && s.of > 1 && !s.death) return coach('ultimo') || say(s.text ? `${T('Ultimo!', 'Last one!')} ${s.text}` : T('Ultimo round!', 'Last round!'));
   // EMOM: se c'è scritto l'esercizio si legge quello, altrimenti a inizio giro (un giro sì e uno no) una spinta
   if (R.m === 'emom') return s.text ? say(s.text) : first ? coach('via') || say(T('Via!', 'Go!')) : R.S[i - 1]?.round !== s.round && s.round % 2 === 0 ? coach('giroemom') : null;
   if (R.m === 'it') return s.round === 1 && s.sets > 1 && !first ? say(T(`Serie ${s.set}, via!`, `Set ${s.set}, go!`)) : first ? coach('via') || say(T('Via!', 'Go!')) : coach('lavoro');
@@ -450,7 +460,7 @@ function tick() {
   R.lastSec = sec;
   $('#t').textContent = s.up ? fmt(Math.floor(e)) : fmt(left);
   $('#lab').textContent = s.label;
-  $('#rr').textContent = s.round ? `${s.sets > 1 ? `S${s.set} · ` : ''}${s.round}/${s.of}` : s.sets > 1 ? `S${s.set}/${s.sets}` : '';
+  $('#rr').textContent = s.death ? `R${s.round}` : s.round ? `${s.sets > 1 ? `S${s.set} · ` : ''}${s.round}/${s.of}` : s.sets > 1 ? `S${s.set}/${s.sets}` : '';
   $('#txt').textContent = s.kind === 'prep' ? '' : s.text || '';
   $('#bar').style.width = `${s.dur === Infinity ? 0 : Math.min(100, (e / s.dur) * 100)}%`;
   $('#info').textContent = s.kind === 'prep' ? `${summary(R.m, R.c)} · ${T('tocca per partire subito', 'tap to start now')}` : s.up ? (s.dur !== Infinity ? `Time cap ${fmt(s.dur)}` : '') : R.m === 'amrap' ? `${T('di', 'of')} ${fmt(s.dur)}` : nextInfo();
@@ -478,9 +488,12 @@ function nextInfo() {
 }
 // AFAP: il risultato è il tempo fatto (o "TIME CAP" se è scaduto). "FINITO" durante il preparati non vale.
 function finish(timeUp) {
-  if (!timeUp && R.S[R.i].kind !== 'work') return;
+  if (!timeUp && R.S[R.i].kind === 'prep') return;
+  if (!timeUp && !R.c.death && R.S[R.i].kind !== 'work') return;
   R.done = true; clearInterval(R.iv);
   if (R.m === 'afap') R.result = timeUp ? 'TIME CAP' : fmt(Math.floor(elapsed()));
+  // Death EMOM: valgono i giri chiusi (quello in corso quando premono STOP non conta)
+  if (R.c.death) { const cur = R.S[R.i]; R.deathRounds = cur ? cur.round - 1 : 300; R.deathReps = R.c.start ? R.c.start + (R.deathRounds - 1) * R.c.step : 0; }
   beep(1320, 300); setTimeout(() => beep(1760, 500), 320);
   coach('fine') || say(T('Finito!', 'Done!'));
   sleepOk();
@@ -502,6 +515,7 @@ function resultOf(r) {
     const part = r.items.filter((it) => it.n > 0).map((it) => `${it.n} ${it.name || T('esercizio', 'exercise')}`);
     return `${pl(r.rounds, T('giro', 'round'), T('giri', 'rounds'))}${part.length ? ` + ${part.join(', ')}` : ''}`;
   }
+  if (r.c?.death) return `${pl(r.deathRounds, 'round', T('round', 'rounds'))}${r.deathReps > 0 && r.deathRounds ? ` · ${T('ultimo a', 'last at')} ${r.deathReps} ${T('rip', 'reps')}` : ''}`;
   return T('Completato', 'Completed');
 }
 // diario: ogni timer finito si salva da solo, con data e ora (massimo 500)
@@ -527,7 +541,7 @@ function end() {
       <button data-p="${j}" data-d="-1">−</button><output data-po="${j}">${it.n}</output><button data-p="${j}" data-d="1">+</button>
       ${it.reps ? `<button class="all" data-pa="${j}">${T('TUTTE', 'ALL')}</button>` : ''}</div>`).join('')}</div></div>` : ''}` : '';
   app.innerHTML = `<main class="page end" style="--accent:${MODES[m].col}"><h1>${T('DAJE!', 'HELL YEAH!')}</h1>
-    <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b id="big">${m === 'it' || m === 'emom' ? T('FATTO!', 'DONE!') : resultOf(R)}</b>${lapList}${itemList}
+    <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b id="big">${(m === 'it' || m === 'emom') && !c.death ? T('FATTO!', 'DONE!') : resultOf(R)}</b>${lapList}${itemList}
       <span class="when">${when(R.when)} · ${fmt(R.dur)} ${T('di lavoro · salvato nel diario', 'of work · saved to log')}</span></div>
     ${amrapBox}
     <div class="row"><button id="again" class="go">${T('RIFAI', 'AGAIN')}</button><a class="btn" href="#home">HOME</a></div>

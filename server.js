@@ -403,6 +403,19 @@ me.delete('/account', (req, res) => {
   res.setHeader('Set-Cookie', 'sid=; Path=/; Max-Age=0');
   res.json({ ok: true });
 });
+// app Android: il membro si fa mandare (di nuovo) l'email con i piani; massimo 3 al giorno, una ogni 2 minuti
+me.post('/plans-mail', async (req, res) => {
+  const u = req.user, now = Date.now();
+  u.plansMails = (u.plansMails || []).filter((t) => now - t < 864e5);
+  if (u.plansMails.length >= 3) return res.status(429).json({ error: 'Te l\'abbiamo già mandata 3 volte oggi: controlla anche lo spam' });
+  if (u.plansMails.length && now - u.plansMails.at(-1) < 2 * 60e3) return res.status(429).json({ error: 'Appena mandata: aspetta un paio di minuti e controlla anche lo spam' });
+  if (!mailer.configured() || !canSendToday()) return res.status(409).json({ error: 'Email non disponibile in questo momento, riprova più tardi' });
+  try {
+    await sendOne({ to: u.email, ...mails.render('plans', mails.firstName(u.name), PUBLIC_URL, db.settings) });
+    u.plansMails.push(now); logMail({ kind: 'info piani (dall\'app)', sent: 1, failed: 0 }); save();
+    res.json({ ok: true, email: u.email });
+  } catch (e) { res.status(500).json({ error: 'Non sono riuscito a mandare l\'email, riprova tra poco' }); }
+});
 me.post('/trial', (req, res) => {
   const u = req.user;
   if (!trialAvailable(u)) return res.status(409).json({ error: hasAccess(u) ? 'Hai già un abbonamento attivo' : 'La settimana di prova si può fare una sola volta' });

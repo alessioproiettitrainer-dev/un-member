@@ -54,6 +54,18 @@ function render(key, name, url, settings = {}) {
         'Un abbraccio,<br>Alessio',
       ],
     },
+    // chiesta dal membro dall'app Android (lì non si possono mostrare prezzi e link di pagamento)
+    plans: {
+      subject: 'Come continuare ad allenarti con UN-MEMBER 💪',
+      paras: [
+        ciao,
+        'Come mi hai chiesto dall\'app, ecco <b>come continuare ad allenarti</b>. Scegli il piano che fa per te:',
+        '__PLANS__',
+        'Paga con <b>la stessa email con cui sei iscritto all\'app</b>: entro 24 ore attiviamo il tuo accesso. Poi riapri l\'app e trovi tutto com\'era, progressi compresi.',
+        'Hai una domanda? Rispondi a questa email, la leggo io.',
+        'Daje, ci vediamo dentro!<br>Alessio',
+      ],
+    },
     last: {
       subject: `${name ? `${name}, com'è` : 'Com\'è'} andata la settimana di prova? 🙏`,
       paras: [

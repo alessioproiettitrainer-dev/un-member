@@ -1067,7 +1067,9 @@ function paywallView() {
       ${ANDROID ? `<p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Progressi e storico restano salvati.`
         : trialOver ? 'La tua settimana di prova è finita. Progressi e storico restano salvati.'
         : ME.trialAvailable ? '' : 'Il tuo account è creato. Per sbloccare programmi e allenamenti serve un accesso attivo.'}</p>
-      <p class="muted small">Hai già un accesso attivo? Entra con la stessa email (<b>${esc(ME.email)}</b>).</p>` : `
+      <p class="muted small">Hai già un accesso attivo? Entra con la stessa email (<b>${esc(ME.email)}</b>).</p>
+      ${ME.trialAvailable ? '' : `<p class="muted small">Tutte le info per continuare ad allenarti te le mandiamo per email: controlla anche nello spam.</p>
+      <button class="btn primary block" id="plansmail">📩 Mandami l'email con le info</button>`}` : `
       <p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Rinnova per tornare ai tuoi allenamenti: progressi e storico restano salvati.`
         : trialOver ? `<span style="white-space:pre-line">${esc(SETTINGS.trialEndText || 'La tua settimana di prova è finita. Abbonati per sbloccare tutti i programmi e continuare da dove sei arrivato: progressi e storico restano salvati.')}</span>`
         : ME.trialAvailable ? 'Vuoi già tutto? Con l\'abbonamento sblocchi subito tutti i programmi e tutte le settimane.'
@@ -1082,6 +1084,8 @@ function paywallView() {
   document.getElementById('pwout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };
   const st = document.getElementById('starttrial');
   if (st) st.onclick = async () => { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast('Prova attivata: buon allenamento!'); location.hash = '#/'; route(); } catch (err) { toast(err.message, true); } };
+  const pm = document.getElementById('plansmail');
+  if (pm) pm.onclick = async () => { pm.disabled = true; try { const r = await api('/api/me/plans-mail', 'POST'); toast(`Email inviata a ${r.email}: controlla anche lo spam`); } catch (err) { toast(err.message, true); } finally { pm.disabled = false; } };
   document.getElementById('recheck').onclick = async () => { await refreshMe(); if (hasAccessNow()) { toast('Accesso attivo!'); route(); } else toast('Non ancora attivo: riprova più tardi', true); };
 }
 

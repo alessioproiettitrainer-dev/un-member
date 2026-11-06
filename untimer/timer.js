@@ -81,52 +81,54 @@ function say(t) {
 // la voce del telefono legge la frase in italiano. Inglese: file generati in voce/en/ (AUDIO_EN). Max una frase ogni 6 s.
 const COACH = {
   rm: {
-    pronti: ['Preparate, se parte!', 'Mettete in posizione!', 'Pronto? Mo se comincia.'],
-    via: ['Daje, partiamo!', 'Vai, è tutto tuo!', 'Daje che se comincia!'],
+    pronti: ['Preparate, se parte!', "Mo' se comincia!", 'Mettete in posizione!'],
+    via: ['Daje, partiamo!', 'Vai, è tutto tuo!', 'Daje che se incomincia!'],
     pausa: ['Pausa. Riparti quando sei pronto.', "Fermo 'n attimo, poi se riparte."],
-    riprendi: ['Riprendiamo, daje!', 'Rientra, forza!'],
-    meta: ['Metà fatta, nun mollà!', 'Semo a metà, tieni botta!', "Metà fatta, mo' viene il bello!"],
-    min1: ['Ultimo minuto, mo o mai più!', 'Manca un minuto, daje tutto!', 'Un minuto, svuota er serbatoio!'],
+    riprendi: ['Riprendi, daje!', 'Ripartiamo, forza!'],
+    meta: ['Metà fatta, nun mollà!', 'Sta a metà, tieni botta!', "Metà fatta, mo' viene er bello!"],
+    min1: ['Ultimo minuto, mo o mai più!', "Manca 'n minuto, daje a tutta!", 'Un minuto, svuota er serbatoio!'],
     sec10: ['Dieci secondi, spigni!', 'Ultimi dieci, nun te fermà!', 'Dieci secondi, daje daje daje!'],
-    ultimo: ['Ultimo round, dacce dentro!', 'Ultimo, poi te riposi!', "L'ultimo, fallo bene!"],
-    fine: ['Grande! Daje!', "Fatto! Sei 'na bestia!", 'Bravo! Mo riposa.', 'Finito! Oggi te lo sei guadagnato.'],
-    giroemom: ["N'antro minuto, vai!", 'Sotto, riparti!', 'Su, che se ricomincia!'],
-    lavoro: ['Vai!', 'Spigni!', 'Dai tutto!'],
-    recupero: ['Recupera, respira.', 'Fiato, che se riparte.', 'Respira, sciogli le spalle.'],
-    serie: ['Serie finita, bravo! Recupera bene.', 'Una serie in meno! Respira.'],
+    ultimo: ['Ultimo round, daje a tutta!', "L'ultimo e poi te riposi!", "Oh, l'ultimo, fallo bene!"],
+    fine: ['Grande, daje!', "Fatto! Sei 'na bestia!", 'Bravo, mo riposa!', 'Bravo, oggi te lo sei guadagnato!'],
+    giroemom: ["N'antro minuto, vai!", 'Daje sotto, riparti!', 'Daje che se ricomincia!'],
+    lavoro: ['Vai!', 'Spigni!', 'Daje a tutta!'],
+    recupero: ['Recupera e respira.', 'Riprendi fiato, che se riparte.', 'Respira e sciogli le spalle.'],
+    serie: ['Serie finita, bravo, recupera!', 'Una serie de meno, respira!'],
     giro: ["Bravo, n'antro giro!", 'Così se fa!', 'Giro chiuso, avanti!'],
-    veloce: ['Stai a volà!', 'Che ritmo, nun calà!'],
-    lento: ['Oh, nun te fermà, daje!', 'Respira e riparti!', 'Forza, che nun è finita!'],
-    ungiro: ['Er giro ce lo fai, daje!', "Manca solo 'n giro, chiudilo!", 'Ce stai dentro, chiudi sto giro!'],
-    afap: ['Forza che ce stai!', 'Tieni duro, daje!', 'Nun mollà, testa bassa e pedalà!'],
-    esfatto: ['Uno in meno!', 'Via questo, sotto col prossimo!', 'Fatto, avanti!'],
-    esultimo: ['Ultimo esercizio, chiudi!', "È l'ultimo, svuotate!"],
-    conto: ['Tre', 'Due', 'Uno'], // facoltativo: al posto dei bip negli ultimi 3 secondi
+    veloce: ['Ao, stai a volà!', 'Che ritmo! Nun calà, me raccomando!'],
+    lento: ['Oh, nun te fermà!', 'Mi sa che facevi più giri de mi nonna!', 'Forza che nun è finita!'],
+    ungiro: ['Er giro ce lo fai, daje!', "Manca solo 'n giro, chiudilo eh!", "Ce l'hai quasi fatta, manca solo sto giro, daje a tutta!"],
+    afap: ['Forza che ce stai!', 'Oh, tieni duro eh!', "Nun mollà, testa bassa e spigni come 'n treno!"],
+    esfatto: ['Uno in meno!', 'Via questo, sotto col prossimo!', 'Fatto, avanti!'], // da registrare
+    esultimo: ['Ultimo esercizio, chiudilo!', 'Ultimo esercizio, fallo fatto bene!'],
+    conto: ['Tre', 'Due', 'Uno'], // al posto dei bip negli ultimi 3 secondi
   },
+
   // it: non è una lingua dell'app, serve solo alla voce del telefono finché mancano le registrazioni romane
   it: {
-    pronti: ['Preparati, si parte!', 'In posizione!', 'Pronto? Si comincia.'],
+    pronti: ['Preparati, si parte!', 'Si comincia!', 'In posizione!'],
     via: ['Via, partiamo!', 'Vai, è tutto tuo!', 'Forza, si comincia!'],
     pausa: ['Pausa. Riparti quando sei pronto.', 'Fermo un attimo, poi si riparte.'],
-    riprendi: ['Riprendiamo!', 'Rientra, forza!'],
-    meta: ['Metà fatta, non mollare!', 'Siamo a metà, tieni duro!', 'Metà fatta, adesso viene il bello!'],
+    riprendi: ['Riprendi, forza!', 'Ripartiamo, forza!'],
+    meta: ['Metà fatta, non mollare!', 'Sei a metà, tieni duro!', 'Metà fatta, adesso viene il bello!'],
     min1: ['Ultimo minuto, ora o mai più!', 'Manca un minuto, dai tutto!', 'Un minuto, svuota il serbatoio!'],
     sec10: ['Dieci secondi, spingi!', 'Ultimi dieci, non fermarti!', 'Dieci secondi, dai dai dai!'],
-    ultimo: ['Ultimo round, dacci dentro!', 'Ultimo, poi riposi!', "L'ultimo, fallo bene!"],
-    fine: ['Grande!', 'Fatto! Sei una bestia!', 'Bravo! Ora riposa.', 'Finito! Oggi te lo sei guadagnato.'],
+    ultimo: ['Ultimo round, dai tutto!', "L'ultimo e poi riposi!", "L'ultimo, fallo bene!"],
+    fine: ['Grande!', 'Fatto! Sei una bestia!', 'Bravo, ora riposa!', 'Bravo, oggi te lo sei guadagnato!'],
     giroemom: ['Un altro minuto, vai!', 'Sotto, riparti!', 'Su, si ricomincia!'],
     lavoro: ['Vai!', 'Spingi!', 'Dai tutto!'],
-    recupero: ['Recupera, respira.', 'Fiato, che si riparte.', 'Respira, sciogli le spalle.'],
-    serie: ['Serie finita, bravo! Recupera bene.', 'Una serie in meno! Respira.'],
+    recupero: ['Recupera e respira.', 'Riprendi fiato, che si riparte.', 'Respira e sciogli le spalle.'],
+    serie: ['Serie finita, bravo, recupera!', 'Una serie in meno, respira!'],
     giro: ['Bravo, un altro giro!', 'Così si fa!', 'Giro chiuso, avanti!'],
     veloce: ['Stai volando!', 'Che ritmo, non calare!'],
-    lento: ['Non fermarti, forza!', 'Respira e riparti!', 'Forza, non è finita!'],
-    ungiro: ['Il giro ce lo fai, forza!', 'Manca solo un giro, chiudilo!', 'Ci sei dentro, chiudi questo giro!'],
+    lento: ['Non fermarti!', 'Forza, accelera!', 'Forza, non è finita!'],
+    ungiro: ['Il giro ce lo fai, forza!', 'Manca solo un giro, chiudilo!', "Ce l'hai quasi fatta, chiudi questo giro!"],
     afap: ['Forza che ce la fai!', 'Tieni duro!', 'Non mollare, testa bassa e spingi!'],
     esfatto: ['Uno in meno!', 'Via questo, sotto col prossimo!', 'Fatto, avanti!'],
-    esultimo: ['Ultimo esercizio, chiudi!', "È l'ultimo, svuotati!"],
+    esultimo: ['Ultimo esercizio, chiudilo!', 'Ultimo esercizio, fallo bene!'],
     conto: ['Tre', 'Due', 'Uno'],
   },
+
   en: {
     pronti: ['Get set. Here we go.', "Lock in. Clock's about to roll.", 'You ready? Time to work.'],
     via: ["Let's go!", "Go time. It's all yours!", "Let's get it!"],
@@ -151,7 +153,8 @@ const COACH = {
     conto: ['Three', 'Two', 'One'],
   },
 };
-const AUDIO = new Set([]); // romano: i file registrati da Alessio in voce/ (es. 'via-1'; aggiungerli anche a sw.js)
+// romano: le registrazioni di Alessio in voce/ (6/11/2026). Mancano esfatto-1/2/3: lì legge il telefono.
+const AUDIO = new Set(["afap-1","afap-2","afap-3","conto-1","conto-2","conto-3","esultimo-1","esultimo-2","fine-1","fine-2","fine-3","fine-4","giro-1","giro-2","giro-3","giroemom-1","giroemom-2","giroemom-3","lavoro-1","lavoro-2","lavoro-3","lento-1","lento-2","lento-3","meta-1","meta-2","meta-3","min1-1","min1-2","min1-3","pausa-1","pausa-2","pronti-1","pronti-2","pronti-3","recupero-1","recupero-2","recupero-3","riprendi-1","riprendi-2","sec10-1","sec10-2","sec10-3","serie-1","serie-2","ultimo-1","ultimo-2","ultimo-3","ungiro-1","ungiro-2","ungiro-3","veloce-1","veloce-2","via-1","via-2","via-3"]);
 // inglese: tutti i file generati in voce/en/ (tranne il conto, che resta coi bip)
 const AUDIO_EN = new Set(Object.entries(COACH.en).flatMap(([k, l]) => (k === 'conto' ? [] : l.map((_, i) => `${k}-${i + 1}`))));
 let coachAt = 0, coachAu = null;
@@ -163,7 +166,7 @@ function coach(ev, fixed) {
   const file = LANG === 'en' ? AUDIO_EN.has(id) && `voce/en/${id}.mp3` : LANG === 'rm' && AUDIO.has(id) && `voce/${id}.mp3`;
   if (ev === 'conto' && !file) return false; // il conto con la voce del telefono no: bastano i bip
   if (now - coachAt < 6000 && !['fine', 'conto', 'pausa', 'riprendi'].includes(ev)) return false;
-  coachAt = now;
+  if (ev !== 'conto') coachAt = now; // il conto non blocca la frase che viene subito dopo
   // senza registrazione: la voce del telefono (il romano lo legge in italiano)
   const text = LANG === 'en' ? list[n] : COACH.it[ev][n];
   if (file) {

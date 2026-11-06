@@ -1,5 +1,8 @@
 # 🎙️ La voce di Alessio in UN-TIMER
 
+> **Stato (6/11/2026):** registrate e montate nell'app 56 frasi su 59 (file in `untimer/voce/`). Audio pulito (rumore, toni, volume uguale per tutte), codici tolti, ripetizioni scartate (tenuta l'ultima versione), pause lunghe accorciate. I testi nell'app sono quelli che hai detto davvero.
+> **Mancano solo:** `esfatto 1`, `esfatto 2`, `esfatto 3` (al loro posto avevi letto le frasi di "es ultimo"). Finché mancano, lì parla il telefono.
+
 ## L'idea
 Il timer parla poco, nei momenti giusti. Le app di timer più usate fanno così: partenza, cambio lavoro/recupero, metà, ultimi secondi, più qualche spinta. Noi in più abbiamo **la tua voce, in romano**, e un paio di trucchi che le altre non hanno:
 - **AMRAP:** l'app conosce il ritmo dei giri. Se il giro in corso si può chiudere prima della fine → "Manca solo 'n giro, chiudilo!". Se si stanno piantando → "Oh, nun te fermà!". Se hanno chiuso un giro più veloce del solito → "Stai a volà!".
@@ -18,125 +21,125 @@ Spunta man mano. Le frasi **si possono cambiare**: se una non ti viene naturale,
 
 ### Parte il conto alla rovescia "preparati" (10 secondi prima)
 _Tutti_
-- [ ] **pronti 1** — Preparate, se parte!
-- [ ] **pronti 2** — Mettete in posizione!
-- [ ] **pronti 3** — Pronto? Mo se comincia.
+- [x] **pronti 1** — Preparate, se parte!
+- [x] **pronti 2** — Mettete in posizione!
+- [x] **pronti 3** — Pronto? Mo se comincia.
 
 ### Inizio del primo lavoro
 _Tutti_
-- [ ] **via 1** — Daje, partiamo!
-- [ ] **via 2** — Vai, è tutto tuo!
-- [ ] **via 3** — Daje che se comincia!
+- [x] **via 1** — Daje, partiamo!
+- [x] **via 2** — Vai, è tutto tuo!
+- [x] **via 3** — Daje che se comincia!
 
 ### Quando premono PAUSA
 _Tutti_
-- [ ] **pausa 1** — Pausa. Riparti quando sei pronto.
-- [ ] **pausa 2** — Fermo 'n attimo, poi se riparte.
+- [x] **pausa 1** — Pausa. Riparti quando sei pronto.
+- [x] **pausa 2** — Fermo 'n attimo, poi se riparte.
 
 ### Quando premono RIPRENDI
 _Tutti_
-- [ ] **riprendi 1** — Riprendiamo, daje!
-- [ ] **riprendi 2** — Rientra, forza!
+- [x] **riprendi 1** — Riprendiamo, daje!
+- [x] **riprendi 2** — Rientra, forza!
 
 ### A metà tempo (timer da 8 minuti in su)
 _AMRAP, AFAP con cap, intervalli lunghi_
-- [ ] **meta 1** — Metà fatta, nun mollà!
-- [ ] **meta 2** — Semo a metà, tieni botta!
-- [ ] **meta 3** — Metà fatta, mo' viene il bello!
+- [x] **meta 1** — Metà fatta, nun mollà!
+- [x] **meta 2** — Semo a metà, tieni botta!
+- [x] **meta 3** — Metà fatta, mo' viene il bello!
 
 ### Manca 1 minuto (timer da 4 minuti in su)
 _AMRAP, AFAP con cap_
-- [ ] **min1 1** — Ultimo minuto, mo o mai più!
-- [ ] **min1 2** — Manca un minuto, daje tutto!
-- [ ] **min1 3** — Un minuto, svuota er serbatoio!
+- [x] **min1 1** — Ultimo minuto, mo o mai più!
+- [x] **min1 2** — Manca un minuto, daje tutto!
+- [x] **min1 3** — Un minuto, svuota er serbatoio!
 
 ### Mancano 10 secondi (tratti da 2 minuti in su)
 _AMRAP, AFAP con cap_
-- [ ] **sec10 1** — Dieci secondi, spigni!
-- [ ] **sec10 2** — Ultimi dieci, nun te fermà!
-- [ ] **sec10 3** — Dieci secondi, daje daje daje!
+- [x] **sec10 1** — Dieci secondi, spigni!
+- [x] **sec10 2** — Ultimi dieci, nun te fermà!
+- [x] **sec10 3** — Dieci secondi, daje daje daje!
 
 ### Inizia l'ultimo round
 _EMOM, HIIT_
-- [ ] **ultimo 1** — Ultimo round, dacce dentro!
-- [ ] **ultimo 2** — Ultimo, poi te riposi!
-- [ ] **ultimo 3** — L'ultimo, fallo bene!
+- [x] **ultimo 1** — Ultimo round, dacce dentro!
+- [x] **ultimo 2** — Ultimo, poi te riposi!
+- [x] **ultimo 3** — L'ultimo, fallo bene!
 
 ### Timer finito
 _Tutti_
-- [ ] **fine 1** — Grande! Daje!
-- [ ] **fine 2** — Fatto! Sei 'na bestia!
-- [ ] **fine 3** — Bravo! Mo riposa.
-- [ ] **fine 4** — Finito! Oggi te lo sei guadagnato.
+- [x] **fine 1** — Grande! Daje!
+- [x] **fine 2** — Fatto! Sei 'na bestia!
+- [x] **fine 3** — Bravo! Mo riposa.
+- [x] **fine 4** — Finito! Oggi te lo sei guadagnato.
 
 ### Inizio di un nuovo giro (uno sì e uno no), se l'esercizio non è scritto
 _EMOM_
-- [ ] **giroemom 1** — N'antro minuto, vai!
-- [ ] **giroemom 2** — Sotto, riparti!
-- [ ] **giroemom 3** — Su, che se ricomincia!
+- [x] **giroemom 1** — N'antro minuto, vai!
+- [x] **giroemom 2** — Sotto, riparti!
+- [x] **giroemom 3** — Su, che se ricomincia!
 
 ### Inizio di ogni lavoro (dopo il primo)
 _HIIT_
-- [ ] **lavoro 1** — Vai!
-- [ ] **lavoro 2** — Spigni!
-- [ ] **lavoro 3** — Dai tutto!
+- [x] **lavoro 1** — Vai!
+- [x] **lavoro 2** — Spigni!
+- [x] **lavoro 3** — Dai tutto!
 
 ### Inizio del recupero
 _HIIT, EMOM_
-- [ ] **recupero 1** — Recupera, respira.
-- [ ] **recupero 2** — Fiato, che se riparte.
-- [ ] **recupero 3** — Respira, sciogli le spalle.
+- [x] **recupero 1** — Recupera, respira.
+- [x] **recupero 2** — Fiato, che se riparte.
+- [x] **recupero 3** — Respira, sciogli le spalle.
 
 ### Fine di una serie, inizia il recupero lungo tra le serie
 _HIIT_
-- [ ] **serie 1** — Serie finita, bravo! Recupera bene.
-- [ ] **serie 2** — Una serie in meno! Respira.
+- [x] **serie 1** — Serie finita, bravo! Recupera bene.
+- [x] **serie 2** — Una serie in meno! Respira.
 
 ### Premono "+1 GIRO" (ogni 2 giri)
 _AMRAP_
-- [ ] **giro 1** — Bravo, n'antro giro!
-- [ ] **giro 2** — Così se fa!
-- [ ] **giro 3** — Giro chiuso, avanti!
+- [x] **giro 1** — Bravo, n'antro giro!
+- [x] **giro 2** — Così se fa!
+- [x] **giro 3** — Giro chiuso, avanti!
 
 ### Hanno chiuso un giro più veloce del loro ritmo medio
 _AMRAP_
-- [ ] **veloce 1** — Stai a volà!
-- [ ] **veloce 2** — Che ritmo, nun calà!
+- [x] **veloce 1** — Stai a volà!
+- [x] **veloce 2** — Che ritmo, nun calà!
 
 ### Il giro in corso sta durando molto più del solito (si stanno piantando)
 _AMRAP_
-- [ ] **lento 1** — Oh, nun te fermà, daje!
-- [ ] **lento 2** — Respira e riparti!
-- [ ] **lento 3** — Forza, che nun è finita!
+- [x] **lento 1** — Oh, nun te fermà, daje!
+- [x] **lento 2** — Respira e riparti!
+- [x] **lento 3** — Forza, che nun è finita!
 
 ### Dal ritmo medio si capisce che il giro in corso lo chiudono prima della fine
 _AMRAP_
-- [ ] **ungiro 1** — Er giro ce lo fai, daje!
-- [ ] **ungiro 2** — Manca solo 'n giro, chiudilo!
-- [ ] **ungiro 3** — Ce stai dentro, chiudi sto giro!
+- [x] **ungiro 1** — Er giro ce lo fai, daje!
+- [x] **ungiro 2** — Manca solo 'n giro, chiudilo!
+- [x] **ungiro 3** — Ce stai dentro, chiudi sto giro!
 
 ### Ogni 3 minuti
 _AFAP_
-- [ ] **afap 1** — Forza che ce stai!
-- [ ] **afap 2** — Tieni duro, daje!
-- [ ] **afap 3** — Nun mollà, testa bassa e pedalà!
+- [x] **afap 1** — Forza che ce stai!
+- [x] **afap 2** — Tieni duro, daje!
+- [x] **afap 3** — Nun mollà, testa bassa e pedalà!
 
 ### Hanno finito un esercizio della lista
 _AFAP_
-- [ ] **esfatto 1** — Uno in meno!
-- [ ] **esfatto 2** — Via questo, sotto col prossimo!
-- [ ] **esfatto 3** — Fatto, avanti!
+- [ ] **esfatto 1** ⚠️ DA REGISTRARE — Uno in meno!
+- [ ] **esfatto 2** ⚠️ DA REGISTRARE — Via questo, sotto col prossimo!
+- [ ] **esfatto 3** ⚠️ DA REGISTRARE — Fatto, avanti!
 
 ### Rimane un solo esercizio
 _AFAP_
-- [ ] **esultimo 1** — Ultimo esercizio, chiudi!
-- [ ] **esultimo 2** — È l'ultimo, svuotate!
+- [x] **esultimo 1** — Ultimo esercizio, chiudi!
+- [x] **esultimo 2** — È l'ultimo, svuotate!
 
 ### Gli ultimi 3 secondi di ogni tratto, al posto dei bip
 _Tutti (facoltativo)_
-- [ ] **conto 1** — Tre
-- [ ] **conto 2** — Due
-- [ ] **conto 3** — Uno
+- [x] **conto 1** — Tre
+- [x] **conto 2** — Due
+- [x] **conto 3** — Uno
 
 ## Come registrare (15 minuti)
 1. **Dove:** una stanza piccola con cose morbide (camera da letto con tende chiuse, armadio aperto pieno di vestiti) oppure **la macchina parcheggiata** in una strada tranquilla. Niente bagno o cucina (fanno eco). Spegni ventilatori e condizionatore e chiudi le finestre.

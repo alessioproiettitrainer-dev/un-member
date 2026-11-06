@@ -1,7 +1,7 @@
 # 🎙️ La voce di Alessio in UN-TIMER
 
-> **Stato (6/11/2026):** registrate e montate nell'app 56 frasi su 59 (file in `untimer/voce/`). Audio pulito (rumore, toni, volume uguale per tutte), codici tolti, ripetizioni scartate (tenuta l'ultima versione), pause lunghe accorciate. I testi nell'app sono quelli che hai detto davvero.
-> **Mancano solo:** `esfatto 1`, `esfatto 2`, `esfatto 3` (al loro posto avevi letto le frasi di "es ultimo"). Finché mancano, lì parla il telefono.
+> **Stato (6/11/2026): FATTO.** Tutte le frasi sono nell'app con la voce di Alessio (`untimer/voce/`): audio pulito, codici tolti, ripetizioni scartate, pause accorciate. I testi nell'app sono quelli detti davvero.
+> "es fatto" non era nella registrazione: usa 3 frasi già registrate che ci stanno bene ("Daje sotto, riparti!", "Daje a tutta!", "Forza che ce stai!").
 
 ## L'idea
 Il timer parla poco, nei momenti giusti. Le app di timer più usate fanno così: partenza, cambio lavoro/recupero, metà, ultimi secondi, più qualche spinta. Noi in più abbiamo **la tua voce, in romano**, e un paio di trucchi che le altre non hanno:
@@ -126,9 +126,9 @@ _AFAP_
 
 ### Hanno finito un esercizio della lista
 _AFAP_
-- [ ] **esfatto 1** ⚠️ DA REGISTRARE — Uno in meno!
-- [ ] **esfatto 2** ⚠️ DA REGISTRARE — Via questo, sotto col prossimo!
-- [ ] **esfatto 3** ⚠️ DA REGISTRARE — Fatto, avanti!
+- [x] **esfatto 1** — Uno in meno!
+- [x] **esfatto 2** — Via questo, sotto col prossimo!
+- [x] **esfatto 3** — Fatto, avanti!
 
 ### Rimane un solo esercizio
 _AFAP_

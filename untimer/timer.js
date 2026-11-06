@@ -99,7 +99,7 @@ const COACH = {
     lento: ['Oh, nun te fermà!', 'Mi sa che facevi più giri de mi nonna!', 'Forza che nun è finita!'],
     ungiro: ['Er giro ce lo fai, daje!', "Manca solo 'n giro, chiudilo eh!", "Ce l'hai quasi fatta, manca solo sto giro, daje a tutta!"],
     afap: ['Forza che ce stai!', 'Oh, tieni duro eh!', "Nun mollà, testa bassa e spigni come 'n treno!"],
-    esfatto: ['Uno in meno!', 'Via questo, sotto col prossimo!', 'Fatto, avanti!'], // da registrare
+    esfatto: ['Daje sotto, riparti!', 'Daje a tutta!', 'Forza che ce stai!'], // frasi già registrate, che stanno bene anche qui
     esultimo: ['Ultimo esercizio, chiudilo!', 'Ultimo esercizio, fallo fatto bene!'],
     conto: ['Tre', 'Due', 'Uno'], // al posto dei bip negli ultimi 3 secondi
   },
@@ -153,8 +153,8 @@ const COACH = {
     conto: ['Three', 'Two', 'One'],
   },
 };
-// romano: le registrazioni di Alessio in voce/ (6/11/2026). Mancano esfatto-1/2/3: lì legge il telefono.
-const AUDIO = new Set(["afap-1","afap-2","afap-3","conto-1","conto-2","conto-3","esultimo-1","esultimo-2","fine-1","fine-2","fine-3","fine-4","giro-1","giro-2","giro-3","giroemom-1","giroemom-2","giroemom-3","lavoro-1","lavoro-2","lavoro-3","lento-1","lento-2","lento-3","meta-1","meta-2","meta-3","min1-1","min1-2","min1-3","pausa-1","pausa-2","pronti-1","pronti-2","pronti-3","recupero-1","recupero-2","recupero-3","riprendi-1","riprendi-2","sec10-1","sec10-2","sec10-3","serie-1","serie-2","ultimo-1","ultimo-2","ultimo-3","ungiro-1","ungiro-2","ungiro-3","veloce-1","veloce-2","via-1","via-2","via-3"]);
+// romano: le registrazioni di Alessio in voce/ (6/11/2026); esfatto-1/2/3 sono copie di giroemom-2, lavoro-3, afap-1
+const AUDIO = new Set(["afap-1","afap-2","afap-3","conto-1","conto-2","conto-3","esfatto-1","esfatto-2","esfatto-3","esultimo-1","esultimo-2","fine-1","fine-2","fine-3","fine-4","giro-1","giro-2","giro-3","giroemom-1","giroemom-2","giroemom-3","lavoro-1","lavoro-2","lavoro-3","lento-1","lento-2","lento-3","meta-1","meta-2","meta-3","min1-1","min1-2","min1-3","pausa-1","pausa-2","pronti-1","pronti-2","pronti-3","recupero-1","recupero-2","recupero-3","riprendi-1","riprendi-2","sec10-1","sec10-2","sec10-3","serie-1","serie-2","ultimo-1","ultimo-2","ultimo-3","ungiro-1","ungiro-2","ungiro-3","veloce-1","veloce-2","via-1","via-2","via-3"]);
 // inglese: tutti i file generati in voce/en/ (tranne il conto, che resta coi bip)
 const AUDIO_EN = new Set(Object.entries(COACH.en).flatMap(([k, l]) => (k === 'conto' ? [] : l.map((_, i) => `${k}-${i + 1}`))));
 let coachAt = 0, coachAu = null;

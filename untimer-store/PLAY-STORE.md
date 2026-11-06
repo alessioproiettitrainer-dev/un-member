@@ -20,14 +20,14 @@ L'app ha **tutti i file del timer dentro** (Capacitor, cartella `untimer-app/`):
 6. Dopo i 14 giorni: **Richiedi accesso alla produzione** (domande su com'è andato il test) → Produzione → nuova release con lo stesso `.aab` (o uno aggiornato) → revisione Google (di solito 1-7 giorni).
 
 ## Risposte per "Configura l'app"
-- **Norme sulla privacy (URL):** serve una pagina online: `untimer/privacy.html` (manca l'email di contatto). Vedi in fondo dove pubblicarla.
+- **Norme sulla privacy (URL):** `https://<indirizzo-render>/privacy.html` (pagina pronta, email inclusa). Vedi in fondo dove pubblicarla.
 - **Accesso all'app:** tutte le funzioni sono disponibili senza restrizioni (niente login).
 - **Annunci:** No, l'app non contiene annunci.
 - **Classificazione dei contenuti:** questionario IARC → categoria "Tutte le altre app" → rispondi **No** a tutto (niente violenza, sesso, droghe, gioco d'azzardo, contenuti generati dagli utenti, condivisione posizione, acquisti). Risultato atteso: PEGI 3 / Per tutti.
 - **Pubblico di destinazione:** 18 anni e oltre (è un'app di allenamento; evita gli obblighi delle app per bambini). "Potrebbe attirare i bambini": No.
 - **Sicurezza dei dati:** "L'app raccoglie o condivide dati utente?" → **No**. (Impostazioni, timer e diario restano solo sul telefono; nessun dato esce dall'app.) Crittografia in transito: non applicabile. Eliminazione dati: l'utente li cancella disinstallando l'app o dai dati dell'app.
 - **App per enti pubblici:** No. **App finanziarie / sanitarie:** No (è fitness, non un dispositivo medico). **App di notizie:** No.
-- **Categoria:** Salute e fitness. **Email di contatto:** quella che scegli (obbligatoria, visibile sullo store).
+- **Categoria:** Salute e fitness. **Email di contatto:** uncoach.info@gmail.com (visibile sullo store).
 
 ## Scheda dello store
 

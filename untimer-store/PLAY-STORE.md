@@ -82,6 +82,6 @@ Plus:
 • Save your favorite timers
 • Automatic log: every workout with date, time and result
 • Works offline
-• English or Italian (with an optional Roman-dialect coach)
+• English, or Italian with a Roman-dialect coach
 
 **Category:** Health & Fitness · **Ads:** No · **Price:** Free

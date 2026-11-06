@@ -1,5 +1,5 @@
 // UN-TIMER: app a sé, gratuita. Timer EMOM, AMRAP, AFAP e HIIT, senza video e senza account.
-// Lingue: romano (voce di Alessio), italiano, inglese (voce maschile americana generata). T('it', 'en') sceglie il testo.
+// Lingue: romano (voce di Alessio) e inglese (slang americano, voce maschile generata). T('it', 'en') sceglie il testo.
 // Tutto gira sul telefono: impostazioni e timer salvati restano nel localStorage.
 const NAME = 'UN-TIMER'; // nome dell'app (si cambia qui e in index.html / manifest.json)
 const $ = (s, r = document) => r.querySelector(s);
@@ -14,8 +14,8 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const PROVA = 'https://un-member.onrender.com/?utm_source=untimer&utm_medium=app&utm_campaign=timer#/prova';
 
 const opts = () => ({ voice: true, beep: true, prep: 10, ...ls.get('opts', {}) });
-// lingua: 'rm' romano, 'it' italiano, 'en' inglese (la prima volta dal telefono)
-let LANG = opts().lang || (/^it/i.test(navigator.language || '') ? 'rm' : 'en');
+// lingua: 'rm' romano o 'en' inglese (la prima volta dal telefono)
+let LANG = opts().lang === 'en' ? 'en' : opts().lang ? 'rm' : /^it/i.test(navigator.language || '') ? 'rm' : 'en';
 const T = (it, en) => (LANG === 'en' ? en : it);
 const LOC = () => T('it-IT', 'en-US');
 document.documentElement.lang = T('it', 'en');
@@ -75,8 +75,8 @@ function say(t) {
   speechSynthesis.speak(u);
 }
 
-// ---------- voce del coach: romano (Alessio), italiano, inglese ----------
-// Ogni momento ha più frasi, scelte a caso, nella stessa posizione nelle tre lingue.
+// ---------- voce del coach: romano (Alessio) e inglese ----------
+// Ogni momento ha più frasi, scelte a caso, nella stessa posizione in COACH.rm / COACH.it / COACH.en.
 // Romano: se c'è la registrazione di Alessio (voce/<momento>-<n>.mp3, elencata in AUDIO) parte quella, altrimenti
 // la voce del telefono legge la frase in italiano. Inglese: file generati in voce/en/ (AUDIO_EN). Max una frase ogni 6 s.
 const COACH = {
@@ -103,6 +103,7 @@ const COACH = {
     esultimo: ['Ultimo esercizio, chiudi!', "È l'ultimo, svuotate!"],
     conto: ['Tre', 'Due', 'Uno'], // facoltativo: al posto dei bip negli ultimi 3 secondi
   },
+  // it: non è una lingua dell'app, serve solo alla voce del telefono finché mancano le registrazioni romane
   it: {
     pronti: ['Preparati, si parte!', 'In posizione!', 'Pronto? Si comincia.'],
     via: ['Via, partiamo!', 'Vai, è tutto tuo!', 'Forza, si comincia!'],
@@ -522,7 +523,7 @@ function end() {
       <span class="pn">${esc(it.name || T('Esercizio', 'Exercise'))}${it.reps ? ` <small>/ ${it.reps}</small>` : ''}</span>
       <button data-p="${j}" data-d="-1">−</button><output data-po="${j}">${it.n}</output><button data-p="${j}" data-d="1">+</button>
       ${it.reps ? `<button class="all" data-pa="${j}">${T('TUTTE', 'ALL')}</button>` : ''}</div>`).join('')}</div></div>` : ''}` : '';
-  app.innerHTML = `<main class="page end" style="--accent:${MODES[m].col}"><h1>${{ rm: 'DAJE!', it: 'GRANDE!', en: 'HELL YEAH!' }[LANG]}</h1>
+  app.innerHTML = `<main class="page end" style="--accent:${MODES[m].col}"><h1>${T('DAJE!', 'HELL YEAH!')}</h1>
     <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b id="big">${m === 'it' || m === 'emom' ? T('FATTO!', 'DONE!') : resultOf(R)}</b>${lapList}${itemList}
       <span class="when">${when(R.when)} · ${fmt(R.dur)} ${T('di lavoro · salvato nel diario', 'of work · saved to log')}</span></div>
     ${amrapBox}
@@ -572,8 +573,8 @@ function settings() {
   const draw = () => {
     app.innerHTML = `<main class="page">${back(T('IMPOSTAZIONI', 'SETTINGS'))}
       <div class="field"><label>${T('Lingua e voce', 'Language & voice')}</label>
-        <div class="chips lang">${[['rm', 'Romano'], ['it', 'Italiano'], ['en', 'English']].map(([k, l]) => `<button data-l="${k}" class="${LANG === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-        <p class="muted small">${{ rm: 'Il coach ti spinge in romano (voce di Alessio).', it: 'Il coach ti spinge in italiano.', en: 'The coach pushes you in English.' }[LANG]}</p></div>
+        <div class="chips lang">${[['rm', 'Romano'], ['en', 'English']].map(([k, l]) => `<button data-l="${k}" class="${LANG === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <p class="muted small">${T('Il coach ti spinge in romano (voce di Alessio).', 'The coach pushes you in English.')}</p></div>
       <label class="sw"><span>${T('Voce', 'Voice')}</span><input type="checkbox" id="voice" ${o.voice ? 'checked' : ''}></label>
       <label class="sw"><span>${T('Spinte del coach', 'Coach pep talk')}</span><input type="checkbox" id="push" ${o.push !== false ? 'checked' : ''}></label>
       <label class="sw"><span>${T('Bip', 'Beeps')}</span><input type="checkbox" id="beep" ${o.beep ? 'checked' : ''}></label>

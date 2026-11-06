@@ -101,9 +101,9 @@ function segments(m, c) {
 
 // ---------- pezzi di pagina ----------
 function nav(tab) {
-  return `<nav class="tabs"><a href="#/" class="${tab === 'timer' ? 'on' : ''}"><span>⏱</span>Timer</a>
-    <a href="#/workout" class="${tab === 'workout' ? 'on' : ''}"><span>🔥</span>Workout</a>
-    <a href="#/impostazioni" class="${tab === 'opts' ? 'on' : ''}"><span>⚙︎</span>Impostazioni</a></nav>`;
+  return `<nav class="tabs"><a href="#home" class="${tab === 'timer' ? 'on' : ''}"><span>⏱</span>Timer</a>
+    <a href="#workout" class="${tab === 'workout' ? 'on' : ''}"><span>🔥</span>Workout</a>
+    <a href="#impostazioni" class="${tab === 'opts' ? 'on' : ''}"><span>⚙︎</span>Impostazioni</a></nav>`;
 }
 const brand = `<div class="brand"><b>${NAME.split('-')[0]}</b>-${NAME.split('-')[1] || ''}</div>`;
 const stepper = (k, label, val, shown) => `<div class="field"><label>${label}</label>
@@ -112,12 +112,12 @@ const stepper = (k, label, val, shown) => `<div class="field"><label>${label}</l
 function home() {
   const saved = ls.get('saved', []);
   app.innerHTML = `<main class="page">${brand}
-    <div class="modes">${Object.entries(MODES).map(([k, m]) => `<a class="mode m-${k}" href="#/set/${k}"><b>${m.name}</b><span>${m.sub}</span></a>`).join('')}</div>
-    ${saved.length ? `<h2>I MIEI TIMER</h2><div class="saved">${saved.map((s, i) => `<div class="sv"><a href="#/set/${s.m}/${i}"><small>${MODES[s.m].name}</small><b>${esc(s.name)}</b><span>${summary(s.m, s.c)}</span></a><button data-del="${i}" aria-label="Elimina">✕</button></div>`).join('')}</div>` : ''}
+    <div class="modes">${Object.entries(MODES).map(([k, m]) => `<a class="mode m-${k}" href="#set-${k}"><b>${m.name}</b><span>${m.sub}</span></a>`).join('')}</div>
+    ${saved.length ? `<h2>I MIEI TIMER</h2><div class="saved">${saved.map((s, i) => `<div class="sv"><a href="#set-${s.m}-${i}"><small>${MODES[s.m].name}</small><b>${esc(s.name)}</b><span>${summary(s.m, s.c)}</span></a><button data-del="${i}" aria-label="Elimina">✕</button></div>`).join('')}</div>` : ''}
   </main>${nav('timer')}`;
-  app.querySelectorAll('[data-del]').forEach((b) => (b.onclick = () => {
+  app.querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
     const s = ls.get('saved', []);
-    if (!confirm(`Eliminare "${s[b.dataset.del].name}"?`)) return;
+    if (!(await ask(`Eliminare "${s[b.dataset.del].name}"?`, { ok: 'Elimina' }))) return;
     s.splice(b.dataset.del, 1); ls.set('saved', s); home();
   }));
 }
@@ -128,7 +128,7 @@ const STEP = {
   work: [5, 5, 600], rest: [5, 0, 600], sets: [1, 1, 20], setRest: [5, 0, 600],
 };
 function setup(m, savedIdx) {
-  const M = MODES[m]; if (!M) return (location.hash = '#/');
+  const M = MODES[m]; if (!M) return (location.hash = '#home');
   const saved = savedIdx != null ? ls.get('saved', [])[savedIdx] : null;
   const c = saved ? { ...clone(M.def), ...clone(saved.c) } : cfgOf(m);
   const keep = () => { if (!saved) ls.set('cfg_' + m, c); };
@@ -152,7 +152,7 @@ function setup(m, savedIdx) {
     if (m === 'it') body = `<div class="pair">${stepper('work', 'Lavoro', c.work, secTxt(c.work))}${stepper('rest', 'Recupero', c.rest, secTxt(c.rest))}</div>
       ${stepper('rounds', 'Round', c.rounds)}
       <div class="pair">${stepper('sets', 'Ripeti tutto (serie)', c.sets, `${c.sets}×`)}${c.sets > 1 ? stepper('setRest', 'Recupero tra le serie', c.setRest, secTxt(c.setRest)) : ''}</div>`;
-    app.innerHTML = `<main class="page"><header class="top"><a href="#/" class="back">‹</a><h1>${saved ? esc(saved.name) : M.name}</h1></header>
+    app.innerHTML = `<main class="page"><header class="top"><a href="#home" class="back">‹</a><h1>${saved ? esc(saved.name) : M.name}</h1></header>
       <p class="muted">${M.sub}</p>${body}
       <p class="sum">${summary(m, c)}</p>
       <button class="go" id="go">VIA</button>
@@ -173,12 +173,12 @@ function setup(m, savedIdx) {
     app.querySelectorAll('[data-reps]').forEach((i) => (i.oninput = () => { c.items[i.dataset.reps].reps = Math.max(0, parseInt(i.value) || 0); keep(); $('.sum').textContent = summary(m, c); }));
     app.querySelectorAll('[data-rmi]').forEach((b) => (b.onclick = () => { c.items.splice(b.dataset.rmi, 1); keep(); draw(); }));
     if ($('#addi')) $('#addi').onclick = () => { c.items.push({ name: '', reps: 0 }); keep(); draw(); app.querySelector(`[data-reps="${c.items.length - 1}"]`)?.focus(); };
-    if ($('#clr')) $('#clr').onclick = () => { if (confirm('Cancellare tutti gli esercizi?')) { c.items = []; keep(); draw(); } };
+    if ($('#clr')) $('#clr').onclick = async () => { if (await ask('Cancellare tutti gli esercizi?', { ok: 'Cancella' })) { c.items = []; keep(); draw(); } };
     $('#go').onclick = () => start(m, clean(m, c), saved?.name);
-    $('#save').onclick = () => {
+    $('#save').onclick = async () => {
       const s = ls.get('saved', []);
       if (saved) { s[savedIdx] = { ...saved, c: clean(m, c) }; ls.set('saved', s); toast('Salvato'); return; }
-      const name = prompt('Come lo chiami?', `${M.name} ${summary(m, c).split(' · ')[0]}`)?.trim();
+      const name = await ask('Come lo chiami?', { ok: 'Salva', input: `${M.name} ${summary(m, c).split(' · ')[0]}` });
       if (!name) return;
       s.unshift({ name: name.slice(0, 40), m, c: clean(m, c) }); ls.set('saved', s); toast('Salvato in "I miei timer"');
     };
@@ -187,6 +187,26 @@ function setup(m, savedIdx) {
 }
 // toglie le righe vuote prima di partire / salvare
 const clean = (m, c) => (m === 'afap' ? { ...clone(c), items: c.items.filter((it) => it.name.trim() || it.reps).map((it) => ({ name: it.name.trim(), reps: it.reps || 0 })) } : clone(c));
+// finestra di conferma / nome dentro l'app (confirm e prompt del browser non vanno ovunque)
+let askEl = null;
+const closeAsk = () => { askEl?.remove(); askEl = null; };
+function ask(text, { ok = 'Sì', input = null } = {}) {
+  closeAsk();
+  return new Promise((res) => {
+    askEl = Object.assign(document.createElement('div'), { className: 'ask' });
+    askEl.innerHTML = `<div class="askbox"><p>${esc(text)}</p>${input != null ? `<input id="askin" maxlength="40" value="${esc(input)}">` : ''}
+      <div class="row"><button class="btn" data-a="0">Annulla</button><button class="go" data-a="1">${esc(ok)}</button></div></div>`;
+    document.body.append(askEl);
+    const inp = askEl.querySelector('#askin');
+    if (inp) { inp.focus(); inp.select(); inp.onkeydown = (e) => e.key === 'Enter' && askEl.querySelector('[data-a="1"]').click(); }
+    askEl.onclick = (e) => {
+      const b = e.target.closest('[data-a]');
+      if (!b && e.target !== askEl) return;
+      const v = b?.dataset.a === '1' ? (inp ? inp.value.trim() || null : true) : (inp ? null : false);
+      closeAsk(); res(v);
+    };
+  });
+}
 function toast(t) { const d = Object.assign(document.createElement('div'), { className: 'toast', textContent: t }); document.body.append(d); setTimeout(() => d.remove(), 1800); }
 
 // ---------- timer in corso ----------
@@ -195,13 +215,13 @@ function start(m, c, title) {
   if (window.speechSynthesis) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
   R = { m, c, title, S: segments(m, c), i: 0, t0: performance.now(), paused: 0, pauseAt: 0, laps: [], done: false,
     items: (c.items || []).map((it) => ({ ...it, n: 0, ok: false })) };
-  if (location.hash === '#/run') run(); else location.hash = '#/run';
+  if (location.hash === '#run') run(); else location.hash = '#run';
 }
 const elapsed = () => ((R.pauseAt || performance.now()) - R.t0 - R.paused) / 1000;
 const workTime = () => R.S.slice(0, R.i).filter((s) => s.kind !== 'prep').reduce((a, s) => a + s.dur, 0) + (R.S[R.i].kind === 'prep' ? 0 : elapsed());
 
 function run() {
-  if (!R) return (location.hash = '#/');
+  if (!R) return (location.hash = '#home');
   const afapList = R.m === 'afap' && R.items.length;
   app.innerHTML = `<main class="run ${afapList ? 'withlist' : ''}">
     <header class="rtop"><button class="x" id="stop">✕</button><b>${esc(R.title || MODES[R.m].name)}</b><span id="rr"></span></header>
@@ -211,7 +231,7 @@ function run() {
         ${it.reps ? [1, 5, 10].map((v) => `<button class="pl" data-add="${j}" data-v="${v}">+${v}</button>`).join('') : ''}</div>`).join('')}</div>` : ''}
     <div class="ctrl">${R.S.some((s) => s.laps) ? `<button class="round" id="plus">+1 GIRO<small id="rc">0 giri</small></button>` : ''}
       <div class="row"><button id="pause">PAUSA</button>${R.m === 'afap' ? '<button id="fin" class="fin">FINITO</button>' : '<button id="skip">SALTA ›</button>'}</div></div></main>`;
-  $('#stop').onclick = () => { if (confirm('Vuoi chiudere il timer?')) stop(); };
+  $('#stop').onclick = async () => { if (await ask('Vuoi chiudere il timer?', { ok: 'Chiudi' })) stop(); };
   $('#pause').onclick = togglePause;
   // durante il "preparati" un tocco sul timer fa partire subito
   $('.clock').onclick = () => { if (R.S[R.i].kind === 'prep' && !R.pauseAt) jump(); };
@@ -263,7 +283,7 @@ function enter(i) {
   say('Via!');
 }
 function tick() {
-  if (!R || R.done || location.hash !== '#/run') return;
+  if (!R || R.done || location.hash !== '#run') return;
   let s = R.S[R.i], e = elapsed();
   // tratti finiti (anche più d'uno, se il telefono era in background): avanti
   while (e >= s.dur) {
@@ -301,16 +321,16 @@ function finish(timeUp) {
   beep(1320, 300); setTimeout(() => beep(1760, 500), 320);
   say('Finito! Daje!');
   sleepOk();
-  location.hash = '#/fine';
+  location.hash = '#fine';
 }
 function stop(home = true) {
   if (R) { clearInterval(R.iv); sleepOk(); }
   R = null; window.speechSynthesis?.cancel(); document.body.classList.remove('paused'); delete document.body.dataset.kind;
-  if (home) location.hash = '#/';
+  if (home) location.hash = '#home';
 }
 
 function end() {
-  if (!R?.done) return (location.hash = '#/');
+  if (!R?.done) return (location.hash = '#home');
   const { m, c, laps, result, items, title } = R;
   delete document.body.dataset.kind; document.body.classList.remove('paused');
   const big = m === 'afap' ? result : m === 'amrap' && laps.length ? `${laps.length} ${laps.length === 1 ? 'giro' : 'giri'}` : 'FATTO!';
@@ -318,7 +338,7 @@ function end() {
   const itemList = items.length ? `<div class="laps items">${items.map((it) => `<span class="${it.ok ? 'ok' : ''}">${it.ok ? '✓' : '·'} ${esc(it.name || 'Esercizio')}${it.reps ? ` ${it.n}/${it.reps}` : ''}</span>`).join('')}</div>` : '';
   app.innerHTML = `<main class="page end"><div class="done">💪</div><h1>DAJE!</h1>
     <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b>${big}</b>${lapList}${itemList}</div>
-    <div class="row"><button id="again" class="go">RIFAI</button><a class="btn" href="#/">HOME</a></div>
+    <div class="row"><button id="again" class="go">RIFAI</button><a class="btn" href="#home">HOME</a></div>
     <a class="promo" href="${PROVA}" target="_blank" rel="noopener"><div><small>VUOI UN WORKOUT GIÀ PRONTO?</small><b>PROVA I NOSTRI ALLENAMENTI</b></div><i>›</i></a></main>`;
   $('#again').onclick = () => start(m, c, title);
 }
@@ -351,21 +371,22 @@ function settings() {
 
 // ---------- router ----------
 function route() {
-  const h = location.hash.slice(1) || '/';
-  if (h !== '/run' && h !== '/fine' && R && !R.done) stop(false);
-  if (h !== '/run') { delete document.body.dataset.kind; document.body.classList.remove('paused'); }
+  const h = location.hash.slice(1) || 'home';
+  if (h !== 'run' && h !== 'fine' && R && !R.done) stop(false);
+  if (h !== 'run') { delete document.body.dataset.kind; document.body.classList.remove('paused'); }
+  closeAsk();
   window.scrollTo(0, 0);
-  if (h === '/run') return run();
-  if (h === '/fine') return end();
-  const sm = h.match(/^\/set\/(\w+)(?:\/(\d+))?$/);
+  if (h === 'run') return run();
+  if (h === 'fine') return end();
+  const sm = h.match(/^set-(\w+?)(?:-(\d+))?$/);
   if (sm) return setup(sm[1], sm[2] != null ? Number(sm[2]) : null);
-  if (h === '/workout') return workout();
-  if (h === '/impostazioni') return settings();
+  if (h === 'workout') return workout();
+  if (h === 'impostazioni') return settings();
   home();
 }
 window.addEventListener('hashchange', route);
 document.addEventListener('keydown', (e) => {
-  if (location.hash !== '#/run' || !R || R.done) return;
+  if (location.hash !== '#run' || !R || R.done) return;
   if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); ($('#plus') || $('#pause')).click(); }
   else if (e.key === 'p' || e.key === 'P') togglePause();
 });

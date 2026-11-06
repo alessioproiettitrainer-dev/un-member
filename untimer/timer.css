@@ -173,3 +173,10 @@ h2 { font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--muted)
   .ctrl { justify-content: center; }
   #t { font-size: min(22vw, 55vh); }
 }
+
+/* finestra di conferma */
+.ask { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+.askbox { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; }
+.askbox p { font-weight: 800; font-size: 18px; margin: 0 0 14px; }
+.askbox input { width: 100%; background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; color: var(--text); font: 600 16px 'Montserrat', sans-serif; padding: 12px; margin-bottom: 14px; }
+.askbox .row { display: flex; gap: 10px; } .askbox .row > * { flex: 1; margin: 0; font-size: 17px; padding: 14px; }

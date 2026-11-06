@@ -64,8 +64,17 @@ const pickVoice = () => {
   VOICE_EN = all.filter((v) => /^en/i.test(v.lang)).sort((a, b) => male(b) + rank(b) - male(a) - rank(a))[0] || null;
 };
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
+// nell'app Android (Capacitor) la voce del browser non c'è: si usa quella del telefono con il plugin
+const NATIVE = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins : null;
 function say(t) {
-  if (!opts().voice || !window.speechSynthesis || !t) return;
+  if (!opts().voice || !t) return;
+  if (NATIVE?.TextToSpeech) {
+    const en = LANG === 'en';
+    NATIVE.TextToSpeech.stop().catch(() => {});
+    NATIVE.TextToSpeech.speak({ text: en ? t : t.replace(/\bemom\b/gi, 'èmom').replace(/\bamrap\b/gi, 'àmrap').replace(/\bafap\b/gi, 'àfap'), lang: en ? 'en-US' : 'it-IT', rate: 1, pitch: en ? 0.85 : 1, category: 'playback' }).catch(() => {});
+    return;
+  }
+  if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
   const en = LANG === 'en';
   const u = new SpeechSynthesisUtterance(en ? t : t.replace(/\bemom\b/gi, 'èmom').replace(/\bamrap\b/gi, 'àmrap').replace(/\bafap\b/gi, 'àfap'));
@@ -182,6 +191,7 @@ const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform ==
 let R = null; // timer in corso
 async function keepAwake() {
   if (!R || R.done || document.visibilityState !== 'visible') return;
+  if (NATIVE?.KeepAwake) { NATIVE.KeepAwake.keepAwake().catch(() => {}); return; } // app Android
   let ok = !!(R.wake && !R.wake.released);
   if (!ok && navigator.wakeLock) {
     try { R.wake = await navigator.wakeLock.request('screen'); R.wake.addEventListener?.('release', () => setTimeout(keepAwake, 400)); ok = true; } catch {}
@@ -195,7 +205,7 @@ async function keepAwake() {
   }
   if (R.nosleep.paused) R.nosleep.play().catch(() => {});
 }
-const sleepOk = () => { if (R) { R.wake?.release?.().catch(() => {}); R.wake = null; R.nosleep?.remove(); R.nosleep = null; } };
+const sleepOk = () => { NATIVE?.KeepAwake?.allowSleep().catch(() => {}); if (R) { R.wake?.release?.().catch(() => {}); R.wake = null; R.nosleep?.remove(); R.nosleep = null; } };
 document.addEventListener('visibilitychange', () => { keepAwake(); if (R && !R.done) tick(); });
 
 // ---------- segmenti: ogni timer è una lista di tratti a tempo ----------

@@ -1,23 +1,33 @@
 # UN-TIMER su Android (Google Play)
 
+## Come è fatta l'app Android
+L'app ha **tutti i file del timer dentro** (Capacitor, cartella `untimer-android/`): niente sito da tenere online, funziona offline da subito.
+- Nome pacchetto: `com.uncoach.untimer` (non si cambia più dopo il primo caricamento).
+- Android 7 e successivi, target Android 16 (API 36), come chiede Google.
+- Schermo acceso col sistema di Android, voce del telefono (nomi esercizi EMOM) con la sintesi vocale di Android.
+- File da caricare: `untimer-release.aab` (te lo mando io). Per provarla sul telefono prima: `untimer-prova.apk`.
+
+## La chiave di firma (IMPORTANTISSIMA)
+- File `untimer-upload.jks` + password (te li mando a parte). **Salvali in 2 posti sicuri** (es. Google Drive personale + chiavetta). Mai su GitHub: il repository è pubblico.
+- Serve per firmare **ogni aggiornamento**. Con "Firma dell'app di Google Play" (attiva di default) Google tiene la chiave vera; questa è la chiave di caricamento: se la perdi si può sostituire tramite l'assistenza Google, ma ci vogliono giorni.
+
 ## I passi, in ordine
+1. **Account sviluppatore**: play.google.com/console → account **personale** → 25 $ una volta sola, documento d'identità e verifica del telefono. Google ci mette da qualche ora a qualche giorno a verificare.
+2. **Crea app** → Nome "UN-TIMER", lingua predefinita Italiano, App (non gioco), Gratuita.
+3. **Configura l'app** (lista "Configura l'app" nella Dashboard), risposte qui sotto.
+4. **Scheda dello store**: testi e immagini qui sotto.
+5. **Test chiuso** (obbligatorio per gli account personali nuovi): Test → Test chiuso → crea traccia → carica `untimer-release.aab` → aggiungi un elenco di tester con **almeno 12 indirizzi Gmail** → invia a revisione. I tester accettano dal link e devono **tenere l'app installata 14 giorni di fila**.
+6. Dopo i 14 giorni: **Richiedi accesso alla produzione** (domande su com'è andato il test) → Produzione → nuova release con lo stesso `.aab` (o uno aggiornato) → revisione Google (di solito 1-7 giorni).
 
-1. **Mettere online l'app (gratis, 5 minuti, lo fa Alessio da Render)**
-   - Render → New → **Static Site** → repository `un-member`.
-   - Branch: `claude/timer-app-free-xnnk01` (finché non la uniamo a `main`).
-   - Build Command: `echo ok` · Publish Directory: `untimer`.
-   - Nome: `un-timer` → indirizzo `https://un-timer.onrender.com`. Il piano "Static Site" è gratuito e non tocca UN-MEMBER.
-   - Più avanti si può dare un dominio suo (es. timer.uncoach.it).
-2. **Account sviluppatore Google Play**: play.google.com/console → 25 $ una volta sola, con documento d'identità.
-   - Account **personale** nuovo: Google chiede un **test chiuso con almeno 12 persone per 14 giorni** prima di poter pubblicare per tutti. Vanno benissimo clienti e community (serve solo il loro indirizzo Gmail).
-3. **Pacchetto Android**: lo genero io dal sito online (TWA: l'app Android apre il sito a schermo intero, senza barra del browser). Ne escono:
-   - il file `.aab` da caricare sul Play Store;
-   - la **chiave di firma**: va conservata per sempre (serve per ogni aggiornamento);
-   - il file `assetlinks.json`, che metto io in `untimer/.well-known/`.
-4. **Scheda dello store**: testi qui sotto + immagini in questa cartella.
-5. Test chiuso 14 giorni → richiesta di pubblicazione → revisione Google (qualche giorno).
-
-Gli aggiornamenti dei timer dopo la pubblicazione **non richiedono** un nuovo pacchetto: basta aggiornare il sito.
+## Risposte per "Configura l'app"
+- **Norme sulla privacy (URL):** serve una pagina online: `untimer/privacy.html` (manca l'email di contatto). Vedi in fondo dove pubblicarla.
+- **Accesso all'app:** tutte le funzioni sono disponibili senza restrizioni (niente login).
+- **Annunci:** No, l'app non contiene annunci.
+- **Classificazione dei contenuti:** questionario IARC → categoria "Tutte le altre app" → rispondi **No** a tutto (niente violenza, sesso, droghe, gioco d'azzardo, contenuti generati dagli utenti, condivisione posizione, acquisti). Risultato atteso: PEGI 3 / Per tutti.
+- **Pubblico di destinazione:** 18 anni e oltre (è un'app di allenamento; evita gli obblighi delle app per bambini). "Potrebbe attirare i bambini": No.
+- **Sicurezza dei dati:** "L'app raccoglie o condivide dati utente?" → **No**. (Impostazioni, timer e diario restano solo sul telefono; nessun dato esce dall'app.) Crittografia in transito: non applicabile. Eliminazione dati: l'utente li cancella disinstallando l'app o dai dati dell'app.
+- **App per enti pubblici:** No. **App finanziarie / sanitarie:** No (è fitness, non un dispositivo medico). **App di notizie:** No.
+- **Categoria:** Salute e fitness. **Email di contatto:** quella che scegli (obbligatoria, visibile sullo store).
 
 ## Scheda dello store
 
@@ -48,7 +58,6 @@ In più:
 Vuoi allenamenti già pronti, con video e programmi? Dentro l'app trovi la prova gratuita di UN-MEMBER.
 
 **Categoria:** Salute e fitness · **Contenuti:** Per tutti · **Prezzo:** Gratis · **Pubblicità:** No
-**Privacy:** `https://<indirizzo-del-sito>/privacy.html` (manca l'email di contatto: va scritta in `untimer/privacy.html`)
 **Sicurezza dei dati:** nessun dato raccolto né condiviso.
 
 ## Immagini (in questa cartella)
@@ -85,3 +94,8 @@ Plus:
 • English, or Italian with a Roman-dialect coach
 
 **Category:** Health & Fitness · **Ads:** No · **Price:** Free
+
+## Dove pubblicare la pagina privacy (Google vuole un link)
+Una delle due:
+- **Più semplice:** Render → New → Static Site → repository `un-member`, Publish Directory `untimer` (gratis) → link `https://<nome>.onrender.com/privacy.html`. Fa anche da versione web del timer.
+- Oppure un **Documento Google** pubblico con lo stesso testo (Condividi → Chiunque abbia il link).

@@ -17,6 +17,6 @@
 <body>
   <div id="app"></div>
   <script type="module" src="./timer.js"></script>
-  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+  <script>if ('serviceWorker' in navigator && !window.Capacitor) navigator.serviceWorker.register('./sw.js'); // nell'app Android i file sono già dentro</script>
 </body>
 </html>

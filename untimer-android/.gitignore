@@ -1,0 +1,17 @@
+node_modules/
+# segreti della firma: MAI su git (il repository è pubblico)
+*.jks
+*.keystore
+keystore.properties
+android/keystore.properties
+# file generati
+android/app/build/
+android/build/
+android/.gradle/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins/
+android/local.properties
+*.aab
+*.apk

@@ -1167,8 +1167,8 @@ app.get('/disiscriviti', (req, res) => {
   res.send(unsubPage('Non vuoi più ricevere le email?', `Togliamo <b>${escHtml(e)}</b> dalle email di UN-MEMBER (novità, promemoria, offerte). L'app e il tuo account restano come sono.`, `<form method="post" action="/disiscriviti?${q}"><button>Sì, cancellami</button></form>`));
 });
 // ---- pagine richieste dal Play Store: privacy, cancellazione account, collegamento app Android ↔ sito
-// impronta del certificato dell'app Android (chiave di caricamento; quella di Google Play si aggiunge con ANDROID_SHA256 o qui)
-const ANDROID_SHA256 = ['48:25:43:8B:6A:4F:50:DA:6B:32:61:32:D7:B3:8D:6F:A9:99:73:30:24:FF:4E:22:9E:DF:5B:47:DF:A7:07:80', ...String(process.env.ANDROID_SHA256 || '').split(',').map((x) => x.trim()).filter(Boolean)];
+// impronte del certificato dell'app Android: chiave di firma di Google Play + chiave di caricamento (altre con ANDROID_SHA256)
+const ANDROID_SHA256 = ['73:60:42:80:C4:01:E5:76:32:7F:77:DA:19:32:58:D2:62:AD:9E:FB:71:62:E9:82:DC:65:F5:D2:33:51:13:65', '48:25:43:8B:6A:4F:50:DA:6B:32:61:32:D7:B3:8D:6F:A9:99:73:30:24:FF:4E:22:9E:DF:5B:47:DF:A7:07:80', ...String(process.env.ANDROID_SHA256 || '').split(',').map((x) => x.trim()).filter(Boolean)];
 app.get('/.well-known/assetlinks.json', (req, res) => res.json([{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: 'com.uncoach.unmember', sha256_cert_fingerprints: ANDROID_SHA256 } }]));
 const infoPage = (title, html) => `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · UN-MEMBER</title>
 <style>body{margin:0;background:#0c0c0e;color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;padding:20px;line-height:1.55}.c{max-width:720px;margin:0 auto}h1{font-size:26px}h2{font-size:17px;margin-top:26px;color:#ff7a00}p,li{color:#c9c9cf}a{color:#ff7a00}</style></head><body><div class="c">${html}</div></body></html>`;

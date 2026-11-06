@@ -63,6 +63,51 @@ const hasAccessNow = () => !!ME?.active && (ME.paid || !ME.trialUntil || ME.tria
 // "sono aperta" ogni minuto (e subito quando si torna nell'app): così prima di pubblicare si vede chi si sta allenando
 const ping = () => { if (ME?.id && ME.id !== 'admin-preview' && document.visibilityState === 'visible') fetch('/api/me/ping', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workout: playerOpen() }) }).catch(() => {}); };
 setInterval(ping, 60e3); document.addEventListener('visibilitychange', ping); setTimeout(ping, 5e3);
+// ---- notifiche push ----------------------------------------------------------------------------------
+// iPhone: funzionano solo con l'app aggiunta alla schermata Home (Condividi → Aggiungi alla schermata Home)
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const STANDALONE = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const b64u = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4), r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map((c) => c.charCodeAt(0))); };
+async function mySub() { try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch { return null; } }
+async function pushOn() { const s = pushOk() && Notification.permission === 'granted' && (await mySub()); return !!s; }
+async function enablePush() {
+  if (!pushOk()) throw new Error(IOS && !STANDALONE ? 'Su iPhone aggiungi prima l\'app alla schermata Home (Condividi → Aggiungi alla schermata Home) e aprila da lì' : 'Questo telefono o browser non supporta le notifiche');
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error('Notifiche bloccate: attivale dalle impostazioni del telefono per questa app');
+  const reg = await navigator.serviceWorker.ready;
+  const { key } = await api('/api/push/key');
+  const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(key) }));
+  ME.push = await api('/api/me/push', 'POST', { sub: sub.toJSON() });
+  api('/api/me/push/test', 'POST').catch(() => {});
+}
+async function disablePush() { const s = await mySub(); if (s) { await api('/api/me/push', 'DELETE', { endpoint: s.endpoint }).catch(() => {}); await s.unsubscribe().catch(() => {}); } }
+async function pushCard(el) {
+  if (!el) return;
+  const on = await pushOn(), p = ME.push || { hour: 9, off: [] }, off = new Set(p.off || []);
+  const hours = Array.from({ length: 16 }, (_, i) => i + 6);
+  el.innerHTML = `<div class="card"><div class="row between"><b>🔔 Notifiche</b><span class="pill ${on ? 'accent' : ''}">${on ? 'Attive' : 'Spente'}</span></div>
+    <div class="muted small" style="margin-top:4px">Ti ricordo l'allenamento del giorno, ti do una spinta se salti qualche giorno e ti avviso quando il coach ti scrive.</div>
+    ${on ? `<label style="margin-top:10px;display:block">Orario del promemoria<select id="phour">${hours.map((h) => `<option value="${h}" ${h === (p.hour ?? 9) ? 'selected' : ''}>${h}:00</option>`).join('')}</select></label>
+      <div class="qchips" style="margin-top:10px">${[['workout', 'Allenamento del giorno'], ['missed', 'Se salto qualche giorno'], ['chat', 'Messaggi']].map(([k, l]) => `<button type="button" class="qchip ${off.has(k) ? '' : 'on'}" data-pk="${k}">${l}</button>`).join('')}</div>
+      <button class="btn block" style="margin-top:12px" id="poff">Spegni le notifiche</button>`
+    : `<button class="btn primary block" style="margin-top:12px" id="pon">Attiva le notifiche</button>
+      ${IOS && !STANDALONE ? '<div class="muted small" style="margin-top:8px">Su iPhone: prima aggiungi l\'app alla schermata Home (Condividi → "Aggiungi alla schermata Home") e aprila da lì.</div>' : ''}`}</div>`;
+  const q = (x) => el.querySelector(x);
+  if (q('#pon')) q('#pon').onclick = async () => { try { await enablePush(); toast('Notifiche attive 💪'); pushCard(el); } catch (err) { toast(err.message, true); } };
+  if (q('#poff')) q('#poff').onclick = async () => { await disablePush(); toast('Notifiche spente'); pushCard(el); };
+  if (q('#phour')) q('#phour').onchange = async (e) => { ME.push = await api('/api/me/push', 'PUT', { hour: Number(e.target.value) }); toast(`Promemoria alle ${e.target.value}:00`); };
+  el.querySelectorAll('[data-pk]').forEach((b) => (b.onclick = async () => { b.classList.toggle('on'); const o = [...el.querySelectorAll('[data-pk]')].filter((x) => !x.classList.contains('on')).map((x) => x.dataset.pk); ME.push = await api('/api/me/push', 'PUT', { off: o }); }));
+}
+// in "Oggi", una volta sola: invito ad attivarle
+async function pushAsk(el) {
+  if (!el || !pushOk() || Notification.permission !== 'default' || ls.get('pushAsked', false) || (await pushOn())) return;
+  el.innerHTML = `<div class="card pushask"><div class="row" style="gap:12px;align-items:flex-start"><span style="font-size:26px">🔔</span><div style="flex:1"><b>Te lo ricordo io?</b>
+    <div class="muted small">Attiva le notifiche: ti dico che allenamento c'hai oggi e, se salti, ti vengo a cercà 😄</div></div></div>
+    <div class="row" style="margin-top:10px;gap:8px"><button class="btn primary" style="flex:1" id="pask">Attiva</button><button class="btn" id="pno">Più tardi</button></div></div>`;
+  el.querySelector('#pno').onclick = () => { ls.set('pushAsked', true); el.innerHTML = ''; };
+  el.querySelector('#pask').onclick = async () => { ls.set('pushAsked', true); try { await enablePush(); toast('Notifiche attive 💪'); el.innerHTML = ''; } catch (err) { toast(err.message, true); } };
+}
 async function refreshMe() { try { ME = await api('/api/me'); meAt = Date.now(); } catch {} }
 const progCache = new Map();
 const getProgram = async (id) => progCache.get(id) || progCache.set(id, await api(`/api/programs/${id}`)).get(id);
@@ -364,11 +409,15 @@ async function homeView() {
       <div class="t">${esc(nw.title)}</div><div class="muted small">${esc(prog.title)}${cycleWeek(prog) ? ` · settimana ${cycleWeek(prog)} di ${prog.weeks}` : ''} · ~${Math.round(estimateSeconds(nw) / 60)} min</div>
       <a class="btn primary block" style="margin-top:12px" href="#/w/${prog.id}/${nw.id}">▶ Vai all'allenamento</a></div>`
       : '<div class="card muted">Nessun programma disponibile per ora.</div>'}
+    <div id="pushask"></div>
     ${board.challenges.length ? `<div class="h2">Challenge</div>${board.challenges.map(challengeCard).join('')}` : ''}
     ${board.tips.length ? `<div class="h2">Consigli</div>${board.tips.map((tp) => `<div class="card tip">${embedUrl(tp.videoUrl) ? `<div class="tvid"><iframe src="${esc(embedUrl(tp.videoUrl))}" allow="encrypted-media; fullscreen" allowfullscreen loading="lazy" title="${esc(tp.title)}"></iframe></div>` : tp.image ? `<img src="${esc(tp.image)}" alt="">` : ''}<b>${esc(tp.title)}</b><div class="muted">${esc(tp.text).replace(/\n/g, '<br>')}</div></div>`).join('')}` : ''}
   `);
   $app.querySelectorAll('[data-ch]').forEach((el) => el.addEventListener('click', onChallenge));
   $app.querySelectorAll('[data-wplay]').forEach((el) => { el.onclick = () => welcomePlayer(); });
+  pushAsk(document.getElementById('pushask'));
+  // il server usa il prossimo allenamento per il promemoria del mattino
+  if (nw && ME.id !== 'admin-preview' && ls.get('nextWo', '') !== nw.title + prog.id) api('/api/me/next', 'PUT', { title: nw.title, program: prog.title }).then(() => ls.set('nextWo', nw.title + prog.id)).catch(() => {});
   coachInfo().then((c) => { const el = document.getElementById('coachcard'); if (el && c.coach) el.innerHTML = `<a class="card coachmsg" href="#/chat/${c.coachRoom}"><span class="cm-ico">💬</span><div style="flex:1"><b>Alessio ti ha scritto</b><div class="muted small">${c.coach === 1 ? 'Hai un messaggio nuovo' : `Hai ${c.coach} messaggi nuovi`}: tocca per leggere</div></div><span class="badge">${c.coach}</span></a>`; });
   const wc = document.getElementById('wclose');
   if (wc) wc.onclick = () => welcomeDone();
@@ -1006,6 +1055,7 @@ function profileView() {
     </form>
     <div class="card"><b>La tua attrezzatura</b><div class="muted small">In Allenamenti ti mostro prima i programmi che puoi fare con questi attrezzi.</div>
       <div class="qchips" id="myeq" style="margin-top:10px">${[['kb1', '1 kettlebell'], ['kb2', '2 o più kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici']].map(([v, l]) => `<button type="button" class="qchip ${(myEquip() || []).includes(v) ? 'on' : ''}" data-eq="${v}">${l}</button>`).join('')}</div></div>
+    <div id="pushcard"></div>
     <div id="coachbtn"></div>
     ${welcomeSrc() ? '<button class="btn block" style="margin-top:12px" id="rewatch">▶ Rivedi il video di benvenuto</button>' : ''}
     <button class="btn block" style="margin-top:12px" id="logout">Esci</button>
@@ -1035,6 +1085,7 @@ function profileView() {
   const lv = document.getElementById('leave');
   if (lv) lv.onclick = async () => { if (!confirm('Uscire dalla community? Non comparirai più tra i membri e non potrai scrivere in chat.')) return; ME = await api('/api/me/community', 'PUT', { joined: false }); profileView(); };
   document.getElementById('logout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };
+  pushCard(document.getElementById('pushcard'));
   document.getElementById('delacc').onclick = async () => {
     const c = prompt('Vuoi cancellare il tuo account? Perdi allenamenti fatti, progressi e foto, e non si può tornare indietro.\n\nSe hai un abbonamento attivo, per disdirlo scrivi all\'assistenza.\n\nPer confermare scrivi ELIMINA');
     if (c === null) return;

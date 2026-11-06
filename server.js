@@ -656,6 +656,7 @@ cm.post('/chat/:room', (req, res) => {
   save();
   res.json(msgOut(m));
   notifyCoach(req.user, r, m);
+  if (r.other) pushTo(r.other, { title: `💬 ${req.user.name}`, body: text.slice(0, 120), url: `/#/chat/dm-${req.user.id}`, tag: `dm-${req.user.id}` }, 'chat');
 });
 // ---- foto in chat: il telefono le riduce prima (≈1280 px), qui un tetto di 3 MB e 10 foto al giorno a testa
 const PHOTO_DIR = path.join(DATA_DIR, 'chatphotos');
@@ -1275,6 +1276,7 @@ function coachTick() {
       const m = { id: newId(), room: dmKey(coach.id, u.id), from: coach.id, text, ts: Date.now() };
       if (st.video && (db.settings.welcomeVideo || db.settings.welcomeUrl)) m.video = true;
       db.messages.push(m);
+      pushTo(u, { title: '💬 Alessio ti ha scritto', body: text.slice(0, 120), url: `/#/chat/dm-${coach.id}`, tag: 'coach' }, 'chat');
       sent[st.key] = new Date().toISOString(); changed = true;
       break; // un messaggio alla volta
     }
@@ -1282,6 +1284,90 @@ function coachTick() {
   if (changed) save();
 }
 setInterval(() => { try { coachTick(); } catch (e) { console.error('coachTick', e.message); } }, 5 * 60 * 1000);
+
+// ---- notifiche push (web push: Android, iPhone con l'app sulla schermata Home, PC) ---------------------
+// Chiavi VAPID create una volta e tenute nel db (che non va su git). Il membro sceglie l'orario del promemoria.
+const webpush = require('web-push');
+function vapid() {
+  if (!db.vapid) { db.vapid = webpush.generateVAPIDKeys(); save(); }
+  webpush.setVapidDetails(`mailto:${db.settings.supportEmail || 'uncoach.info@gmail.com'}`, db.vapid.publicKey, db.vapid.privateKey);
+  return db.vapid.publicKey;
+}
+async function pushTo(u, msg, kind) {
+  const p = u?.push;
+  if (!p?.subs?.length || p.off?.includes(kind)) return 0;
+  let ok = 0;
+  for (const s of p.subs.slice()) {
+    try { vapid(); await webpush.sendNotification(s, JSON.stringify(msg), { TTL: 6 * 3600 }); ok++; }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) { p.subs = p.subs.filter((x) => x.endpoint !== s.endpoint); save(); } }
+  }
+  return ok;
+}
+app.get('/api/push/key', (req, res) => res.json({ key: vapid() }));
+me.post('/push', (req, res) => {
+  const s = req.body?.sub;
+  if (!s?.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return res.status(400).json({ error: 'Iscrizione alle notifiche non valida' });
+  const p = (req.user.push ||= { subs: [], hour: 9 });
+  p.subs = [...p.subs.filter((x) => x.endpoint !== s.endpoint), { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }].slice(-5);
+  save(); res.json(pushState(req.user));
+});
+me.put('/push', (req, res) => {
+  const p = (req.user.push ||= { subs: [], hour: 9 });
+  if (req.body?.hour != null) p.hour = Math.min(21, Math.max(6, Math.floor(Number(req.body.hour)) || 9));
+  if (Array.isArray(req.body?.off)) p.off = req.body.off.filter((k) => ['workout', 'missed', 'chat'].includes(k));
+  save(); res.json(pushState(req.user));
+});
+me.delete('/push', (req, res) => {
+  const p = req.user.push; const ep = String(req.body?.endpoint || '');
+  if (p) p.subs = ep ? p.subs.filter((x) => x.endpoint !== ep) : [];
+  save(); res.json(pushState(req.user));
+});
+me.post('/push/test', async (req, res) => res.json({ sent: await pushTo(req.user, { title: 'Notifiche attive ✅', body: 'Daje! Da oggi ti ricordo io gli allenamenti 💪', url: '/#/' }) }));
+const pushState = (u) => ({ subs: (u.push?.subs || []).map((x) => x.endpoint), hour: u.push?.hour ?? 9, off: u.push?.off || [] });
+// l'app dice al server qual è il prossimo allenamento (lo calcola lei), per il promemoria del mattino
+me.put('/next', (req, res) => { req.user.nextWo = { title: String(req.body?.title || '').slice(0, 80), program: String(req.body?.program || '').slice(0, 80) }; res.json({ ok: true }); });
+
+// testi in romano leggero: {nome}, {wo} = allenamento, {n} = giorni senza allenarsi
+const PUSH_TXT = {
+  workout: [
+    ['Oggi si allena 💪', '{nome}, oggi tocca a «{wo}». Daje che in mezz\'ora sei a posto!'],
+    ['È il tuo giorno! 🔥', '{nome}, ti aspetta «{wo}». Prendi la kettlebell e annamo!'],
+    ['Allenamento pronto ✅', '«{wo}» sta lì che t\'aspetta, {nome}. Riscaldamento e sei dentro.'],
+  ],
+  missed: [
+    ['Oh {nome}, che fine hai fatto? 👀', 'Sono {n} giorni che non ti alleni… la kettlebell sta a prende la polvere. Ripartiamo oggi?'],
+    ['Non è che hai mollato, eh? 😏', '{nome}, bastano 20 minuti per rimetterti in carreggiata. Apri l\'app e daje!'],
+    ['Ao, {nome}! 😄', '{n} giorni senza allenamento… Che fai, non ti alleni più? Oggi è il giorno buono.'],
+    ['Ti aspetto 💪', 'Anche un allenamento corto vale, {nome}. Il difficile è iniziare: il resto lo facciamo insieme.'],
+  ],
+};
+const fillTxt = (t, v) => t.replace(/\{nome\}/g, v.nome).replace(/\{wo\}/g, v.wo).replace(/\{n\}/g, v.n);
+const lastWorkoutDate = (u) => (u.history.at(-1)?.date || '').slice(0, 10);
+// ogni 5 minuti: all'ora scelta dal membro (ora di Roma), una notifica al giorno al massimo
+async function pushTick() {
+  const n = romeNow(), wd = new Date(n.date + 'T12:00Z').getUTCDay();
+  for (const u of db.users) {
+    const p = u.push;
+    if (!p?.subs?.length || !canUse(u) || n.hour !== (p.hour ?? 9) || p.lastDay === n.date) continue;
+    const last = lastWorkoutDate(u), gap = last ? daysBetween(last, n.date) : daysBetween(u.joined, n.date);
+    if (last === n.date) continue; // già allenato oggi
+    const nome = String(u.name || '').trim().split(/\s+/)[0] || '', train = (u.profile?.trainingDays || [1, 3, 5]).includes(wd);
+    let msg = null;
+    if (gap >= 3 && (p.missedRow || 0) < 4 && (!p.lastMissed || daysBetween(p.lastMissed, n.date) >= 3) && !p.off?.includes('missed')) {
+      const [t, b] = PUSH_TXT.missed[(p.missedRow || 0) % PUSH_TXT.missed.length];
+      msg = { kind: 'missed', title: fillTxt(t, { nome, wo: '', n: gap }), body: fillTxt(b, { nome, wo: '', n: gap }) };
+      p.missedRow = (p.missedRow || 0) + 1; p.lastMissed = n.date;
+    } else if (train && u.nextWo?.title && !p.off?.includes('workout')) {
+      const [t, b] = PUSH_TXT.workout[(p.woRow = ((p.woRow || 0) + 1) % PUSH_TXT.workout.length)];
+      msg = { kind: 'workout', title: fillTxt(t, { nome, wo: u.nextWo.title, n: gap }), body: fillTxt(b, { nome, wo: u.nextWo.title, n: gap }) };
+    }
+    if (gap < 3) p.missedRow = 0; // si è allenato di recente: i promemoria "che fine hai fatto" ripartono da capo
+    p.lastDay = n.date;
+    if (msg) await pushTo(u, { title: msg.title, body: msg.body, url: '/#/', tag: msg.kind }, msg.kind);
+    save();
+  }
+}
+setInterval(() => { pushTick().catch((e) => console.error('pushTick', e.message)); }, 5 * 60 * 1000);
 setTimeout(() => { try { coachTick(); } catch {} }, 20 * 1000);
 // ultime risposte dei membri al coach, per il pannello
 admin.get('/coach-replies', (req, res) => {

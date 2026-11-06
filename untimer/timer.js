@@ -14,7 +14,7 @@ const PROVA = 'https://un-member.onrender.com/?utm_source=untimer&utm_medium=app
 
 const MODES = {
   emom: { name: 'EMOM', col: '#ffc21a', sub: 'Ogni X secondi, per X round', def: { every: 60, rounds: 10, slots: [{ text: '', rest: false }] } },
-  amrap: { name: 'AMRAP', col: '#ff7a00', sub: 'Più giri possibili nel tempo', def: { minutes: 12 } },
+  amrap: { name: 'AMRAP', col: '#ff7a00', sub: 'Più giri possibili nel tempo', def: { minutes: 12, items: [] } },
   afap: { name: 'AFAP', col: '#ff4d6d', sub: 'Il più veloce possibile', def: { cap: 0, items: [] } },
   it: { name: 'HIIT', col: '#35d07f', sub: 'Lavoro / recupero a intervalli', def: { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 60 } },
 };
@@ -28,7 +28,7 @@ const emomTotal = (c) => c.every * c.slots.length * c.rounds;
 const itTotal = (c) => ((c.work + c.rest) * c.rounds - c.rest) * c.sets + (c.sets - 1) * c.setRest;
 function summary(m, c) {
   if (m === 'emom') return `ogni ${secTxt(c.every)}${c.slots.length > 1 ? ` · ${c.slots.length} intervalli a giro` : ''} · ${c.rounds} round · ${fmt(emomTotal(c))}`;
-  if (m === 'amrap') return `${c.minutes} minuti`;
+  if (m === 'amrap') return `${c.minutes} ${c.minutes === 1 ? 'minuto' : 'minuti'}${c.items?.length ? ` · ${c.items.length} esercizi` : ''}`;
   if (m === 'afap') return `${c.items.length ? `${c.items.length} esercizi · ` : ''}${c.cap ? `time cap ${c.cap} min` : 'senza time cap'}`;
   return `${c.work}s / ${c.rest}s × ${c.rounds}${c.sets > 1 ? ` · ${c.sets} serie (${secTxt(c.setRest)} tra le serie)` : ''} · ${fmt(itTotal(c))}`;
 }
@@ -108,7 +108,7 @@ const menuBtn = '<button class="burger" id="burger" aria-label="Menu"><i></i><i>
 function openMenu() {
   const d = Object.assign(document.createElement('div'), { className: 'drawer' });
   d.innerHTML = `<aside><div class="dlogo">${logo()}</div>
-    <a href="#home">⏱<span>Timer</span></a><a href="#salvati">★<span>I miei timer</span></a>
+    <a href="#home">⏱<span>Timer</span></a><a href="#salvati">★<span>I miei timer</span></a><a href="#diario">📅<span>Diario</span></a>
     <a href="#workout">🔥<span>Prova i nostri workout</span></a><a href="#impostazioni">⚙︎<span>Impostazioni</span></a></aside>`;
   d.onclick = (e) => { if (e.target === d || e.target.closest('a')) d.remove(); };
   document.body.append(d);
@@ -122,7 +122,7 @@ function home() {
   app.innerHTML = `<main class="home"><header class="hbar">${menuBtn}</header>
     ${logo(true)}
     <div class="pills">${Object.entries(MODES).map(([k, m]) => `<a class="pill" href="#set-${k}" style="--c:${m.col}"><b>${m.name}</b><span>${m.sub}</span></a>`).join('')}</div>
-    <div class="hfoot"><a href="#salvati">★ I MIEI TIMER${n ? ` <em>${n}</em>` : ''}</a><a href="#workout" class="hpromo">Vuoi provare i nostri workout? <b>Prova gratis ›</b></a></div>
+    <div class="hfoot"><div class="hlinks"><a href="#salvati">★ I MIEI TIMER${n ? ` <em>${n}</em>` : ''}</a><a href="#diario">📅 DIARIO</a></div><a href="#workout" class="hpromo">Vuoi provare i nostri workout? <b>Prova gratis ›</b></a></div>
   </main>`;
   $('#burger').onclick = openMenu;
 }
@@ -161,12 +161,14 @@ function setup(m, savedIdx) {
           <button data-rest="${j}" class="tg ${sl.rest ? 'on' : ''}" title="Recupero">💤</button>${c.slots.length > 1 ? `<button data-rm="${j}" class="rm">✕</button>` : ''}</div>`).join('')}</div>
         <div class="row2"><button class="add" data-addslot="0">+ Intervallo</button><button class="add" data-addslot="1">+ Recupero</button></div></div>
       ${stepper('rounds', 'Round (giri completi)', c.rounds)}`;
-    if (m === 'amrap') body = stepper('minutes', 'Durata', c.minutes, `${c.minutes} min`) + '<p class="muted small center">Durante il timer premi "+1 GIRO" ogni volta che chiudi un giro.</p>';
-    if (m === 'afap') body = `<div class="field"><label>Esercizi (facoltativo)</label>
+    const items = (label, hint) => `<div class="field"><label>${label}</label>
         <div class="list">${c.items.map((it, j) => `<div class="li"><input data-reps="${j}" class="reps" type="number" inputmode="numeric" value="${it.reps || ''}" placeholder="rip">
-          <input data-name="${j}" value="${esc(it.name)}" placeholder="Esercizio" maxlength="40"><button data-rmi="${j}" class="rm">✕</button></div>`).join('') || '<p class="muted small">Es. 100 Burpees, 50 Swing… Durante il timer segni quante ne hai fatte e spunti quelli finiti.</p>'}</div>
-        <div class="row2"><button class="add" id="addi">+ Esercizio</button>${c.items.length ? '<button class="add" id="clr">Cancella tutto</button>' : ''}</div></div>
-      ${stepper('cap', 'Time cap', c.cap, c.cap ? `${c.cap} min` : 'nessuno')}`;
+          <input data-name="${j}" value="${esc(it.name)}" placeholder="Esercizio" maxlength="40"><button data-rmi="${j}" class="rm">✕</button></div>`).join('') || `<p class="muted small">${hint}</p>`}</div>
+        <div class="row2"><button class="add" id="addi">+ Esercizio</button>${c.items.length ? '<button class="add" id="clr">Cancella tutto</button>' : ''}</div></div>`;
+    if (m === 'amrap') body = stepper('minutes', 'Durata', c.minutes, `${c.minutes} min`)
+      + items('Il workout (esercizi di un giro, facoltativo)', 'Es. 10 Swing, 8 Burpees, 6 Goblet Squat. Durante il timer premi "+1 GIRO" a ogni giro chiuso; alla fine segni cosa hai fatto del giro non finito.');
+    if (m === 'afap') body = items('Esercizi (facoltativo)', 'Es. 100 Burpees, 50 Swing… Durante il timer segni quante ne hai fatte e spunti quelli finiti.')
+      + stepper('cap', 'Time cap', c.cap, c.cap ? `${c.cap} min` : 'nessuno');
     if (m === 'it') body = `<div class="pair">${stepper('work', 'Lavoro', c.work, secTxt(c.work))}${stepper('rest', 'Recupero', c.rest, secTxt(c.rest))}</div>
       ${stepper('rounds', 'Round', c.rounds)}
       <div class="pair">${stepper('sets', 'Ripeti tutto (serie)', c.sets, `${c.sets}×`)}${c.sets > 1 ? stepper('setRest', 'Recupero tra le serie', c.setRest, secTxt(c.setRest)) : ''}</div>`;
@@ -204,7 +206,7 @@ function setup(m, savedIdx) {
   draw();
 }
 // toglie le righe vuote prima di partire / salvare
-const clean = (m, c) => (m === 'afap' ? { ...clone(c), items: c.items.filter((it) => it.name.trim() || it.reps).map((it) => ({ name: it.name.trim(), reps: it.reps || 0 })) } : clone(c));
+const clean = (m, c) => (c.items ? { ...clone(c), items: c.items.filter((it) => it.name.trim() || it.reps).map((it) => ({ name: it.name.trim(), reps: it.reps || 0 })) } : clone(c));
 // finestra di conferma / nome dentro l'app (confirm e prompt del browser non vanno ovunque)
 let askEl = null;
 const closeAsk = () => { askEl?.remove(); askEl = null; };
@@ -236,14 +238,16 @@ function start(m, c, title) {
   if (location.hash === '#run') run(); else location.hash = '#run';
 }
 const elapsed = () => ((R.pauseAt || performance.now()) - R.t0 - R.paused) / 1000;
-const workTime = () => R.S.slice(0, R.i).filter((s) => s.kind !== 'prep').reduce((a, s) => a + s.dur, 0) + (R.S[R.i].kind === 'prep' ? 0 : elapsed());
+// secondi di lavoro fatti (a timer finito R.i è oltre l'ultimo tratto)
+const workTime = () => R.S.slice(0, R.i).filter((s) => s.kind !== 'prep').reduce((a, s) => a + s.dur, 0) + (!R.S[R.i] || R.S[R.i].kind === 'prep' ? 0 : elapsed());
 
 function run() {
   if (!R) return (location.hash = '#home');
-  const afapList = R.m === 'afap' && R.items.length;
-  app.innerHTML = `<main class="run ${afapList ? 'withlist' : ''}" style="--accent:${MODES[R.m].col}">
+  const afapList = R.m === 'afap' && R.items.length, wod = R.m === 'amrap' && R.items.length;
+  app.innerHTML = `<main class="run ${afapList || wod ? 'withlist' : ''}" style="--accent:${MODES[R.m].col}">
     <header class="rtop"><button class="x" id="stop">✕</button><b>${esc(R.title || MODES[R.m].name)}</b><span id="rr"></span></header>
     <div class="clock"><small id="lab"></small><div id="t">0:00</div><div id="txt"></div><div class="bar"><i id="bar"></i></div><p id="info"></p></div>
+    ${wod ? `<div class="wod">${R.items.map((it) => `<div><b>${it.reps || ''}</b>${esc(it.name || 'Esercizio')}</div>`).join('')}</div>` : ''}
     ${afapList ? `<div class="checklist">${R.items.map((it, j) => `<div class="ck" data-i="${j}"><button class="box" data-ok="${j}"></button>
         <div class="nm"><b>${esc(it.name || `Esercizio ${j + 1}`)}</b><span>${it.reps ? `<i>0</i> / ${it.reps}` : ''}</span></div>
         ${it.reps ? [1, 5, 10].map((v) => `<button class="pl" data-add="${j}" data-v="${v}">+${v}</button>`).join('') : ''}</div>`).join('')}</div>` : ''}
@@ -339,6 +343,9 @@ function finish(timeUp) {
   beep(1320, 300); setTimeout(() => beep(1760, 500), 320);
   say('Finito! Daje!');
   sleepOk();
+  R.when = Date.now(); R.dur = workTime();
+  if (R.m === 'amrap') { R.rounds = R.laps.length; R.items.forEach((it) => (it.n = 0)); }
+  logSave();
   location.hash = '#fine';
 }
 function stop(home = true) {
@@ -347,18 +354,70 @@ function stop(home = true) {
   if (home) location.hash = '#home';
 }
 
+// risultato in una riga, per la fine e per il diario
+function resultOf(r) {
+  if (r.m === 'afap') return r.result;
+  if (r.m === 'amrap') {
+    const part = r.items.filter((it) => it.n > 0).map((it) => `${it.n} ${it.name || 'esercizio'}`);
+    return `${r.rounds} ${r.rounds === 1 ? 'giro' : 'giri'}${part.length ? ` + ${part.join(', ')}` : ''}`;
+  }
+  return 'Completato';
+}
+// diario: ogni timer finito si salva da solo, con data e ora (massimo 500)
+function logSave() {
+  const log = ls.get('log', []).filter((x) => x.id !== R.when);
+  const items = R.m === 'afap' ? R.items.map((it) => ({ name: it.name, reps: it.reps, n: it.n, ok: it.ok })) : R.m === 'amrap' ? R.items.filter((it) => it.n > 0).map((it) => ({ name: it.name, n: it.n })) : [];
+  log.unshift({ id: R.when, m: R.m, c: R.c, title: R.title || '', res: resultOf(R), dur: Math.round(R.dur), laps: R.laps.map(Math.round), items });
+  ls.set('log', log.slice(0, 500));
+}
+const when = (t) => new Date(t).toLocaleString('it-IT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
 function end() {
   if (!R?.done) return (location.hash = '#home');
-  const { m, c, laps, result, items, title } = R;
+  const { m, c, laps, items, title } = R;
   delete document.body.dataset.kind; document.body.classList.remove('paused');
-  const big = m === 'afap' ? result : m === 'amrap' && laps.length ? `${laps.length} ${laps.length === 1 ? 'giro' : 'giri'}` : 'FATTO!';
   const lapList = laps.length ? `<div class="laps">${laps.map((t, j) => `<span><em>${j + 1}</em>${fmt(t - (laps[j - 1] || 0))}</span>`).join('')}</div>` : '';
-  const itemList = items.length ? `<div class="laps items">${items.map((it) => `<span class="${it.ok ? 'ok' : ''}">${it.ok ? '✓' : '·'} ${esc(it.name || 'Esercizio')}${it.reps ? ` ${it.n}/${it.reps}` : ''}</span>`).join('')}</div>` : '';
-  app.innerHTML = `<main class="page end" style="--accent:${MODES[m].col}"><div class="done">💪</div><h1>DAJE!</h1>
-    <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b>${big}</b>${lapList}${itemList}</div>
+  const itemList = m === 'afap' && items.length ? `<div class="laps items">${items.map((it) => `<span class="${it.ok ? 'ok' : ''}">${it.ok ? '✓' : '·'} ${esc(it.name || 'Esercizio')}${it.reps ? ` ${it.n}/${it.reps}` : ''}</span>`).join('')}</div>` : '';
+  // AMRAP: giri completi (si possono correggere) + cosa hai fatto del giro non finito
+  const amrapBox = m === 'amrap' ? `<div class="field am"><label>Giri completi</label>
+      <div class="stepper"><button data-g="-1">−</button><output id="giri">${R.rounds}</output><button data-g="1">+</button></div></div>
+    ${items.length ? `<div class="field am"><label>Giro non finito: quante ne hai fatte?</label><div class="list">${items.map((it, j) => `<div class="li part">
+      <span class="pn">${esc(it.name || 'Esercizio')}${it.reps ? ` <small>/ ${it.reps}</small>` : ''}</span>
+      <button data-p="${j}" data-d="-1">−</button><output data-po="${j}">${it.n}</output><button data-p="${j}" data-d="1">+</button>
+      ${it.reps ? `<button class="all" data-pa="${j}">TUTTE</button>` : ''}</div>`).join('')}</div></div>` : ''}` : '';
+  app.innerHTML = `<main class="page end" style="--accent:${MODES[m].col}"><h1>DAJE!</h1>
+    <div class="res"><small>${esc(title || MODES[m].name)} · ${summary(m, c)}</small><b id="big">${m === 'it' || m === 'emom' ? 'FATTO!' : resultOf(R)}</b>${lapList}${itemList}
+      <span class="when">${when(R.when)} · ${fmt(R.dur)} di lavoro · salvato nel diario</span></div>
+    ${amrapBox}
     <div class="row"><button id="again" class="go">RIFAI</button><a class="btn" href="#home">HOME</a></div>
     <a class="promo" href="${PROVA}" target="_blank" rel="noopener"><div><small>VUOI UN WORKOUT GIÀ PRONTO?</small><b>PROVA I NOSTRI ALLENAMENTI</b></div><i>›</i></a></main>`;
+  const upd = () => { $('#big').textContent = resultOf(R); logSave(); };
+  app.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { R.rounds = Math.max(0, R.rounds + Number(b.dataset.g)); $('#giri').textContent = R.rounds; upd(); }));
+  const setP = (j, v) => { const it = items[j]; it.n = Math.max(0, it.reps ? Math.min(it.reps, v) : v); app.querySelector(`[data-po="${j}"]`).textContent = it.n; upd(); };
+  app.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => setP(b.dataset.p, items[b.dataset.p].n + Number(b.dataset.d))));
+  app.querySelectorAll('[data-pa]').forEach((b) => (b.onclick = () => setP(b.dataset.pa, items[b.dataset.pa].reps)));
   $('#again').onclick = () => start(m, c, title);
+}
+
+// diario dei workout fatti, raggruppati per giorno
+function diary() {
+  const log = ls.get('log', []);
+  let day = '';
+  const rows = log.map((x) => {
+    const d = new Date(x.id).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const head = d !== day ? `<h2>${(day = d)}</h2>` : '';
+    const det = x.items?.length && x.m === 'afap' ? x.items.map((it) => `${it.ok ? '✓' : '·'} ${esc(it.name || 'Esercizio')}${it.reps ? ` ${it.n}/${it.reps}` : ''}`).join(' &nbsp; ') : '';
+    return `${head}<div class="sv lg" style="--c:${MODES[x.m].col}"><div class="lgx"><small>${MODES[x.m].name} · ${new Date(x.id).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</small>
+      <b>${esc(x.res)}</b><span>${x.title ? esc(x.title) + ' · ' : ''}${summary(x.m, { ...clone(MODES[x.m].def), ...x.c })}${x.dur ? ` · ${fmt(x.dur)}` : ''}</span>${det ? `<span>${det}</span>` : ''}</div>
+      <button data-redo="${x.id}" aria-label="Rifai">↻</button><button data-dl="${x.id}" aria-label="Elimina">✕</button></div>`;
+  }).join('');
+  app.innerHTML = `<main class="page">${back('DIARIO')}
+    ${rows || '<p class="muted">Qui trovi ogni workout finito, con data, ora e risultato. Si salvano da soli.</p>'}</main>`;
+  app.querySelectorAll('[data-redo]').forEach((b) => (b.onclick = () => { const x = log.find((y) => y.id == b.dataset.redo); start(x.m, { ...clone(MODES[x.m].def), ...x.c }, x.title); }));
+  app.querySelectorAll('[data-dl]').forEach((b) => (b.onclick = async () => {
+    if (!(await ask('Eliminare questo workout dal diario?', { ok: 'Elimina' }))) return;
+    ls.set('log', ls.get('log', []).filter((y) => y.id != b.dataset.dl)); diary();
+  }));
 }
 
 // "Workout": l'unico posto dove si parla di UN-MEMBER, con un link esterno
@@ -400,6 +459,7 @@ function route() {
   if (sm) return setup(sm[1], sm[2] != null ? Number(sm[2]) : null);
   if (h === 'workout') return workout();
   if (h === 'salvati') return savedPage();
+  if (h === 'diario') return diary();
   if (h === 'impostazioni') return settings();
   home();
 }

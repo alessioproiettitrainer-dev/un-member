@@ -11,7 +11,10 @@ const ls = {
 };
 const clone = (o) => JSON.parse(JSON.stringify(o));
 // link esterno alla prova gratuita di UN-MEMBER (l'unico collegamento con l'altra app)
-const PROVA = 'https://un-member.onrender.com/?utm_source=untimer&utm_medium=app&utm_campaign=timer#/prova';
+// nell'app iPhone/iPad porta alla scheda App Store di UN-MEMBER (Apple non vuole link a pagamenti fuori dallo store)
+const PROVA = window.Capacitor?.getPlatform?.() === 'ios'
+  ? 'https://apps.apple.com/app/id1637634457'
+  : 'https://un-member.onrender.com/?utm_source=untimer&utm_medium=app&utm_campaign=timer#/prova';
 
 const opts = () => ({ voice: true, beep: true, prep: 10, ...ls.get('opts', {}) });
 // lingua: 'rm' romano o 'en' inglese (la prima volta dal telefono)

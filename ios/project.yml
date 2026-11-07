@@ -12,14 +12,16 @@ targets:
       - UNMEMBER
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.uncoach.unmember
+        # identificativo della vecchia scheda App Store "UN-MEMBER" (ex YMove): la nuova app esce come aggiornamento
+        PRODUCT_BUNDLE_IDENTIFIER: theunconventionalcoach.ymove.app
         PRODUCT_NAME: UNMEMBER
-        MARKETING_VERSION: "1.0.0"
+        MARKETING_VERSION: "2.0.0"
         CURRENT_PROJECT_VERSION: "1"
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"   # iPhone + iPad: la vecchia versione supportava l'iPad, l'aggiornamento deve continuare
         INFOPLIST_FILE: UNMEMBER/Info.plist
         CODE_SIGN_ENTITLEMENTS: UNMEMBER/UNMEMBER.entitlements
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: G9L6F6HZQX
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: NO

@@ -19,12 +19,15 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         if let n = launchOptions?[.remoteNotification] as? [AnyHashable: Any], let url = n["url"] as? String {
             WebVC.shared.pendingPath = url
         }
-        let w = UIWindow(frame: UIScreen.main.bounds)
-        w.backgroundColor = DARK
-        w.rootViewController = WebVC.shared
-        w.makeKeyAndVisible()
-        window = w
         return true
+    }
+
+    // iOS 27: le app devono usare le "scene"; la finestra la crea SceneDelegate
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let c = UISceneConfiguration(name: "Default", sessionRole: connectingSceneSession.role)
+        c.delegateClass = SceneDelegate.self
+        return c
     }
 
     // token Apple del telefono: lo passo all'app web, che lo manda al server
@@ -47,6 +50,24 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         if let url = response.notification.request.content.userInfo["url"] as? String { WebVC.shared.open(path: url) }
         completionHandler()
+    }
+}
+
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard let ws = scene as? UIWindowScene else { return }
+        // aperta toccando una notifica a app chiusa: dopo il caricamento va alla pagina giusta
+        if let r = connectionOptions.notificationResponse,
+           let url = r.notification.request.content.userInfo["url"] as? String {
+            WebVC.shared.pendingPath = url
+        }
+        let w = UIWindow(windowScene: ws)
+        w.backgroundColor = DARK
+        w.rootViewController = WebVC.shared
+        w.makeKeyAndVisible()
+        window = w
     }
 }
 

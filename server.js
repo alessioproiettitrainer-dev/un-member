@@ -1295,10 +1295,45 @@ function vapid() {
   webpush.setVapidDetails(`mailto:${db.settings.supportEmail || 'uncoach.info@gmail.com'}`, db.vapid.publicKey, db.vapid.privateKey);
   return db.vapid.publicKey;
 }
+// notifiche Apple (app iPhone): HTTP/2 verso i server Apple con un "gettone" firmato con la chiave .p8
+// variabili su Render: APNS_KEY_P8 (testo della chiave), APNS_KEY_ID, APNS_TEAM_ID; APNS_SANDBOX=1 solo per le prove da Xcode
+const http2 = require('http2');
+let apnsJwt = { token: '', at: 0 }, apnsConn = null;
+const apnsOn = () => !!(process.env.APNS_KEY_P8 && process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID);
+function apnsToken() {
+  if (apnsJwt.token && Date.now() - apnsJwt.at < 45 * 60e3) return apnsJwt.token;
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const head = b64({ alg: 'ES256', kid: process.env.APNS_KEY_ID }), body = b64({ iss: process.env.APNS_TEAM_ID, iat: Math.floor(Date.now() / 1000) });
+  const key = process.env.APNS_KEY_P8.replace(/\\n/g, '\n');
+  const sig = crypto.sign('sha256', Buffer.from(`${head}.${body}`), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+  apnsJwt = { token: `${head}.${body}.${sig}`, at: Date.now() };
+  return apnsJwt.token;
+}
+function apnsSend(token, msg) {
+  return new Promise((ok) => {
+    try {
+      if (!apnsConn || apnsConn.closed || apnsConn.destroyed) { apnsConn = http2.connect(process.env.APNS_SANDBOX === '1' ? 'https://api.sandbox.push.apple.com' : 'https://api.push.apple.com'); apnsConn.on('error', () => { apnsConn = null; }); }
+      const req = apnsConn.request({ ':method': 'POST', ':path': `/3/device/${token}`, authorization: `bearer ${apnsToken()}`, 'apns-topic': process.env.APNS_TOPIC || 'com.uncoach.unmember', 'apns-push-type': 'alert', 'content-type': 'application/json' });
+      let status = 0, data = '';
+      req.on('response', (h) => { status = h[':status']; });
+      req.on('data', (c) => { data += c; });
+      req.on('end', () => ok({ status, reason: (() => { try { return JSON.parse(data).reason; } catch { return ''; } })() }));
+      req.on('error', () => ok({ status: 0 }));
+      req.end(JSON.stringify({ aps: { alert: { title: msg.title, body: msg.body }, sound: 'default', 'thread-id': msg.tag || 'un' }, url: msg.url || '/#/' }));
+      req.setTimeout(10000, () => { req.close(); ok({ status: 0 }); });
+    } catch { ok({ status: 0 }); }
+  });
+}
 async function pushTo(u, msg, kind) {
   const p = u?.push;
-  if (!p?.subs?.length || p.off?.includes(kind)) return 0;
+  if ((!p?.subs?.length && !p?.ios?.length) || p.off?.includes(kind)) return 0;
   let ok = 0;
+  if (p.ios?.length && apnsOn()) for (const t of p.ios.slice()) {
+    const r = await apnsSend(t, msg);
+    if (r.status === 200) ok++;
+    else if (r.status === 410 || r.reason === 'BadDeviceToken' || r.reason === 'Unregistered') { p.ios = p.ios.filter((x) => x !== t); save(); }
+  }
+  p.subs ||= [];
   for (const s of p.subs.slice()) {
     try { vapid(); await webpush.sendNotification(s, JSON.stringify(msg), { TTL: 6 * 3600 }); ok++; }
     catch (e) { if (e.statusCode === 404 || e.statusCode === 410) { p.subs = p.subs.filter((x) => x.endpoint !== s.endpoint); save(); } }
@@ -1324,6 +1359,15 @@ me.delete('/push', (req, res) => {
   if (p) p.subs = ep ? p.subs.filter((x) => x.endpoint !== ep) : [];
   save(); res.json(pushState(req.user));
 });
+// app iPhone: il token Apple del telefono (esadecimale)
+me.post('/push-ios', (req, res) => {
+  const t = String(req.body?.token || '').trim();
+  if (!/^[0-9a-fA-F]{32,200}$/.test(t)) return res.status(400).json({ error: 'Token notifiche non valido' });
+  const p = (req.user.push ||= { subs: [], hour: 9 });
+  p.ios = [...(p.ios || []).filter((x) => x !== t), t].slice(-5);
+  save(); res.json(pushState(req.user));
+});
+me.delete('/push-ios', (req, res) => { if (req.user.push) req.user.push.ios = []; save(); res.json(pushState(req.user)); });
 me.post('/push/test', async (req, res) => res.json({ sent: await pushTo(req.user, { title: 'Notifiche attive ✅', body: 'Daje! Da oggi ti ricordo io gli allenamenti 💪', url: '/#/' }) }));
 // chat: in privato subito; nel gruppo raggruppate (una ogni 3 ore, 30 minuti se scrive il coach) e solo a chi non l'ha già letta
 function chatPush(from, r, m) {
@@ -1333,12 +1377,12 @@ function chatPush(from, r, m) {
   const coach = isCoach(from), gap = (coach ? 30 : 180) * 60e3, now = Date.now();
   for (const u of db.users) {
     const p = u.push;
-    if (u.id === from.id || !p?.subs?.length || !inCommunity(u) || !canUse(u) || blockedBy(u, from.id) || (u.lastRead?.general || 0) >= m.ts || now - (p.lastGroup || 0) < gap) continue;
+    if (u.id === from.id || (!p?.subs?.length && !p?.ios?.length) || !inCommunity(u) || !canUse(u) || blockedBy(u, from.id) || (u.lastRead?.general || 0) >= m.ts || now - (p.lastGroup || 0) < gap) continue;
     p.lastGroup = now;
     pushTo(u, { title: coach ? '📣 Alessio nella chat di gruppo' : '💬 Chat di gruppo', body: coach ? body : `${from.name}: ${body}`, url: '/#/community/chat', tag: 'group' }, 'group');
   }
 }
-const pushState = (u) => ({ subs: (u.push?.subs || []).map((x) => x.endpoint), hour: u.push?.hour ?? 9, off: u.push?.off || [] });
+const pushState = (u) => ({ subs: (u.push?.subs || []).map((x) => x.endpoint), ios: u.push?.ios || [], hour: u.push?.hour ?? 9, off: u.push?.off || [] });
 // l'app dice al server qual è il prossimo allenamento (lo calcola lei), per il promemoria del mattino
 me.put('/next', (req, res) => { req.user.nextWo = { title: String(req.body?.title || '').slice(0, 80), program: String(req.body?.program || '').slice(0, 80) }; res.json({ ok: true }); });
 
@@ -1363,7 +1407,7 @@ async function pushTick() {
   const n = romeNow(), wd = new Date(n.date + 'T12:00Z').getUTCDay();
   for (const u of db.users) {
     const p = u.push;
-    if (!p?.subs?.length || !canUse(u) || n.hour !== (p.hour ?? 9) || p.lastDay === n.date) continue;
+    if ((!p?.subs?.length && !p?.ios?.length) || !canUse(u) || n.hour !== (p.hour ?? 9) || p.lastDay === n.date) continue;
     const last = lastWorkoutDate(u), gap = last ? daysBetween(last, n.date) : daysBetween(u.joined, n.date);
     if (last === n.date) continue; // già allenato oggi
     const nome = String(u.name || '').trim().split(/\s+/)[0] || '', train = (u.profile?.trainingDays || [1, 3, 5]).includes(wd);

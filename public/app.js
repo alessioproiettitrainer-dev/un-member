@@ -67,11 +67,20 @@ setInterval(ping, 60e3); document.addEventListener('visibilitychange', ping); se
 // iPhone: funzionano solo con l'app aggiunta alla schermata Home (Condividi → Aggiungi alla schermata Home)
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const STANDALONE = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const pushOk = () => IOSAPP || ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+// app iPhone: chiede al codice nativo il permesso e il "token" Apple, poi lo manda al server
+const iosAsk = (what) => new Promise((ok) => { window.__unmemberPush = (r) => ok(r || {}); window.webkit.messageHandlers.unmember.postMessage({ push: what }); setTimeout(() => ok({ timeout: true }), 60000); });
 const b64u = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4), r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map((c) => c.charCodeAt(0))); };
 async function mySub() { try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch { return null; } }
-async function pushOn() { const s = pushOk() && Notification.permission === 'granted' && (await mySub()); return !!s; }
+async function pushOn() { if (IOSAPP) return !!(ME.push?.ios || []).length && (await iosAsk('status')).granted === true; const s = pushOk() && Notification.permission === 'granted' && (await mySub()); return !!s; }
 async function enablePush() {
+  if (IOSAPP) {
+    const r = await iosAsk('enable');
+    if (!r.token) throw new Error(r.denied ? 'Notifiche bloccate: attivale in Impostazioni → UN-MEMBER → Notifiche' : 'Non riesco ad attivare le notifiche, riprova');
+    ME.push = await api('/api/me/push-ios', 'POST', { token: r.token });
+    api('/api/me/push/test', 'POST').catch(() => {});
+    return;
+  }
   if (!pushOk()) throw new Error(IOS && !STANDALONE ? 'Su iPhone aggiungi prima l\'app alla schermata Home (Condividi → Aggiungi alla schermata Home) e aprila da lì' : 'Questo telefono o browser non supporta le notifiche');
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Notifiche bloccate: attivale dalle impostazioni del telefono per questa app');
@@ -81,7 +90,7 @@ async function enablePush() {
   ME.push = await api('/api/me/push', 'POST', { sub: sub.toJSON() });
   api('/api/me/push/test', 'POST').catch(() => {});
 }
-async function disablePush() { const s = await mySub(); if (s) { await api('/api/me/push', 'DELETE', { endpoint: s.endpoint }).catch(() => {}); await s.unsubscribe().catch(() => {}); } }
+async function disablePush() { if (IOSAPP) { ME.push = await api('/api/me/push-ios', 'DELETE').catch(() => ME.push); return; } const s = await mySub(); if (s) { await api('/api/me/push', 'DELETE', { endpoint: s.endpoint }).catch(() => {}); await s.unsubscribe().catch(() => {}); } }
 async function pushCard(el) {
   if (!el) return;
   const on = await pushOn(), p = ME.push || { hour: 9, off: [] }, off = new Set(p.off || []);
@@ -92,7 +101,7 @@ async function pushCard(el) {
       <div class="qchips" style="margin-top:10px">${[['workout', 'Allenamento del giorno'], ['missed', 'Se salto qualche giorno'], ['chat', 'Messaggi privati'], ['group', 'Chat di gruppo']].map(([k, l]) => `<button type="button" class="qchip ${off.has(k) ? '' : 'on'}" data-pk="${k}">${l}</button>`).join('')}</div>
       <button class="btn block" style="margin-top:12px" id="poff">Spegni le notifiche</button>`
     : `<button class="btn primary block" style="margin-top:12px" id="pon">Attiva le notifiche</button>
-      ${IOS && !STANDALONE ? '<div class="muted small" style="margin-top:8px">Su iPhone: prima aggiungi l\'app alla schermata Home (Condividi → "Aggiungi alla schermata Home") e aprila da lì.</div>' : ''}`}</div>`;
+      ${IOS && !STANDALONE && !IOSAPP ? '<div class="muted small" style="margin-top:8px">Su iPhone: prima aggiungi l\'app alla schermata Home (Condividi → "Aggiungi alla schermata Home") e aprila da lì.</div>' : ''}`}</div>`;
   const q = (x) => el.querySelector(x);
   if (q('#pon')) q('#pon').onclick = async () => { try { await enablePush(); toast('Notifiche attive 💪'); pushCard(el); } catch (err) { toast(err.message, true); } };
   if (q('#poff')) q('#poff').onclick = async () => { await disablePush(); toast('Notifiche spente'); pushCard(el); };
@@ -101,7 +110,9 @@ async function pushCard(el) {
 }
 // in "Oggi", una volta sola: invito ad attivarle
 async function pushAsk(el) {
-  if (!el || !pushOk() || Notification.permission !== 'default' || ls.get('pushAsked', false) || (await pushOn())) return;
+  // app iPhone con notifiche già attive: rinnova il token Apple (può cambiare), senza chiedere niente
+  if (IOSAPP && (ME.push?.ios || []).length && !pushAsk.done) { pushAsk.done = true; iosAsk('status').then((r) => r.granted && iosAsk('enable')).then((r) => r?.token && api('/api/me/push-ios', 'POST', { token: r.token }).then((p) => (ME.push = p))).catch(() => {}); }
+  if (!el || !pushOk() || (!IOSAPP && Notification.permission !== 'default') || ls.get('pushAsked', false) || (await pushOn())) return;
   el.innerHTML = `<div class="card pushask"><div class="row" style="gap:12px;align-items:flex-start"><span style="font-size:26px">🔔</span><div style="flex:1"><b>Te lo ricordo io?</b>
     <div class="muted small">Attiva le notifiche: ti dico che allenamento c'hai oggi e, se salti, ti vengo a cercà 😄</div></div></div>
     <div class="row" style="margin-top:10px;gap:8px"><button class="btn primary" style="flex:1" id="pask">Attiva</button><button class="btn" id="pno">Più tardi</button></div></div>`;
@@ -138,15 +149,17 @@ function tabbar(on) {
 }
 const previewBar = () => (ME?.id === 'admin-preview' ? `<div class="pvbar">Anteprima admin: qui le modifiche non vengono salvate. <a href="#/register">Iscriviti come membro</a> o <a href="#/login">accedi</a> per usare l'app come i tuoi clienti.</div>` : '');
 // Piani di abbonamento: ognuno apre direttamente il suo link di pagamento (se non ci sono piani, il link del sito)
-// app Android del Play Store (apre il sito con ?app=android): niente prezzi né link di pagamento esterni, lo vietano le regole di Google Play.
-// sessionStorage e non localStorage: lo spazio è lo stesso di Chrome, così sul sito aperto dal browser i piani restano.
-try { if (/[?&]app=android/.test(location.search) || document.referrer.startsWith('android-app://')) sessionStorage.setItem('android', '1'); } catch {}
-const ANDROID = (() => { try { return sessionStorage.getItem('android') === '1'; } catch { return false; } })();
-const plans = () => (ANDROID ? [] : (SETTINGS.plans || []).filter((x) => x.url && x.title));
-const hasPlans = () => !ANDROID && (plans().length > 0 || !!SETTINGS.shopUrl);
+// app degli store (Android apre il sito con ?app=android, iPhone con ?app=ios): niente prezzi né link di pagamento esterni,
+// lo vietano le regole di Google Play e di Apple. sessionStorage e non localStorage: sul sito aperto dal browser i piani restano.
+// IOSAPP = dentro l'app iPhone (c'è il "ponte" nativo per le notifiche Apple)
+const IOSAPP = !!window.webkit?.messageHandlers?.unmember;
+try { if (/[?&]app=(android|ios)/.test(location.search) || document.referrer.startsWith('android-app://') || IOSAPP) sessionStorage.setItem('android', '1'); } catch {}
+const STORE = (() => { try { return sessionStorage.getItem('android') === '1'; } catch { return false; } })();
+const plans = () => (STORE ? [] : (SETTINGS.plans || []).filter((x) => x.url && x.title));
+const hasPlans = () => !STORE && (plans().length > 0 || !!SETTINGS.shopUrl);
 function plansHtml() {
   const list = plans();
-  if (ANDROID) return '';
+  if (STORE) return '';
   if (!list.length) return SETTINGS.shopUrl ? `<a class="btn primary block" href="${esc(SETTINGS.shopUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.shopLabel || 'Scegli il tuo abbonamento')}</a>` : '';
   return `<div class="plans">${list.map((x) => `<a class="plan ${x.best ? 'best' : ''}" href="${esc(x.url)}" target="_blank" rel="noopener">
     ${x.best ? '<span class="tag">Consigliato</span>' : ''}<div class="pt">${esc(x.title)}</div>
@@ -224,7 +237,7 @@ async function route() {
     ls.set('wantTrial', false);
     if (ME.trialAvailable) { try { ME = await api('/api/me/trial', 'POST'); progCache.clear(); toast(`Settimana di prova attiva: buon allenamento!`); } catch (err) { toast(err.message, true); } }
   }
-  if (parts[0] === 'abbonati') return ANDROID ? (location.hash = '#/') : plansView();
+  if (parts[0] === 'abbonati') return STORE ? (location.hash = '#/') : plansView();
   if (!hasAccessNow()) { progCache.clear(); return paywallView(); } // prova finita o scaduto: solo la schermata per abbonarsi
   try {
     if (parts[0] === 'train') return await trainView();
@@ -1115,7 +1128,7 @@ function paywallView() {
       <p class="muted small">Nessun pagamento e nessun rinnovo automatico: alla fine decidi tu se abbonarti.</p>
       <button class="btn primary block" id="starttrial">Inizia la prova gratuita</button></div>` : ''}
     <div class="card">
-      ${ANDROID ? `<p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Progressi e storico restano salvati.`
+      ${STORE ? `<p style="margin-top:0">${expired ? `Il tuo accesso è scaduto il ${new Date(ME.accessUntil + 'T12:00').toLocaleDateString('it-IT')}. Progressi e storico restano salvati.`
         : trialOver ? 'La tua settimana di prova è finita. Progressi e storico restano salvati.'
         : ME.trialAvailable ? '' : 'Il tuo account è creato. Per sbloccare programmi e allenamenti serve un accesso attivo.'}</p>
       <p class="muted small">Hai già un accesso attivo? Entra con la stessa email (<b>${esc(ME.email)}</b>).</p>` : `
@@ -1125,9 +1138,9 @@ function paywallView() {
         : 'Il tuo account è creato. Per sbloccare programmi, challenge e allenamenti serve un abbonamento attivo.'}</p>
       <p class="muted small">Hai già pagato? Usa la stessa email (<b>${esc(ME.email)}</b>): ti attiviamo l'accesso il prima possibile.</p>`}
       ${plansHtml()}
-      ${SETTINGS.extraAppUrl && !ANDROID ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
+      ${SETTINGS.extraAppUrl && !STORE ? `<a class="btn block" style="margin-top:8px" href="${esc(SETTINGS.extraAppUrl)}" target="_blank" rel="noopener">${esc(SETTINGS.extraAppLabel || 'Scarica l\'app')}</a>` : ''}
       ${SETTINGS.supportEmail ? `<a class="btn block" style="margin-top:8px" href="mailto:${esc(SETTINGS.supportEmail)}">Scrivici</a>` : ''}
-      <button class="btn block" style="margin-top:8px" id="recheck">${ANDROID ? 'Ricontrolla il mio accesso' : 'Ho già pagato, ricontrolla'}</button>
+      <button class="btn block" style="margin-top:8px" id="recheck">${STORE ? 'Ricontrolla il mio accesso' : 'Ho già pagato, ricontrolla'}</button>
     </div>
     <div style="text-align:center;margin:18px 0 8px"><button class="linkbtn muted small" id="pwout">Esci dall'account</button></div></div>`;
   document.getElementById('pwout').onclick = async () => { await api('/api/auth/logout', 'POST'); ME = null; progCache.clear(); location.hash = '#/login'; };

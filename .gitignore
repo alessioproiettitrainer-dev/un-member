@@ -11,3 +11,6 @@ data/avatars/
 .env.*
 !.env.example
 PlayStore/
+AppStore/
+ios/*.xcodeproj/
+ios/build/

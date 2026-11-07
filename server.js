@@ -386,7 +386,8 @@ me.put('/welcome', (req, res) => {
   res.json(publicUser(req.user));
 });
 function startTrial(u) {
-  const days = Math.max(1, Number(db.settings.trialDays) || 7);
+  // beta tester (settings.trialBonus = { email: giorni }): prova più lunga di quella normale
+  const days = Math.max(1, Number(db.settings.trialBonus?.[String(u.email).toLowerCase()]) || Number(db.settings.trialDays) || 7);
   u.trialStart = today();
   u.trialUntil = new Date(Date.now() + (days - 1) * 864e5).toISOString().slice(0, 10); // oggi compreso
   db.trialEmails.push(trialKey(u.email));

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="it" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<title>UN-MEMBER · L'app di allenamento di Alessio Proietti</title>
+<meta name="description" content="Kettlebell, calisthenics e TRX con il metodo di Alessio Proietti, Unconventional Coach. Workout con video, timer e voce guida. Prova gratis 7 giorni dal browser: presto su Google Play e App Store.">
+<meta property="og:title" content="UN-MEMBER · Allenati con il metodo UN-COACH">
+<meta property="og:description" content="Kettlebell, calisthenics e TRX: workout guidati con video, timer e voce. Prova 7 giorni gratis.">
+<meta property="og:image" content="/icon-512.png">
+<meta name="theme-color" content="#0c0c0e">
+<link rel="icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap">
+<style>
+/* Landing UN-MEMBER (/scopri): pagina a sé, i bottoni portano alla prova gratuita (#/prova) */
+:root{--bg:#0c0c0e;--card:#16161a;--card2:#202026;--line:#2c2c34;--text:#f4f4f5;--muted:#a1a1aa;--accent:#ff7a00;--ink:#1a0c00}
+*{box-sizing:border-box}html,body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:Montserrat,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
+.wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:0 26px;border-radius:16px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;font-size:15px;background:var(--accent);color:var(--ink);box-shadow:0 10px 30px rgba(255,122,0,.28);transition:transform .15s}
+.btn:active{transform:scale(.98)}.btn.ghost{background:var(--card2);color:var(--text);box-shadow:none}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:7px 12px;border-radius:99px;background:rgba(255,122,0,.14);color:var(--accent)}
+.h{font-weight:900;text-transform:uppercase;letter-spacing:-.5px;line-height:1.02;margin:0}.h em{font-style:normal;color:var(--accent)}
+.muted{color:var(--muted)}section{padding:64px 0}
+/* barra in alto */
+.top{position:sticky;top:0;z-index:10;background:rgba(12,12,14,.86);backdrop-filter:blur(10px);border-bottom:1px solid #1d1d22}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.5px}
+.logo svg{height:22px}.top .btn{min-height:42px;padding:0 16px;font-size:12px;box-shadow:none}
+/* hero */
+.hero{overflow:hidden;padding:42px 0 30px;background:radial-gradient(90% 60% at 80% 10%,rgba(255,122,0,.18),transparent 60%)}
+.hero .wrap{display:grid;gap:34px;align-items:center}
+.hero h1{font-size:clamp(38px,9vw,72px);margin:16px 0 14px}
+.hero p.lead{font-size:18px;line-height:1.55;color:#d4d4d8;margin:0 0 24px;max-width:560px}
+.stores{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.store{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:700}
+.store b{display:block;font-size:15px}.store small{color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;font-size:10px}
+.note{font-size:13px;color:var(--muted);margin-top:12px}
+/* telefoni */
+.phones{display:flex;justify-content:center;align-items:flex-end;gap:14px;position:relative}
+.phone{width:min(42vw,250px);border-radius:34px;padding:8px;background:#111115;border:2px solid #2a2a30;box-shadow:0 30px 70px rgba(0,0,0,.6)}
+.phone img{border-radius:26px;aspect-ratio:480/1039;object-fit:cover;object-position:top}
+.phone.back{transform:translateY(-26px) rotate(-4deg);opacity:.92}.phone.front{transform:rotate(3deg)}
+/* numeri */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}
+.stat b{display:block;font-size:26px;font-weight:900;color:var(--accent)}.stat span{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+/* cosa trovi */
+.grid{display:grid;gap:14px;margin-top:28px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px}
+.feat .ico{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:rgba(255,122,0,.12);margin-bottom:14px}
+.feat h3{margin:0 0 6px;font-size:18px;font-weight:900;text-transform:uppercase}.feat p{margin:0;color:var(--muted);line-height:1.55;font-size:15px}
+.feat.big{background:linear-gradient(135deg,#2a1608,#16161a 70%);border-color:#4a2a10}
+.feat .tag{display:inline-block;margin-top:12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:5px 10px;border-radius:99px;background:var(--card2);color:var(--muted)}
+/* chi sono */
+.about{display:grid;gap:26px;align-items:center}
+.about .photo{position:relative;border-radius:26px;overflow:hidden;max-width:420px;margin:0 auto;border:1px solid var(--line)}
+.about .photo img{width:100%;aspect-ratio:2/3;object-fit:cover}
+.about .photo .badge{position:absolute;left:14px;bottom:14px;background:rgba(12,12,14,.85);border-radius:14px;padding:10px 14px;font-weight:900;font-size:13px;text-transform:uppercase}
+.about .photo .badge span{color:var(--accent)}
+.about p{line-height:1.7;color:#d4d4d8;font-size:16px;margin:0 0 14px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px}.tools span{font-size:12px;font-weight:800;padding:7px 12px;border-radius:99px;background:var(--card2);text-transform:uppercase;letter-spacing:.4px}
+.sign{font-weight:900;font-size:20px;margin-top:10px}.sign small{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+/* passi */
+.steps{display:grid;gap:12px;margin-top:26px;counter-reset:s}
+.step{display:flex;gap:16px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.step:before{counter-increment:s;content:counter(s);flex:0 0 40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--accent);color:var(--ink);font-weight:900;font-size:18px}
+.step b{display:block;font-size:16px;margin-bottom:4px}.step span{color:var(--muted);font-size:14px;line-height:1.5}
+/* piani */
+.plans{display:grid;gap:12px;margin-top:26px}
+.plan{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.plan.best{border-color:var(--accent)}.plan .t{font-weight:900;text-transform:uppercase;font-size:15px}
+.plan .p{font-size:28px;font-weight:900;margin-top:6px}.plan .p small{font-size:14px;color:var(--muted);font-weight:700}
+.plan .n{font-size:13px;color:var(--muted);margin-top:4px}.plan .save{color:var(--accent);font-weight:800}
+.plan .tg{position:absolute;top:-10px;right:14px;background:var(--accent);color:var(--ink);font-size:11px;font-weight:900;padding:4px 10px;border-radius:99px;text-transform:uppercase}
+/* domande */
+details{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:10px}
+summary{cursor:pointer;font-weight:800;list-style:none;display:flex;justify-content:space-between;gap:12px}summary::-webkit-details-marker{display:none}
+summary:after{content:'+';color:var(--accent);font-size:22px;line-height:1}details[open] summary:after{content:'–'}
+details p{color:var(--muted);line-height:1.6;margin:10px 0 0;font-size:15px}
+/* finale */
+.final{text-align:center;background:radial-gradient(70% 90% at 50% 100%,rgba(255,122,0,.22),transparent 70%)}
+.final h2{font-size:clamp(32px,7vw,54px);margin-bottom:14px}
+footer{border-top:1px solid #1d1d22;padding:28px 0 40px;color:var(--muted);font-size:13px;text-align:center}footer a{text-decoration:underline}
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(12,12,14,.96) 30%);display:none}
+.sticky .btn{width:100%}
+@media (max-width:759px){.sticky.on{display:block}}
+@media (min-width:760px){
+  .hero .wrap{grid-template-columns:1.1fr .9fr}.grid{grid-template-columns:repeat(3,1fr)}.feat.big{grid-column:span 2}
+  .about{grid-template-columns:.8fr 1.2fr}.steps{grid-template-columns:repeat(3,1fr)}.plans{grid-template-columns:repeat(2,1fr)}
+  section{padding:90px 0}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="#"><svg viewBox="0 0 924 516"><path fill="#f4f4f5" d="M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z"/></svg>UN-MEMBER</a>
+  <a class="btn cta" href="/#/prova">Prova gratis</a>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div>
+    <span class="pill">📱 Presto su Google Play e App Store</span>
+    <h1 class="h">Allenati con il metodo <em>UN&#8209;COACH</em>. Ovunque.</h1>
+    <p class="lead">Kettlebell, calisthenics e TRX: workout guidati con <b>video, timer e voce</b>, a casa o al parco. Tu premi play, al resto pensiamo noi.</p>
+    <a class="btn cta" href="/#/prova">Prova 7 giorni gratis →</a>
+    <div class="note">Nessun pagamento per provare. Funziona già dal browser di telefono, tablet e PC.</div>
+    <div class="stores">
+      <div class="store">▶<div><small>In arrivo su</small><b>Google Play</b></div></div>
+      <div class="store"><div><small>In arrivo su</small><b>App Store</b></div></div>
+      <div class="store">🌐<div><small>Disponibile ora</small><b>Dal browser</b></div></div>
+    </div>
+  </div>
+  <div class="phones">
+    <div class="phone back"><img src="/img/prova-programmi.webp" alt="Programmi di allenamento nell'app" loading="lazy"></div>
+    <div class="phone front"><img src="/img/prova-player.webp" alt="Player con video, timer e voce guida"></div>
+  </div>
+</div></section>
+
+<section style="padding-top:20px"><div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>14+</b><span>anni da coach</span></div>
+    <div class="stat"><b>7</b><span>giorni gratis</span></div>
+    <div class="stat"><b>1</b><span>coach che ti risponde</span></div>
+  </div>
+</div></section>
+
+<section id="cosa"><div class="wrap">
+  <span class="pill">Dentro l'app</span>
+  <h2 class="h" style="font-size:clamp(30px,6vw,48px);margin-top:14px">Tutto quello che ti serve per <em>allenarti sul serio</em></h2>
+  <div class="grid">
+    <div class="feat big"><div class="ico">🔥</div><h3>Il Programma del mese</h3>
+      <p>Doppia kettlebell, livello intermedio e avanzato. <b>Cambia ogni mese</b>, proprio come una classe di functional in palestra: ogni settimana sai cosa fare, senza mai annoiarti.</p><span class="tag">2 kettlebell · Intermedi e avanzati</span></div>
+    <div class="feat"><div class="ico">🏋️</div><h3>Workout di base</h3><p>Kettlebell, TRX e calisthenics per costruire tecnica e forza, passo dopo passo. Perfetti anche se parti da zero.</p></div>
+    <div class="feat"><div class="ico">⚡</div><h3>Sprint da 20 minuti</h3><p>Poco tempo? 20 minuti, una kettlebell e hai fatto. Veloci, intensi, ovunque.</p></div>
+    <div class="feat"><div class="ico">🎥</div><h3>Video, timer e voce</h3><p>Ogni esercizio ha la sua demo video. Il timer parte da solo e la voce ti dice cosa fare: intervalli, EMOM, AMRAP e a tempo.</p></div>
+    <div class="feat"><div class="ico">💬</div><h3>Parli direttamente con me</h3><p>Nessun bot: hai una chat privata con il coach. Dubbi sugli esercizi, sul programma o sull'app? Mi scrivi e ti rispondo io.</p></div>
+    <div class="feat"><div class="ico">👥</div><h3>La community</h3><p>Se ti va (non è obbligatorio) entri nella chat di gruppo: foto, messaggi e motivazione con tutti gli altri membri.</p></div>
+    <div class="feat"><div class="ico">📈</div><h3>I tuoi progressi</h3><p>Calendario, peso, foto prima/dopo, record e Test livelli: Base, Bronzo, Argento, Oro, Elite. Vedi quanto migliori.</p></div>
+    <div class="feat"><div class="ico">🎓</div><h3>Tutorial in arrivo</h3><p>Stanno arrivando tantissimi tutorial per imparare la tecnica di ogni esercizio, insieme a nuovi workout.</p><span class="tag">Novità ogni mese</span></div>
+  </div>
+</div></section>
+
+<section id="chi"><div class="wrap about">
+  <div class="photo"><img src="/img/coach.webp" alt="Alessio Proietti, Unconventional Coach" loading="lazy"><div class="badge">Alessio Proietti<br><span>Unconventional Coach</span></div></div>
+  <div>
+    <span class="pill">Chi sono</span>
+    <h2 class="h" style="font-size:clamp(30px,6vw,46px);margin:14px 0 18px">Ciao, sono <em>Alessio</em></h2>
+    <p>Sono un <b>Unconventional Coach da oltre 14 anni</b>. Sono nato come <b>calistenico</b>: ho gareggiato all'estero, ho fatto il <b>giudice</b> e faccio parte del <b>Team Busters</b>.</p>
+    <p>Con gli anni però ho capito che la calisthenics da sola non era un allenamento completo. Così ho iniziato a studiare l'<b>allenamento funzionale</b>: kettlebell, TRX, sacche bulgare, clave e tanto altro.</p>
+    <p>Da lì è nato <b>il mio metodo</b>: basato soprattutto su <b>kettlebell e corpo libero</b>, con TRX e attrezzi non convenzionali. È quello che trovi dentro UN-MEMBER.</p>
+    <div class="tools"><span>Kettlebell</span><span>Calisthenics</span><span>TRX</span><span>Sacche bulgare</span><span>Clave</span></div>
+    <div class="sign">Daje, ci vediamo dentro!<small>Alessio · UN-COACH</small></div>
+  </div>
+</div></section>
+
+<section id="come"><div class="wrap">
+  <span class="pill">Come funziona</span>
+  <h2 class="h" style="font-size:clamp(30px,6vw,46px);margin-top:14px">Inizi in <em>2 minuti</em></h2>
+  <div class="steps">
+    <div class="step"><div><b>Iscriviti gratis</b><span>Nome, email e password. La prova di 7 giorni parte subito, senza carta.</span></div></div>
+    <div class="step"><div><b>Rispondi a 2 domande</b><span>Ti consiglio io da quale programma partire, in base al tuo livello e agli attrezzi che hai.</span></div></div>
+    <div class="step"><div><b>Premi play e allenati</b><span>Video, timer e voce ti guidano dall'inizio alla fine. A casa, al parco o in viaggio.</span></div></div>
+  </div>
+  <div style="text-align:center;margin-top:28px"><a class="btn cta" href="/#/prova">Inizia la prova gratis →</a></div>
+</div></section>
+
+<section id="piani" hidden><div class="wrap">
+  <span class="pill">Dopo la prova</span>
+  <h2 class="h" style="font-size:clamp(30px,6vw,46px);margin-top:14px">Ti è piaciuta? <em>Continua così</em></h2>
+  <p class="muted" style="margin-top:12px;line-height:1.6">Prima provi gratis per 7 giorni, poi decidi tu: nessun rinnovo automatico della prova.</p>
+  <div class="plans" id="plans"></div>
+</div></section>
+
+<section id="faq"><div class="wrap" style="max-width:780px">
+  <span class="pill">Domande</span>
+  <h2 class="h" style="font-size:clamp(28px,5vw,40px);margin:14px 0 10px">Le domande che mi fanno <em>tutti</em></h2>
+  <details><summary>Quando arriva l'app sugli store?</summary><p>Presto: prima su Google Play, poi sull'App Store. Intanto l'app funziona già dal browser del telefono, identica. Su Android e iPhone puoi anche aggiungerla alla schermata Home e usarla come un'app. Quando esce, entri con lo stesso account e ritrovi tutto.</p></details>
+  <details><summary>Devo pagare per provarla?</summary><p>No. Ti iscrivi e hai 7 giorni gratis con accesso completo. Nessun pagamento e nessun rinnovo automatico: alla fine decidi tu se continuare.</p></details>
+  <details><summary>Che attrezzi mi servono?</summary><p>Dipende dal programma: ci sono workout con 1 kettlebell, con 2 kettlebell, con il TRX e solo a corpo libero. Al primo accesso mi dici cosa hai e ti consiglio io da dove partire.</p></details>
+  <details><summary>Sono principiante, va bene lo stesso?</summary><p>Sì. I workout di base (Kettlebell Volume 1, TRX, calisthenics) sono fatti apposta per chi inizia, con video di ogni esercizio. E se hai un dubbio mi scrivi in chat.</p></details>
+  <details><summary>Devo per forza entrare nella community?</summary><p>No, è facoltativa. Se ti va entri e ti scambi foto e messaggi con gli altri membri, altrimenti ti alleni per conto tuo. La chat privata con me c'è sempre.</p></details>
+</div></section>
+
+<section class="final"><div class="wrap">
+  <h2 class="h">Il primo workout <em>è già pronto</em></h2>
+  <p class="muted" style="font-size:17px;margin:0 0 26px">7 giorni gratis, da subito, dal tuo telefono.</p>
+  <a class="btn cta" href="/#/prova">Prova UN-MEMBER gratis →</a>
+  <div class="stores" style="justify-content:center"><div class="store">▶<div><small>Presto su</small><b>Google Play</b></div></div><div class="store"><div><small>Presto su</small><b>App Store</b></div></div></div>
+</div></section>
+
+<footer><div class="wrap">UN-MEMBER · Alessio Proietti · UN-COACH<br><a href="/privacy">Privacy</a> · <a href="/#/login">Accedi</a></div></footer>
+<div class="sticky" id="sticky"><a class="btn cta" href="/#/prova">Prova 7 giorni gratis</a></div>
+
+<script>
+// i bottoni portano alla prova e si portano dietro la provenienza (utm della pubblicità che ha aperto questa pagina)
+(function () {
+  var q = new URLSearchParams(location.search), keep = new URLSearchParams();
+  ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'fbclid', 'ttclid', 'gclid'].forEach(function (k) { if (q.get(k)) keep.set(k, q.get(k)); });
+  if (!keep.get('utm_source') && !keep.get('fbclid') && !keep.get('ttclid') && !keep.get('gclid')) { keep.set('utm_source', 'landing'); keep.set('utm_medium', 'web'); }
+  document.querySelectorAll('a.cta').forEach(function (a) { a.href = '/?' + keep.toString() + '#/prova'; });
+  // bottone fisso in basso sul telefono, dopo la prima schermata
+  var st = document.getElementById('sticky');
+  addEventListener('scroll', function () { st.classList.toggle('on', scrollY > innerHeight * 0.8 && innerHeight + scrollY < document.body.scrollHeight - 300); }, { passive: true });
+  // piani dal pannello (prezzi e note sempre aggiornati)
+  fetch('/api/settings').then(function (r) { return r.json(); }).then(function (s) {
+    var list = (s.plans || []).filter(function (p) { return p.title && p.price; });
+    if (!list.length) return;
+    var esc = function (t) { return String(t || '').replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    document.getElementById('plans').innerHTML = list.map(function (p) {
+      var note = esc(p.note).replace(/(Risparmi [^·]+)/, '<span class="save">$1</span>');
+      return '<div class="plan' + (p.best ? ' best' : '') + '">' + (p.best ? '<span class="tg">Consigliato</span>' : '') + '<div class="t">' + esc(p.title) + '</div><div class="p">' + esc(p.price) + ' <small>' + esc(p.period) + '</small></div>' + (note ? '<div class="n">' + note + '</div>' : '') + '</div>';
+    }).join('');
+    document.getElementById('piani').hidden = false;
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

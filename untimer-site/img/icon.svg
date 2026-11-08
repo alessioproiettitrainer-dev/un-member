@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0c0c0e"/>
+  <path transform="translate(106 150) scale(0.3247)" fill="#fff" d="M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z"/>
+  <text x="256" y="372" text-anchor="middle" font-family="Montserrat, Arial Black, sans-serif" font-weight="900" font-size="60" letter-spacing="14" fill="#ffffff">TIMER</text>
+</svg>

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="it" translate="no" class="notranslate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<title>UN-TIMER · Il timer gratis per EMOM, AMRAP, AFAP e HIIT</title>
+<meta name="description" content="L'app timer per chi fa allenamento funzionale: EMOM, Death EMOM, AMRAP, AFAP, HIIT e Tabata. Diario automatico, il coach che ti sprona in romano. Gratis, per sempre. Di The Unconventional Coach.">
+<meta name="theme-color" content="#0c0c0e">
+<meta property="og:title" content="UN-TIMER · Il timer che non te molla">
+<meta property="og:description" content="EMOM, AMRAP, AFAP e HIIT per chi fa funzionale sul serio. Gratis, per sempre.">
+<meta property="og:image" content="https://un-timer.onrender.com/img/og.jpg">
+<meta property="og:type" content="website">
+<link rel="icon" href="img/icon.svg">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap">
+<style>
+/* Pagina scura come l'app: nero caldo, arancione UN, verde "gratis". Titoli Montserrat Black maiuscoli. */
+:root {
+  --bg: #0c0c0e; --bg-2: #131316; --card: #18181c; --line: #2a2a31; --text: #f4f4f5; --muted: #a1a1aa;
+  --accent: #ff7a00; --ink: #140900; --free: #35d07f; --emom: #ffc21a; --afap: #ff4d6d;
+  --display: 'Montserrat', 'Arial Black', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 500 17px/1.6 var(--display); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+img, video { max-width: 100%; display: block; }
+a { color: inherit; }
+.wrap { max-width: 1140px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-weight: 900; text-transform: uppercase; line-height: 1.02; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-size: clamp(34px, 6vw, 60px); }
+.kick { display: inline-block; font-weight: 900; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink); background: var(--accent); padding: 6px 12px; border-radius: 8px; }
+.kick.free { background: var(--free); color: #04150b; }
+.hl { color: var(--accent); }
+.lead { color: #d4d4d8; font-size: clamp(17px, 2vw, 20px); max-width: 60ch; }
+section { padding-block: clamp(64px, 10vw, 120px); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+
+/* barra in alto */
+.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: rgba(12,12,14,.82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 21; }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 900; letter-spacing: .2em; font-size: 15px; }
+.brand svg { width: 44px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; text-decoration: none; border-radius: 999px; padding: 15px 26px; font-size: 16px; border: 0; cursor: pointer; transition: transform .15s, background .15s; }
+.btn:active { transform: scale(.97); }
+.btn-main { background: var(--accent); color: var(--ink); }
+.btn-main:hover { background: #ff8c24; }
+.btn-ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 2px var(--line); }
+.btn-ghost:hover { box-shadow: inset 0 0 0 2px var(--accent); }
+.nav .btn { padding: 10px 18px; font-size: 13px; }
+
+/* hero con i telefoni in 3D */
+.hero { position: relative; padding-block: clamp(40px, 7vw, 90px) clamp(60px, 8vw, 100px); overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: -20% -10% auto; height: 120%; background: radial-gradient(600px 460px at 70% 45%, rgba(255,122,0,.22), transparent 70%); pointer-events: none; }
+.hero .wrap { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; position: relative; }
+.hero h1 { font-size: clamp(48px, 8.4vw, 104px); margin: 18px 0 20px; }
+.hero h1 .nope { display: block; color: var(--accent); }
+.hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.hero .tiny { color: var(--muted); font-size: 14px; margin-top: 14px; }
+.stage { perspective: 1400px; height: 640px; display: grid; place-items: center; }
+.phones { position: relative; width: 300px; height: 620px; transform-style: preserve-3d; transform: rotateX(var(--rx, 6deg)) rotateY(var(--ry, -18deg)); transition: transform .12s linear; }
+.ph { position: absolute; inset: 0; border-radius: 44px; background: #1c1c21; padding: 10px; box-shadow: 0 0 0 2px #2e2e36, 0 40px 80px rgba(0,0,0,.6); transform-style: preserve-3d; }
+.ph img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 35px; }
+.ph.a { transform: translateZ(60px); }
+.ph.b { transform: translateX(-190px) translateZ(-60px) rotateY(18deg) scale(.86); filter: brightness(.75); }
+.ph.c { transform: translateX(190px) translateZ(-60px) rotateY(-18deg) scale(.86); filter: brightness(.75); }
+.float { animation: float 6s ease-in-out infinite; transform-style: preserve-3d; }
+@keyframes float { 50% { transform: translateY(-14px); } }
+.sticker { position: absolute; top: 40px; right: -10px; transform: translateZ(140px) rotate(10deg); background: var(--bg); border: 4px solid var(--free); color: var(--free); font-weight: 900; font-size: 15px; letter-spacing: .04em; padding: 8px 14px; border-radius: 12px; white-space: nowrap; }
+
+/* striscia che scorre */
+.marquee { border-block: 1px solid var(--line); background: var(--bg-2); overflow: hidden; padding: 18px 0; }
+.marquee div { display: flex; gap: 48px; width: max-content; animation: slide 26s linear infinite; font-weight: 900; font-size: clamp(22px, 3.4vw, 34px); text-transform: uppercase; white-space: nowrap; }
+.marquee span:nth-child(4n+1) { color: var(--emom); } .marquee span:nth-child(4n+2) { color: var(--accent); } .marquee span:nth-child(4n+3) { color: var(--afap); } .marquee span:nth-child(4n) { color: var(--free); }
+@keyframes slide { to { transform: translateX(-50%); } }
+
+/* chi sono */
+.story .wrap { display: grid; grid-template-columns: 340px 1fr; gap: clamp(28px, 5vw, 64px); align-items: start; }
+.portrait { position: sticky; top: 100px; }
+.portrait img { border-radius: 26px; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; box-shadow: 0 30px 60px rgba(0,0,0,.5); }
+.portrait p { margin: 14px 0 0; font-weight: 800; }
+.portrait p small { display: block; color: var(--muted); font-weight: 600; }
+.story h2 { margin: 16px 0 18px; }
+.years { font-size: clamp(80px, 13vw, 150px); font-weight: 900; line-height: .9; color: var(--accent); letter-spacing: -.04em; }
+.years small { font-size: .3em; color: var(--text); letter-spacing: 0; vertical-align: top; margin-left: 8px; }
+
+/* schede che si girano (prima / con UN-TIMER) */
+.flips { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 30px; }
+.flip { perspective: 1000px; min-height: 230px; cursor: pointer; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; }
+.flip .in { position: relative; height: 100%; min-height: 230px; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.2,.8,.2,1); }
+.flip.on .in { transform: rotateY(180deg); }
+.flip .f, .flip .b { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 8px; }
+.flip .f { background: var(--card); border: 1px solid var(--line); }
+.flip .b { background: linear-gradient(150deg, #2b1500, #18181c 70%); border: 1px solid #6b3300; transform: rotateY(180deg); }
+.flip .tag { font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--afap); }
+.flip .b .tag { color: var(--free); }
+.flip h3 { font-size: 22px; }
+.flip p { margin: 0; color: #d4d4d8; font-size: 15.5px; line-height: 1.5; }
+.flip .hint { margin-top: auto; font-size: 12px; color: var(--muted); font-weight: 700; }
+.punch { margin-top: 30px; font-size: clamp(22px, 3vw, 30px); font-weight: 900; text-transform: uppercase; line-height: 1.15; }
+
+/* funzioni */
+.feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 36px; }
+.feat { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px; transform-style: preserve-3d; transition: transform .2s, border-color .2s; }
+.feat:hover { border-color: #4a4a55; }
+.feat .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; margin-bottom: 14px; color: var(--ink); font-weight: 900; }
+.feat h3 { font-size: 20px; margin-bottom: 6px; }
+.feat p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+/* video */
+.video .wrap { display: grid; grid-template-columns: 1fr 360px; gap: clamp(28px, 6vw, 80px); align-items: center; }
+.vphone { border-radius: 40px; background: #1c1c21; padding: 10px; box-shadow: 0 0 0 2px #2e2e36, 0 40px 90px rgba(0,0,0,.6), 0 0 120px rgba(255,122,0,.18); }
+.vphone video { border-radius: 31px; width: 100%; height: auto; aspect-ratio: 9 / 16; background: #000; object-fit: cover; }
+
+/* come funziona */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; counter-reset: s; }
+.step { border-top: 4px solid var(--accent); padding-top: 18px; }
+.step b { font-size: 64px; font-weight: 900; line-height: 1; color: #2e2e36; display: block; }
+.step h3 { font-size: 24px; margin: 6px 0; }
+.step p { margin: 0; color: var(--muted); }
+
+/* gratis */
+.free { text-align: center; background: radial-gradient(700px 400px at 50% 50%, rgba(53,208,127,.12), transparent 70%); }
+.free h2 { font-size: clamp(52px, 11vw, 130px); color: var(--free); }
+.free h2 + p { font-size: clamp(22px, 3vw, 32px); font-weight: 900; text-transform: uppercase; margin: 10px 0 30px; }
+.pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.pills span { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; font-weight: 800; font-size: 15px; }
+
+/* scarica */
+.dl { background: var(--bg-2); border-top: 1px solid var(--line); }
+.dl .box { display: grid; grid-template-columns: 1.1fr .9fr; gap: 36px; align-items: center; }
+.stores { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.store { display: flex; align-items: center; gap: 12px; min-width: 220px; padding: 12px 20px; border-radius: 14px; background: #000; color: #fff; text-decoration: none; box-shadow: inset 0 0 0 1.5px #555; }
+.store small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
+.store b { display: block; font-size: 20px; font-weight: 800; line-height: 1.1; }
+.store svg { width: 28px; height: 28px; flex: none; }
+.store.soon { opacity: .55; pointer-events: none; }
+.store .badge { margin-left: auto; font-size: 11px; font-weight: 900; background: var(--accent); color: var(--ink); padding: 3px 8px; border-radius: 6px; }
+.beta { background: var(--card); border: 1px solid #6b3300; border-radius: 22px; padding: 26px; }
+.beta h3 { font-size: 26px; margin: 10px 0 8px; }
+.beta p { margin: 0 0 18px; color: #d4d4d8; }
+
+footer { border-top: 1px solid var(--line); padding-block: 36px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; align-items: center; }
+footer a { color: var(--text); }
+
+/* telefono e tablet */
+@media (max-width: 900px) {
+  .hero .wrap, .story .wrap, .video .wrap, .dl .box { grid-template-columns: 1fr; }
+  .stage { height: 520px; }
+  .phones { width: 240px; height: 500px; }
+  .ph.b { transform: translateX(-130px) translateZ(-60px) rotateY(18deg) scale(.82); }
+  .ph.c { transform: translateX(130px) translateZ(-60px) rotateY(-18deg) scale(.82); }
+  .portrait { position: static; max-width: 300px; }
+  .video .vphone { max-width: 320px; margin: 0 auto; }
+  .steps { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) { .nav .brand span { display: none; } .stage { height: 460px; } .phones { width: 210px; height: 440px; } .sticker { font-size: 12px; } }
+@media (prefers-reduced-motion: reduce) { .float, .marquee div { animation: none; } .flip .in, .phones { transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header class="nav"><div class="wrap">
+  <a class="brand" href="#top" aria-label="UN-TIMER"><svg viewBox="0 0 924 516" aria-hidden="true"><path fill="#fff" d="M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z"/></svg><span>TIMER</span></a>
+  <a class="btn btn-main" href="#scarica">Scaricala gratis</a>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="wrap">
+  <div>
+    <span class="kick free">Gratis. Per sempre.</span>
+    <h1>Il timer che <span class="nope">non te molla.</span></h1>
+    <p class="lead">EMOM, AMRAP, AFAP e HIIT per chi fa funzionale sul serio. Scrivi il tuo WOD, salva tutto, e il coach ti sprona. In romano. Niente pubblicità, niente account, niente storie.</p>
+    <div class="ctas">
+      <a class="btn btn-main" href="#scarica">Scaricala gratis</a>
+      <a class="btn btn-ghost" href="app/">Provala dal browser</a>
+    </div>
+    <p class="tiny">Android e iPhone in arrivo sugli store · Già adesso dal browser, anche dal PC</p>
+  </div>
+  <div class="stage" aria-hidden="true">
+    <div class="float"><div class="phones" id="phones">
+      <div class="ph b"><img src="img/shot-emom.webp" alt="" width="390" height="844"></div>
+      <div class="ph c"><img src="img/shot-amrap.webp" alt="" width="390" height="844"></div>
+      <div class="ph a"><img src="img/shot-home.webp" alt="" width="390" height="844"></div>
+      <div class="sticker">GRATIS PER SEMPRE</div>
+    </div></div>
+  </div>
+</div></section>
+
+<div class="marquee" aria-hidden="true"><div>
+  <span>EMOM</span><span>AMRAP</span><span>AFAP</span><span>HIIT</span><span>Death EMOM</span><span>Tabata</span><span>For Time</span><span>Diario</span>
+  <span>EMOM</span><span>AMRAP</span><span>AFAP</span><span>HIIT</span><span>Death EMOM</span><span>Tabata</span><span>For Time</span><span>Diario</span>
+</div></div>
+
+<section class="story" id="chi-sono"><div class="wrap">
+  <div class="portrait">
+    <img src="img/coach.webp" alt="Alessio, The Unconventional Coach" width="320" height="480">
+    <p>Alessio Proietti<small>The Unconventional Coach · kettlebell e calisthenics</small></p>
+  </div>
+  <div>
+    <span class="kick">Perché l'ho fatta</span>
+    <h2>Ero stufo. <span class="hl">Punto.</span></h2>
+    <div class="years">14+<small>anni</small></div>
+    <p class="lead">Mi alleno da più di 14 anni, e da 14 anni uso app di allenamento. Tutte. E ogni volta, la stessa storia. Tocca le schede:</p>
+
+    <div class="flips">
+      <button class="flip" type="button" aria-pressed="false"><div class="in">
+        <div class="f"><span class="tag">Prima</span><h3>Pubblicità a metà AMRAP</h3><p>Stai al 9° minuto, col fiato corto, e parte lo spot del materasso. Ma pure no.</p><span class="hint">Tocca ↻</span></div>
+        <div class="b"><span class="tag">Con UN-TIMER</span><h3>Zero pubblicità. Mai.</h3><p>Né oggi né domani. Te alleni e basta.</p></div>
+      </div></button>
+      <button class="flip" type="button" aria-pressed="false"><div class="in">
+        <div class="f"><span class="tag">Prima</span><h3>Crash sul più bello</h3><p>L'app se pianta e tu resti lì come 'n baccalà, senza sapere a che giro stavi.</p><span class="hint">Tocca ↻</span></div>
+        <div class="b"><span class="tag">Con UN-TIMER</span><h3>Gira sul telefono</h3><p>Niente server, niente internet: funziona offline e lo schermo resta acceso.</p></div>
+      </div></button>
+      <button class="flip" type="button" aria-pressed="false"><div class="in">
+        <div class="f"><span class="tag">Prima</span><h3>Workout spariti</h3><p>Finisci, sudi come 'na fontanella, e non resta niente. Manco un appunto.</p><span class="hint">Tocca ↻</span></div>
+        <div class="b"><span class="tag">Con UN-TIMER</span><h3>Diario automatico</h3><p>Ogni workout salvato da solo: data, ora, giri, tempi. Lo rifai con un tocco.</p></div>
+      </div></button>
+      <button class="flip" type="button" aria-pressed="false"><div class="in">
+        <div class="f"><span class="tag">Prima</span><h3>Timer rigidi</h3><p>Ogni 60 secondi e basta. E se volevo 45? E tre esercizi? E il recupero? Niente.</p><span class="hint">Tocca ↻</span></div>
+        <div class="b"><span class="tag">Con UN-TIMER</span><h3>Lo fai come te pare</h3><p>Intervalli liberi, più esercizi a giro, recuperi, serie, Death EMOM a round infiniti.</p></div>
+      </div></button>
+      <button class="flip" type="button" aria-pressed="false"><div class="in">
+        <div class="f"><span class="tag">Prima</span><h3>Audio che non senti</h3><p>Bip timidi che sotto la musica non li senti manco se te metti l'orecchio sul telefono.</p><span class="hint">Tocca ↻</span></div>
+        <div class="b"><span class="tag">Con UN-TIMER</span><h3>Voce vera, bip chiari</h3><p>La mia voce ti chiama i momenti giusti. Su iPhone si sente pure col silenzioso.</p></div>
+      </div></button>
+    </div>
+    <p class="punch">Allora l'ho fatta io. Come la volevo io.<br><span class="hl">E siccome serve pure a te, è gratis. Per sempre.</span></p>
+  </div>
+</div></section>
+
+<section id="funzioni"><div class="wrap">
+  <span class="kick">Cosa fa</span>
+  <h2>Tutti i timer che <span class="hl">usi davvero</span></h2>
+  <div class="feats">
+    <article class="feat tilt"><div class="ic" style="background:var(--emom)">⏱</div><h3>EMOM</h3><p>Ogni 30, 45, 60, 90 secondi o quanto vuoi. Più esercizi a giro, con il recupero dove dici tu.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:var(--emom)">💀</div><h3>Death EMOM</h3><p>Round infiniti, ripetizioni che salgono a ogni giro. Premi STOP quando molli: conta i giri chiusi.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:var(--accent)">🔁</div><h3>AMRAP</h3><p>Scrivi il WOD, premi +1 GIRO. Alla fine segni pure il giro a metà: "6 giri + 10 swing".</p></article>
+    <article class="feat tilt"><div class="ic" style="background:var(--afap)">✅</div><h3>AFAP / For Time</h3><p>100 burpees, 50 swing… segni +1, +5, +10 e spunti. Quando hai finito tutto, il tempo si ferma da solo.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:var(--free)">🔥</div><h3>HIIT e Tabata</h3><p>Lavoro, recupero, round. E ripeti tutto a serie: 6 Tabata di fila con un minuto in mezzo.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:#fff">🎙</div><h3>Il coach ti sprona</h3><p>"Manca solo 'n giro, chiudilo!": lo capisce dal tuo ritmo. In romano, o in inglese da sergente.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:#fff">⭐</div><h3>I miei timer</h3><p>Salvi i tuoi WOD preferiti e li fai ripartire con un tocco.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:#fff">📒</div><h3>Diario automatico</h3><p>Ogni workout si salva da solo, con data, ora e risultato. Resta sul tuo telefono.</p></article>
+    <article class="feat tilt"><div class="ic" style="background:#fff">💻</div><h3>Telefono, tablet, PC</h3><p>Su schermo grande il timer diventa gigante. Dal PC: spazio = +1 giro, P = pausa.</p></article>
+  </div>
+</div></section>
+
+<section class="video" id="video"><div class="wrap">
+  <div>
+    <span class="kick">Guardala girare</span>
+    <h2>25 secondi e <span class="hl">hai capito tutto</span></h2>
+    <p class="lead">L'app vera, niente animazioni finte. Alza il volume: quello che senti sono io.</p>
+  </div>
+  <div class="vphone"><video src="video/trailer.mp4" poster="img/trailer-poster.jpg" controls playsinline preload="none" width="1080" height="1920"></video></div>
+</div></section>
+
+<section><div class="wrap">
+  <span class="kick">Come funziona</span>
+  <h2>Tre passi. <span class="hl">Poi spigni.</span></h2>
+  <div class="steps">
+    <div class="step"><b>01</b><h3>Scegli il timer</h3><p>EMOM, AMRAP, AFAP o HIIT. Un tocco.</p></div>
+    <div class="step"><b>02</b><h3>Scrivi il tuo WOD</h3><p>Esercizi, ripetizioni, tempi, recuperi. E se ti piace, lo salvi.</p></div>
+    <div class="step"><b>03</b><h3>Premi VIA</h3><p>Al resto penso io: tempi, bip, voce, diario. Tu pensa a non mollà.</p></div>
+  </div>
+</div></section>
+
+<section class="free"><div class="wrap">
+  <h2>Gratis.</h2>
+  <p>E sarà <span class="hl">sempre</span> gratis.</p>
+  <div class="pills"><span>🚫 Niente pubblicità</span><span>👤 Niente account</span><span>📴 Funziona offline</span><span>🔒 I tuoi dati restano sul telefono</span></div>
+</div></section>
+
+<section class="dl" id="scarica"><div class="wrap box">
+  <div>
+    <span class="kick">Scaricala</span>
+    <h2>Mettila in <span class="hl">tasca</span></h2>
+    <p class="lead">Sta arrivando sugli store. Intanto la usi subito dal browser, anche dal PC.</p>
+    <div class="stores">
+      <a class="store soon" id="play" href="#" aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#35d07f" d="M4 2.5v19l15-9.5z"/></svg>
+        <span><small>Disponibile su</small><b>Google Play</b></span><span class="badge">PRESTO</span>
+      </a>
+      <a class="store soon" id="apple" href="#" aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="18.5" r="1" fill="#fff"/></svg>
+        <span><small>Scarica su</small><b>App Store</b></span><span class="badge">PRESTO</span>
+      </a>
+    </div>
+    <p style="margin-top:18px"><a class="btn btn-ghost" href="app/">Usala dal browser →</a></p>
+  </div>
+  <div class="beta">
+    <span class="kick">Beta tester</span>
+    <h3>Hai Android? Entra tra i primi 12</h3>
+    <p>Provi l'app prima di tutti e mi dici cosa migliorare. Scrivimi <b>TESTER</b> su Instagram e ti mando il link.</p>
+    <a class="btn btn-main" href="https://ig.me/m/theunconventionalcoach" target="_blank" rel="noopener">Scrivi TESTER su Instagram</a>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>UN-TIMER · creata da <a href="https://www.instagram.com/theunconventionalcoach/" target="_blank" rel="noopener">@theunconventionalcoach</a></span>
+  <span><a href="privacy.html">Privacy</a> · <a href="mailto:uncoach.info@gmail.com">uncoach.info@gmail.com</a></span>
+</div></footer>
+
+<script>
+// link degli store: quando l'app è pubblicata basta incollarli qui
+const LINKS = { play: '', apple: '' };
+for (const [id, url] of Object.entries(LINKS)) {
+  const a = document.getElementById(id === 'play' ? 'play' : 'apple');
+  if (url) { a.href = url; a.classList.remove('soon'); a.removeAttribute('aria-disabled'); a.target = '_blank'; a.rel = 'noopener'; a.querySelector('.badge')?.remove(); }
+}
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// telefoni 3D: seguono il mouse (PC) e lo scorrimento (telefono)
+const ph = document.getElementById('phones');
+if (ph && !still) {
+  let mx = 0, my = 0;
+  addEventListener('pointermove', (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; upd(); }, { passive: true });
+  addEventListener('scroll', upd, { passive: true });
+  function upd() { const s = Math.min(1, scrollY / 600); ph.style.setProperty('--ry', `${-18 + mx * 26 + s * 22}deg`); ph.style.setProperty('--rx', `${6 - my * 12 - s * 4}deg`); }
+}
+// schede che si girano
+document.querySelectorAll('.flip').forEach((b) => b.addEventListener('click', () => { const on = b.classList.toggle('on'); b.setAttribute('aria-pressed', on); }));
+// schede funzioni che si inclinano sotto il mouse
+if (!still) document.querySelectorAll('.tilt').forEach((c) => {
+  c.addEventListener('pointermove', (e) => { const r = c.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; c.style.transform = `perspective(700px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg) translateZ(6px)`; });
+  c.addEventListener('pointerleave', () => (c.style.transform = ''));
+});
+</script>
+</body>
+</html>

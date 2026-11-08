@@ -1174,6 +1174,8 @@ app.get('/.well-known/assetlinks.json', (req, res) => res.json([{ relation: ['de
 const infoPage = (title, html) => `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · UN-MEMBER</title>
 <style>body{margin:0;background:#0c0c0e;color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;padding:20px;line-height:1.55}.c{max-width:720px;margin:0 auto}h1{font-size:26px}h2{font-size:17px;margin-top:26px;color:#ff7a00}p,li{color:#c9c9cf}a{color:#ff7a00}</style></head><body><div class="c">${html}</div></body></html>`;
 const contact = () => escHtml(db.settings.supportEmail || process.env.GMAIL_USER || '');
+// landing della app (link per Instagram, pubblicità, bio): public/scopri.html
+app.get(['/scopri', '/app'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'scopri.html')));
 app.get('/privacy', (req, res) => res.send(infoPage('Privacy', `<h1>Informativa privacy di UN-MEMBER</h1>
 <p>UN-MEMBER è l'app di allenamento di Alessio Proietti (UN-COACH). Qui trovi quali dati usiamo, perché e come cancellarli. Per qualsiasi domanda: <a href="mailto:${contact()}">${contact()}</a>.</p>
 <h2>Quali dati raccogliamo</h2><ul>

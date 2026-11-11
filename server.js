@@ -1493,7 +1493,8 @@ admin.get('/replies', async (req, res) => {
 admin.post('/users/:id/extra-week', (req, res) => {
   const u = db.users.find((x) => x.id === req.params.id);
   if (!u) return res.status(404).end();
-  if ((u.extraWeeks || 0) >= 2) return res.status(409).json({ error: 'Ha già avuto 2 settimane in più' });
+  // massimo 2 a persona; oltre solo se Alessio decide un'eccezione (force: true)
+  if ((u.extraWeeks || 0) >= 2 && req.body?.force !== true) return res.status(409).json({ error: 'Ha già avuto 2 settimane in più' });
   const from = u.trialUntil && u.trialUntil >= today() ? u.trialUntil : today();
   const d = new Date(from + 'T12:00Z'); d.setUTCDate(d.getUTCDate() + 7);
   u.trialUntil = d.toISOString().slice(0, 10); u.extraWeeks = (u.extraWeeks || 0) + 1;

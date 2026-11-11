@@ -20,3 +20,8 @@ App Capacitor che impacchetta la cartella `../untimer` (il timer web) dentro l'a
 - `AppDelegate.swift`: sessione audio "playback" + "mixWithOthers" (si sente col silenzioso, non ferma la musica).
 - Si costruisce solo su Mac: lo fa GitHub (`.github/workflows/untimer-ios.yml`). A ogni modifica: costruzione di prova.
   Per caricare su TestFlight/App Store: Actions → "UN-TIMER iOS" → Run workflow → carica = si (servono i segreti Apple, vedi `untimer-store/APP-STORE.md`).
+
+## Aggiornamenti automatici (GitHub)
+- Android: `.github/workflows/untimer-android.yml` costruisce, firma (chiave dai segreti) e carica su Google Play. Avvio: etichetta `git tag untimer-android-N && git push origin untimer-android-N` (test chiuso) o `untimer-android-prod-N` (produzione).
+- iOS: etichetta `untimer-ios-N` → firma e TestFlight.
+- Configurazione una tantum: `untimer-store/AGGIORNAMENTI-AUTOMATICI.md`. In locale `versionCode` resta quello di `build.gradle` (o `-Pvc=N`).

@@ -12,7 +12,8 @@ android {
         applicationId "com.uncoach.untimer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
+        // in GitHub il numero lo passa il workflow (-Pvc=...), in locale si usa questo
+        versionCode((project.findProperty("vc") ?: "2") as Integer)
         versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

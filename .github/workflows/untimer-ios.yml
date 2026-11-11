@@ -5,7 +5,9 @@
 name: UN-TIMER iOS
 on:
   push:
+    branches: ['**']
     paths: ['untimer/**', 'untimer-app/**', '.github/workflows/untimer-ios.yml']
+    tags: ['untimer-ios-*']   # etichetta untimer-ios-N = firma e carica su TestFlight
   workflow_dispatch:
     inputs:
       carica:
@@ -24,7 +26,7 @@ jobs:
       - name: Costruzione di prova (simulatore, senza firma)
         run: xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build | tail -20
       - name: Firma e carico su TestFlight
-        if: github.event.inputs.carica == 'si'
+        if: github.event.inputs.carica == 'si' || startsWith(github.ref, 'refs/tags/untimer-ios-')
         env:
           TEAM: ${{ secrets.APPLE_TEAM_ID }}
           KID: ${{ secrets.ASC_KEY_ID }}

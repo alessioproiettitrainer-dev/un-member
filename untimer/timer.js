@@ -97,7 +97,8 @@ const COACH = {
     riprendi: ['Riprendi, daje!', 'Ripartiamo, forza!'],
     meta: ['Metà fatta, nun mollà!', 'Sta a metà, tieni botta!', "Metà fatta, mo' viene er bello!"],
     min1: ['Ultimo minuto, mo o mai più!', "Manca 'n minuto, daje a tutta!", 'Un minuto, svuota er serbatoio!'],
-    sec10: ['Dieci secondi, spigni!', 'Ultimi dieci, nun te fermà!', 'Dieci secondi, daje daje daje!'],
+    sec10: ['Dieci secondi, spigni!', 'Ultimi dieci, nun te fermà!', 'Dieci secondi, daje daje daje!', 'Oh, mancano dieci secondi!', 'Solo dieci secondi, daje!'],
+    riparte: ['Dieci secondi e se riparte!', 'Mancano dieci secondi, preparate!', 'Dieci secondi, rimettete in posizione!'], // fine recupero
     ultimo: ['Ultimo round, daje a tutta!', "L'ultimo e poi te riposi!", "Oh, l'ultimo, fallo bene!"],
     fine: ['Grande, daje!', "Fatto! Sei 'na bestia!", 'Bravo, mo riposa!', 'Bravo, oggi te lo sei guadagnato!'],
     giroemom: ["N'antro minuto, vai!", 'Daje sotto, riparti!', 'Daje che se ricomincia!'],
@@ -122,7 +123,8 @@ const COACH = {
     riprendi: ['Riprendi, forza!', 'Ripartiamo, forza!'],
     meta: ['Metà fatta, non mollare!', 'Sei a metà, tieni duro!', 'Metà fatta, adesso viene il bello!'],
     min1: ['Ultimo minuto, ora o mai più!', 'Manca un minuto, dai tutto!', 'Un minuto, svuota il serbatoio!'],
-    sec10: ['Dieci secondi, spingi!', 'Ultimi dieci, non fermarti!', 'Dieci secondi, dai dai dai!'],
+    sec10: ['Dieci secondi, spingi!', 'Ultimi dieci, non fermarti!', 'Dieci secondi, dai dai dai!', 'Mancano dieci secondi!', 'Solo dieci secondi, forza!'],
+    riparte: ['Dieci secondi e si riparte!', 'Mancano dieci secondi, preparati!', 'Dieci secondi, rimettiti in posizione!'],
     ultimo: ['Ultimo round, dai tutto!', "L'ultimo e poi riposi!", "L'ultimo, fallo bene!"],
     fine: ['Grande!', 'Fatto! Sei una bestia!', 'Bravo, ora riposa!', 'Bravo, oggi te lo sei guadagnato!'],
     giroemom: ['Un altro minuto, vai!', 'Sotto, riparti!', 'Su, si ricomincia!'],
@@ -146,7 +148,8 @@ const COACH = {
     riprendi: ['Back at it!', 'Get back in there!'],
     meta: ["Halfway. Don't you quit on me!", 'Halfway there. Stay in it!', 'Halfway. Now it gets real.'],
     min1: ['One minute. Now or never!', 'One minute left. Leave it all out here!', 'Sixty seconds. Empty the tank!'],
-    sec10: ['Ten seconds, push!', "Last ten, don't stop!", 'Ten seconds, go go go!'],
+    sec10: ['Ten seconds, push!', "Last ten, don't stop!", 'Ten seconds, go go go!', 'Ten seconds left, finish strong!', 'Only ten seconds, move!'],
+    riparte: ['Ten seconds, then we go again!', 'Ten seconds, get ready!', 'Ten seconds, back in position!'],
     ultimo: ['Last round. Dig deep!', 'Last one, then you rest!', 'Last one. Make it count!'],
     fine: ['Done! Hell yeah!', "That's it! You're a beast!", 'Good work. Now rest up.', 'Finished! You earned this one.'],
     giroemom: ['Next minute, go!', 'Back to work!', 'Here we go again!'],
@@ -172,7 +175,10 @@ function coach(ev, fixed) {
   const o = opts(), list = COACH[LANG]?.[ev] || COACH.it[ev];
   if (!o.voice || !list || (o.push === false && ev !== 'fine')) return false;
   const now = Date.now();
-  const n = fixed ?? Math.floor(Math.random() * list.length), id = `${ev}-${n + 1}`;
+  const has = (i) => (LANG === 'en' ? AUDIO_EN : AUDIO).has(`${ev}-${i + 1}`);
+  const rec = LANG === 'it' ? [] : list.map((_, i) => i).filter(has);
+  const pool = rec.length ? rec : list.map((_, i) => i);
+  const n = fixed ?? pool[Math.floor(Math.random() * pool.length)], id = `${ev}-${n + 1}`;
   const file = LANG === 'en' ? AUDIO_EN.has(id) && `voce/en/${id}.mp3` : LANG === 'rm' && AUDIO.has(id) && `voce/${id}.mp3`;
   if (ev === 'conto' && !file) return false; // il conto con la voce del telefono no: bastano i bip
   if (now - coachAt < 6000 && !['fine', 'conto', 'pausa', 'riprendi'].includes(ev)) return false;
@@ -464,7 +470,9 @@ function tick() {
   const left = s.dur - e, sec = Math.ceil(left);
   if (sec !== R.lastSec && R.lastSec != null && !R.pauseAt) {
     if (sec <= 3 && sec >= 1 && !coach('conto', 3 - sec)) beep(880, 140);
-    if (s.kind === 'work') motivate(s, e, left, sec);
+    if (sec === 10 && s.kind === 'work' && s.dur >= 30) coach('sec10');
+    else if (sec === 10 && s.kind === 'rest' && s.dur >= 20 && R.S[R.i + 1]?.kind === 'work') coach('riparte');
+    else if (s.kind === 'work') motivate(s, e, left, sec);
   }
   const es = Math.floor(e);
   if (s.up && es !== R.lastUp && !R.pauseAt) { R.lastUp = es; if (es > 0 && es % 180 === 0) coach('afap'); } // AFAP: una spinta ogni 3 minuti
@@ -480,7 +488,6 @@ function tick() {
 // spinte del coach nei tratti lunghi (AMRAP, AFAP col cap, intervalli lunghi)
 function motivate(s, e, left, sec) {
   if (s.dur < 60) return;
-  if (sec === 10 && s.dur >= 120) return coach('sec10');
   if (s.dur >= 240 && sec === 60) return coach('min1') || say(T('Un minuto alla fine', 'One minute left'));
   if (s.dur >= 480 && sec === Math.round(s.dur / 2)) return coach('meta');
   if (R.m !== 'amrap' || !R.laps.length) return;

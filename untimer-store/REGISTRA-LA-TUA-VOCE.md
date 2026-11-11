@@ -141,6 +141,18 @@ _Tutti (facoltativo)_
 - [x] **conto 2** — Due
 - [x] **conto 3** — Uno
 
+## ➕ NUOVE (11/11/2026) – da registrare
+Stesso metodo: dici il codice e poi la frase. Finché mancano, queste le legge il telefono.
+
+### Mancano 10 secondi (lavoro da 30 secondi in su: EMOM, HIIT lunghi, AMRAP, AFAP)
+- [ ] **sec10 4** — Oh, mancano dieci secondi!
+- [ ] **sec10 5** — Solo dieci secondi, daje!
+
+### Fine del recupero (recupero da 20 secondi in su: 10 secondi prima di ripartire)
+- [ ] **riparte 1** — Dieci secondi e se riparte!
+- [ ] **riparte 2** — Mancano dieci secondi, preparate!
+- [ ] **riparte 3** — Dieci secondi, rimettete in posizione!
+
 ## Come registrare (15 minuti)
 1. **Dove:** una stanza piccola con cose morbide (camera da letto con tende chiuse, armadio aperto pieno di vestiti) oppure **la macchina parcheggiata** in una strada tranquilla. Niente bagno o cucina (fanno eco). Spegni ventilatori e condizionatore e chiudi le finestre.
 2. **Telefono:** app Registratore (Android) o Memo vocali (iPhone). Se si può scegliere: qualità alta / mono.

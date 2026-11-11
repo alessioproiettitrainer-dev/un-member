@@ -179,7 +179,7 @@ footer a { color: var(--text); }
       <a class="btn btn-main" href="#scarica">Scaricala gratis</a>
       <a class="btn btn-ghost" href="app/">Provala dal browser</a>
     </div>
-    <p class="tiny">Android e iPhone in arrivo sugli store · Già adesso dal browser, anche dal PC</p>
+    <p class="tiny">Disponibile su App Store · Android in arrivo · Anche dal browser e dal PC</p>
   </div>
   <div class="stage" aria-hidden="true">
     <div class="float"><div class="phones" id="phones">
@@ -278,7 +278,7 @@ footer a { color: var(--text); }
   <div>
     <span class="kick">Scaricala</span>
     <h2>Mettila in <span class="hl">tasca</span></h2>
-    <p class="lead">Sta arrivando sugli store. Intanto la usi subito dal browser, anche dal PC.</p>
+    <p class="lead">Su iPhone e iPad la scarichi già dall'App Store. Android arriva a breve: intanto la usi dal browser, anche dal PC.</p>
     <div class="stores">
       <a class="store soon" id="play" href="#" aria-disabled="true">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#35d07f" d="M4 2.5v19l15-9.5z"/></svg>
@@ -307,11 +307,13 @@ footer a { color: var(--text); }
 
 <script>
 // link degli store: quando l'app è pubblicata basta incollarli qui
-const LINKS = { play: '', apple: '' };
+const LINKS = { play: '', apple: 'https://apps.apple.com/app/un-timer/id6832011246' };
 for (const [id, url] of Object.entries(LINKS)) {
   const a = document.getElementById(id === 'play' ? 'play' : 'apple');
   if (url) { a.href = url; a.classList.remove('soon'); a.removeAttribute('aria-disabled'); a.target = '_blank'; a.rel = 'noopener'; a.querySelector('.badge')?.remove(); }
 }
+// su iPhone/iPad i pulsanti "Scaricala gratis" vanno dritti all'App Store
+if (LINKS.apple && /iP(hone|ad|od)/.test(navigator.userAgent + (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform) ? 'iPad' : ''))) document.querySelectorAll('a[href="#scarica"]').forEach((a) => { a.href = LINKS.apple; a.target = '_blank'; a.rel = 'noopener'; });
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // telefoni 3D: seguono il mouse (PC) e lo scorrimento (telefono)
 const ph = document.getElementById('phones');

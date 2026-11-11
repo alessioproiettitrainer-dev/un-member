@@ -61,13 +61,16 @@ const RULES = {
     noBottom: 'Scendi di più', noTop: 'Distendi le braccia in alto',
     depth: (s, T) => (165 - s.elbow) / (165 - T.bottom),
   },
+  // trazioni: non il gomito (di fronte "balla"), ma quanto è sotto la sbarra la bocca, in % del busto
+  // Il riferimento fissa quanto in basso è l'appeso a braccia tese.
   pullups: {
-    ok: (s) => s.wr.y < s.sh.y, val: (s) => s.elbow,
-    T: (r) => ({ top: Math.max(145, r ? r.top - 12 : 145) }),
-    isTop: (s, T) => s.elbow >= T.top, isBottom: (s) => s.mouth.y < s.barY,
+    ok: (s) => s.wr.y < s.sh.y, val: (s) => (100 * (s.mouth.y - s.barY)) / s.torso,
+    // tarato su trazioni vere: appeso 55-70, in alto (mento sopra la sbarra) 0-8 (la bocca resta un filo sotto i polsi)
+    T: (r) => ({ top: r ? Math.max(40, r.top - 15) : 45, gap: 15, retry: 20, retryFrom: 10 }),
+    isTop: (s, T) => (100 * (s.mouth.y - s.barY)) / s.torso >= T.top, isBottom: (s) => s.mouth.y <= s.barY + 0.08 * s.torso,
     fault: () => '',
     noBottom: 'Mento sopra la sbarra', noTop: 'Giù fino a braccia tese',
-    depth: (s) => (s.mouth.y < s.barY ? 1 : (170 - s.elbow) / 110),
+    depth: (s, T) => (s.mouth.y <= s.barY ? 1 : 1 - (100 * (s.mouth.y - s.barY)) / s.torso / T.top),
   },
   t2b: {
     ok: (s) => s.wr.y < s.sh.y, val: (s) => s.hipA,
@@ -80,25 +83,32 @@ const RULES = {
 };
 
 // ripetizioni a fasi (piegamenti, trazioni, toes to bar)
+// Una ripetizione "scartata" conta solo se ci hai provato davvero (almeno a metà strada):
+// tremolii e piccoli movimenti da fermo non contano né come valide né come scartate.
 function repMachine(rule, T, on) {
   let st = 'wait', rep = null, topMax = 0;
+  const hist = [];
   return (s) => {
-    if (!rule.ok(s)) return;
-    const v = rule.val(s);
+    if (!rule.ok(s)) { hist.length = 0; return; } // fuori posizione (es. in piedi, a V): si riparte da zero
+    hist.push(rule.val(s)); if (hist.length > 3) hist.shift();
+    const v = [...hist].sort((a, b) => a - b)[Math.floor(hist.length / 2)]; // mediana degli ultimi 3 fotogrammi
+    const dep = Math.max(0, Math.min(1, rule.depth(s, T)));
     if (st === 'wait') { if (rule.isTop(s, T)) { st = 'top'; topMax = v; } return; }
     if (st === 'top') {
-      if (v < T.top - 15) { st = 'rep'; rep = { bottom: false, faults: new Set(), min: v, max: topMax, peak: 0 }; }
+      if (v < T.top - (T.gap || 15)) { st = 'rep'; rep = { bottom: false, faults: new Set(), min: v, max: topMax, peak: 0, dep }; }
       else topMax = Math.max(topMax, v);
       return;
     }
-    rep.min = Math.min(rep.min, v);
+    if (v < rep.min) { rep.min = v; rep.peak = v; } // il punto più basso: da qui si misura se risale
+    rep.dep = Math.max(rep.dep, dep);
     const f = rule.fault(s); if (f) rep.faults.add(f);
     if (rule.isBottom(s, T)) { rep.bottom = true; if (rule === RULES.t2b) rep.reach = Math.min(rep.reach ?? 9, dist(s.ft, s.wr) / s.torso); }
     if (rep.bottom) rep.peak = Math.max(rep.peak, v);
     if (rule.isTop(s, T)) { // tornato in partenza: ripetizione finita
       const why = !rep.bottom ? rule.noBottom : [...rep.faults][0] || '';
-      on(!why, why, rep); st = 'top'; rep = null; topMax = v;
-    } else if (rep.bottom && rep.peak - v > 25 && rep.peak > T.top - 40) { // risalito a metà e giù di nuovo
+      if (rep.bottom || rep.dep >= 0.5) on(!why, why, rep); // sotto metà strada: era solo un movimento, si ignora
+      st = 'top'; rep = null; topMax = v;
+    } else if (rep.bottom && rep.peak - v > (T.retry || 25) && rep.peak > T.top - (T.retryFrom || 40)) { // tornato quasi giù e risalito senza distendersi
       on(false, rule.noTop, rep); rep = { bottom: false, faults: new Set(), min: v, max: rep.max, peak: 0 };
     }
   };
@@ -249,7 +259,7 @@ export function qualityTest({ ex, me, api, toast, onSaved }) {
       say('Riferimento ok');
       const stat = (v, l) => `<div><b class="ok">${v} ✓</b><span>${l}</span></div>`;
       box.querySelector('#qtrs').innerHTML = !r ? '' : ex === 'pushups' ? stat(Math.round(r.min) + '°', 'Gomito in basso') + stat(Math.round(r.max) + '°', 'Braccia tese')
-        : ex === 'pullups' ? stat('✓', 'Mento sopra') + stat(Math.round(r.max) + '°', 'Braccia tese')
+        : ex === 'pullups' ? stat('✓', 'Mento sopra') + stat('✓', 'Braccia tese')
         : ex === 't2b' ? stat('✓', 'Piedi alla sbarra') + stat(Math.round(r.max) + '°', 'Corpo disteso') : stat('✓', 'Burpee completo');
       box.querySelector('#qtrm').textContent = 'Riferimento ok! Se vuoi rifallo, altrimenti si parte.';
       const b = box.querySelector('[data-skip]'); b.textContent = 'Riferimento ok · inizia'; b.className = 'qt-btn p'; b.onclick = countdown;

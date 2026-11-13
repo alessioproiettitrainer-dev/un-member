@@ -2,11 +2,13 @@
 // REGOLA: solo lettura. Si fanno esattamente due chiamate e nient'altro:
 //   1. il login (lo stesso che fa il browser quando si entra nel sito)
 //   2. la lettura della lista dei clienti low ticket
+//   3. la lettura della lista "Clienti" (abbonamenti con alimentazione da 56 €, che nella lista low ticket non ci sono) — ok di Alessio del 13/11
 // Niente chat, schede cliente, modifiche o cancellazioni: qualsiasi altro indirizzo viene rifiutato qui sotto.
 const BASE = 'https://server.kalosfit.com/kalosapi';
 const ALLOWED = new Map([
   ['/user/signinadmin', 'POST'],
   ['/lowticketclients/fetchLowTicketClients', 'GET'],
+  ['/salesclients/fetchSalesClients', 'GET'],
 ]);
 
 async function call(pathname, method, { body, cookie } = {}) {
@@ -51,4 +53,14 @@ async function fetchLowTicketClients(email, password) {
     };
   });
 }
-module.exports = { fetchLowTicketClients };
+// lista "Clienti" di Kalos (sola lettura): per ora serve a capire com'è fatta, poi si collega alla sincronizzazione
+async function fetchSalesClientsRaw(email, password) {
+  if (!email || !password) throw new Error('Mancano KALOS_EMAIL e KALOS_PASSWORD nelle variabili d\'ambiente');
+  const login = await call('/user/signinadmin', 'POST', { body: { email, password } });
+  const cookie = (login.headers.getSetCookie?.() || [login.headers.get('set-cookie') || ''])
+    .map((c) => c.split(';')[0]).filter((c) => c.startsWith('jwt_operator=')).join('; ');
+  if (!cookie) throw new Error('Kalos: login non riuscito (controlla email e password)');
+  const data = await (await call('/salesclients/fetchSalesClients', 'GET', { cookie })).json();
+  return Array.isArray(data) ? data : data.result || data.clients || data.data || [];
+}
+module.exports = { fetchLowTicketClients, fetchSalesClientsRaw };

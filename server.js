@@ -3,7 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { fetchLowTicketClients } = require('./kalos');
+const { fetchLowTicketClients, fetchSalesClientsRaw } = require('./kalos');
 const mails = require('./mails');
 const followups = require('./followups');
 const mailer = require('./mailer');
@@ -981,6 +981,19 @@ setInterval(() => {
     runKalos().catch(() => {});
   }
 }, 5 * 60 * 1000);
+// com'è fatta la lista "Clienti" di Kalos: solo nomi dei campi e conteggi, niente dati delle persone
+admin.get('/kalos/probe', async (req, res) => {
+  if (req.role !== 'owner') return res.status(403).json({ error: 'Solo il proprietario' });
+  try {
+    const list = await fetchSalesClientsRaw(process.env.KALOS_EMAIL, process.env.KALOS_PASSWORD);
+    const keys = {}, vals = {};
+    const walk = (o, pre = '') => { for (const [k, v] of Object.entries(o || {})) { const kk = pre + k; keys[kk] = (keys[kk] || 0) + 1;
+      if (v && typeof v === 'object' && !Array.isArray(v) && pre.split('.').length < 3) walk(v, kk + '.');
+      else if (typeof v !== 'object' && /plan|tier|interval|status|type|course|subscription|active|paused|expire|nutri|diet|product/i.test(kk)) { (vals[kk] ||= {}); const val = /expire|date|At$/i.test(kk) ? (String(v) >= new Date().toISOString() ? 'futura' : 'passata') : String(v).slice(0, 40); vals[kk][val] = (vals[kk][val] || 0) + 1; } } };
+    list.forEach((c) => walk(c));
+    res.json({ count: list.length, conEmail: list.filter((c) => c?.email).length, keys, vals });
+  } catch (e) { res.status(409).json({ error: e.message }); }
+});
 admin.get('/kalos', (req, res) => {
   const k = db.kalos || { clients: {} };
   res.json({ configured: kalosConfigured(), hour: Number(db.settings.kalosHour ?? 7), last: k.last || null, running: kalosRunning,

@@ -991,7 +991,10 @@ admin.get('/kalos/probe', async (req, res) => {
       if (v && typeof v === 'object' && !Array.isArray(v) && pre.split('.').length < 3) walk(v, kk + '.');
       else if (typeof v !== 'object' && /plan|tier|interval|status|type|course|subscription|active|paused|expire|nutri|diet|product/i.test(kk)) { (vals[kk] ||= {}); const val = /expire|date|At$/i.test(kk) ? (String(v) >= new Date().toISOString() ? 'futura' : 'passata') : String(v).slice(0, 40); vals[kk][val] = (vals[kk][val] || 0) + 1; } } };
     list.forEach((c) => walk(c));
-    res.json({ count: list.length, conEmail: list.filter((c) => c?.email).length, keys, vals });
+    // incrocio con la lista low ticket già sincronizzata: chi manca (solo conteggi)
+    const known = new Set(Object.keys(db.kalos?.clients || {})), now = new Date().toISOString(), cross = {};
+    for (const c of list) { const k = [`ruolo=${c.role}`, `lowTicket=${c.isLowTicket}`, `piano=${c.lowTicketPlan}${c.lowTicketInterval ? '/' + c.lowTicketInterval : ''}`, `attivo=${!!c.expiresAt && c.expiresAt >= now && !c.isPaused}`, `giàInLista=${known.has(String(c.email).trim().toLowerCase())}`, `corsi=${(c.purchasedCourses || []).length}`].join(' '); cross[k] = (cross[k] || 0) + 1; }
+    res.json({ count: list.length, conEmail: list.filter((c) => c?.email).length, cross, vals });
   } catch (e) { res.status(409).json({ error: e.message }); }
 });
 admin.get('/kalos', (req, res) => {

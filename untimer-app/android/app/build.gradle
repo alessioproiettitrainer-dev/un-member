@@ -13,8 +13,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // in GitHub il numero lo passa il workflow (-Pvc=...), in locale si usa questo
-        versionCode((project.findProperty("vc") ?: "2") as Integer)
-        versionName "1.1"
+        versionCode((project.findProperty("vc") ?: "3") as Integer)
+        versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

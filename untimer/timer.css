@@ -250,3 +250,35 @@ h2 { text-transform: uppercase; }
 /* promemoria tastiera: solo dove c'è un mouse (PC) */
 .keys { display: none; margin: 0; text-align: center; color: var(--muted); font-size: 13px; }
 @media (hover: hover) and (pointer: fine) { .keys { display: block; } }
+
+/* ----- corsa ----- */
+.pill.run { background: linear-gradient(135deg, #3aa0ff, #1f6fd1); color: #fff; }
+.pill.run span { opacity: .9; }
+.rlive .clock { flex: none; padding-top: 6px; }
+.rlive #t { font-size: min(24vw, 20vh); margin: 2px 0 10px; }
+.rstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.rstats.sm { grid-template-columns: repeat(2, 1fr); margin: 8px 0; }
+.rstats div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 6px; text-align: center; }
+.rstats b { display: block; font-weight: 900; font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.rstats span { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.rmap { flex: 1; min-height: 150px; margin: 10px 0; border-radius: 16px; background: radial-gradient(circle at 50% 50%, #12233a, #0c0c0e 75%); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; text-align: center; padding: 8px; }
+.rmap.end { height: 200px; flex: none; margin: 12px 0 4px; }
+.rmap canvas { display: block; }
+.rsplits { display: flex; gap: 6px; overflow-x: auto; min-height: 0; padding-bottom: 4px; }
+.rsplits span { flex: none; background: var(--card-2); border-radius: 10px; padding: 6px 10px; font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rsplits em { font-style: normal; color: var(--accent); margin-right: 6px; }
+#gps i { font-style: normal; font-size: 12px; font-weight: 900; padding: 4px 8px; border-radius: 8px; white-space: nowrap; }
+.gok { background: #12361f; color: #35d07f; } .gmid { background: #3a2c08; color: #ffc21a; } .gbad, .gwait { background: #3a1016; color: #ff4d6d; }
+.rt .rtrow { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.rt .rtrow div { flex: 1; min-width: 0; } .rt b { display: block; font-weight: 900; } .rt span { color: var(--muted); font-size: 13px; font-weight: 700; }
+.rt button { background: var(--card-2); width: 40px; height: 40px; border-radius: 12px; color: var(--muted); }
+.rtc { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 12px; background: #12233a; flex: none; margin-left: 10px; }
+.rec { font-weight: 900; color: #35d07f; margin: 6px 0; }
+.cardv .askbox { max-width: 420px; max-height: 92dvh; overflow-y: auto; }
+.cprev { border-radius: 14px; overflow: hidden; margin-bottom: 12px; background: #000; }
+.cprev canvas { display: block; }
+.cardv .chips { margin: 0 0 12px; }
+@media (min-width: 760px) and (orientation: landscape) {
+  .run.rlive { grid-template-columns: 1fr minmax(320px, 34vw); grid-template-areas: "top top" "clock side" "split ctrl"; }
+  .rlive .rmap { grid-area: side; } .rlive .rsplits { grid-area: split; align-self: end; }
+}

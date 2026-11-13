@@ -102,6 +102,7 @@ const COACH = {
     min1: ['Ultimo minuto, mo o mai più!', "Manca 'n minuto, daje a tutta!", 'Un minuto, svuota er serbatoio!'],
     sec10: ['Dieci secondi, spigni!', 'Ultimi dieci, nun te fermà!', 'Dieci secondi, daje daje daje!', 'Oh, mancano dieci secondi!', 'Solo dieci secondi, daje!'],
     riparte: ['Dieci secondi e se riparte!', 'Mancano dieci secondi, preparate!', 'Dieci secondi, rimettete in posizione!'], // fine recupero
+    km: ["Daje, n'antro chilometro!", 'Chilometro fatto, nun te fermà!', 'Un chilometro in più, vai così!'], // corsa
     ultimo: ['Ultimo round, daje a tutta!', "L'ultimo e poi te riposi!", "Oh, l'ultimo, fallo bene!"],
     fine: ['Grande, daje!', "Fatto! Sei 'na bestia!", 'Bravo, mo riposa!', 'Bravo, oggi te lo sei guadagnato!'],
     giroemom: ["N'antro minuto, vai!", 'Daje sotto, riparti!', 'Daje che se ricomincia!'],
@@ -128,6 +129,7 @@ const COACH = {
     min1: ['Ultimo minuto, ora o mai più!', 'Manca un minuto, dai tutto!', 'Un minuto, svuota il serbatoio!'],
     sec10: ['Dieci secondi, spingi!', 'Ultimi dieci, non fermarti!', 'Dieci secondi, dai dai dai!', 'Mancano dieci secondi!', 'Solo dieci secondi, forza!'],
     riparte: ['Dieci secondi e si riparte!', 'Mancano dieci secondi, preparati!', 'Dieci secondi, rimettiti in posizione!'],
+    km: ['Dai, un altro chilometro!', 'Chilometro fatto, non fermarti!', 'Un chilometro in più, vai così!'],
     ultimo: ['Ultimo round, dai tutto!', "L'ultimo e poi riposi!", "L'ultimo, fallo bene!"],
     fine: ['Grande!', 'Fatto! Sei una bestia!', 'Bravo, ora riposa!', 'Bravo, oggi te lo sei guadagnato!'],
     giroemom: ['Un altro minuto, vai!', 'Sotto, riparti!', 'Su, si ricomincia!'],
@@ -153,6 +155,7 @@ const COACH = {
     min1: ['One minute. Now or never!', 'One minute left. Leave it all out here!', 'Sixty seconds. Empty the tank!'],
     sec10: ['Ten seconds, push!', "Last ten, don't stop!", 'Ten seconds, go go go!', 'Ten seconds left, finish strong!', 'Only ten seconds, move!'],
     riparte: ['Ten seconds, then we go again!', 'Ten seconds, get ready!', 'Ten seconds, back in position!'],
+    km: ['Another kilometer down, keep going!', "One more K, don't stop now!", 'Kilometer done, stay strong!'],
     ultimo: ['Last round. Dig deep!', 'Last one, then you rest!', 'Last one. Make it count!'],
     fine: ['Done! Hell yeah!', "That's it! You're a beast!", 'Good work. Now rest up.', 'Finished! You earned this one.'],
     giroemom: ['Next minute, go!', 'Back to work!', 'Here we go again!'],
@@ -248,7 +251,7 @@ const menuBtn = '<button class="burger" id="burger" aria-label="Menu"><i></i><i>
 function openMenu() {
   const d = Object.assign(document.createElement('div'), { className: 'drawer' });
   d.innerHTML = `<aside><div class="dlogo">${logo()}</div>
-    <a href="#home">⏱<span>Timer</span></a><a href="#salvati">★<span>${T('I miei timer', 'My timers')}</span></a><a href="#diario">📅<span>${T('Diario', 'Log')}</span></a>
+    <a href="#home">⏱<span>Timer</span></a><a href="#salvati">★<span>${T('I miei timer', 'My timers')}</span></a><a href="#diario">📅<span>${T('Diario', 'Log')}</span></a><a href="#corsa">🏃<span>${T('Corsa', 'Run')}</span></a><a href="#percorsi">🗺<span>${T('I miei percorsi', 'My routes')}</span></a>
     <a href="#workout">🔥<span>${T('Prova i nostri workout', 'Try our workouts')}</span></a><a href="#impostazioni">⚙︎<span>${T('Impostazioni', 'Settings')}</span></a></aside>`;
   d.onclick = (e) => { if (e.target === d || e.target.closest('a')) d.remove(); };
   document.body.append(d);
@@ -261,7 +264,8 @@ function home() {
   const n = ls.get('saved', []).length;
   app.innerHTML = `<main class="home"><header class="hbar">${menuBtn}</header>
     ${logo(true)}
-    <div class="pills">${Object.entries(MODES).map(([k, m]) => `<a class="pill" href="#set-${k}" style="--c:${m.col}"><b>${m.name}</b><span>${m.sub()}</span></a>`).join('')}</div>
+    <div class="pills">${Object.entries(MODES).map(([k, m]) => `<a class="pill" href="#set-${k}" style="--c:${m.col}"><b>${m.name}</b><span>${m.sub()}</span></a>`).join('')}
+      <a class="pill run" href="#corsa" style="--c:${RUNM.col}"><b>${G && !G.done ? T('CORSA IN CORSO ›', 'RUN IN PROGRESS ›') : T('CORSA', 'RUN')}</b><span>${G && !G.done ? `${km(G.dist)} km · ${fmt(G.time)}` : T('GPS, percorsi e selfie', 'GPS, routes and selfie')}</span></a></div>
     <div class="hfoot"><div class="hlinks"><a href="#salvati">★ ${T('I MIEI TIMER', 'MY TIMERS')}${n ? ` <em>${n}</em>` : ''}</a><a href="#diario">📅 ${T('DIARIO', 'LOG')}</a></div><a href="#workout" class="hpromo">${T('Vuoi provare i nostri workout?', 'Want our workouts?')} <b>${T('Prova gratis', 'Try free')} ›</b></a></div>
   </main>`;
   $('#burger').onclick = openMenu;
@@ -583,13 +587,13 @@ function diary() {
     const d = new Date(x.id).toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const head = d !== day ? `<h2>${(day = d)}</h2>` : '';
     const det = x.items?.length && x.m === 'afap' ? x.items.map((it) => `${it.ok ? '✓' : '·'} ${esc(it.name || T('Esercizio', 'Exercise'))}${it.reps ? ` ${it.n}/${it.reps}` : ''}`).join(' &nbsp; ') : '';
-    return `${head}<div class="sv lg" style="--c:${MODES[x.m].col}"><div class="lgx"><small>${MODES[x.m].name} · ${new Date(x.id).toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' })}</small>
-      <b>${esc(x.res)}</b><span>${x.title ? esc(x.title) + ' · ' : ''}${summary(x.m, { ...clone(MODES[x.m].def), ...x.c })}${x.dur ? ` · ${fmt(x.dur)}` : ''}</span>${det ? `<span>${det}</span>` : ''}</div>
+    return `${head}<div class="sv lg" style="--c:${modeOf(x.m).col}"><div class="lgx"><small>${modeOf(x.m).name} · ${new Date(x.id).toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' })}</small>
+      <b>${esc(x.res)}</b><span>${x.title ? esc(x.title) + ' · ' : ''}${x.m === 'run' ? `${T('passo', 'pace')} ${pace(x.c.time, x.c.dist)}${x.laps?.length ? ` · ${x.laps.map(fmt).join(' · ')}` : ''}` : `${summary(x.m, { ...clone(MODES[x.m].def), ...x.c })}${x.dur ? ` · ${fmt(x.dur)}` : ''}`}</span>${det ? `<span>${det}</span>` : ''}</div>
       <button data-redo="${x.id}" aria-label="${T('Rifai', 'Again')}">↻</button><button data-dl="${x.id}" aria-label="${T('Elimina', 'Delete')}">✕</button></div>`;
   }).join('');
   app.innerHTML = `<main class="page">${back(T('DIARIO', 'LOG'))}
     ${rows || `<p class="muted">${T('Qui trovi ogni workout finito, con data, ora e risultato. Si salvano da soli.', 'Every finished workout shows up here, with date, time and result. Saved automatically.')}</p>`}</main>`;
-  app.querySelectorAll('[data-redo]').forEach((b) => (b.onclick = () => { const x = log.find((y) => y.id == b.dataset.redo); start(x.m, { ...clone(MODES[x.m].def), ...x.c }, x.title); }));
+  app.querySelectorAll('[data-redo]').forEach((b) => (b.onclick = () => { const x = log.find((y) => y.id == b.dataset.redo); if (x.m === 'run') { ls.set('rtarget', x.route || null); return (location.hash = '#corsa'); } start(x.m, { ...clone(MODES[x.m].def), ...x.c }, x.title); }));
   app.querySelectorAll('[data-dl]').forEach((b) => (b.onclick = async () => {
     if (!(await ask(T('Eliminare questo workout dal diario?', 'Delete this workout from the log?'), { ok: T('Elimina', 'Delete') }))) return;
     ls.set('log', ls.get('log', []).filter((y) => y.id != b.dataset.dl)); diary();
@@ -631,6 +635,268 @@ function settings() {
   draw();
 }
 
+
+// ---------- CORSA: GPS, percorsi salvati, selfie col percorso (tutto resta sul telefono) ----------
+const RUNM = { name: 'CORSA', col: '#3aa0ff' }; // non è tra i 4 timer, ma ha un suo colore nel diario
+const modeOf = (m) => (m === 'run' ? { ...RUNM, name: T('CORSA', 'RUN') } : MODES[m]);
+const km = (m) => (m / 1000).toFixed(2).replace('.', T(',', '.'));
+const pace = (sec, m) => (m > 30 ? fmt(sec / (m / 1000)) : '–:––'); // min/km
+const ropts = () => ({ kmVoice: true, autopause: true, ...ls.get('ropts', {}) });
+let G = null; // corsa in corso
+// distanza in metri tra due punti GPS
+function hav(a, b) {
+  const R0 = 6371000, r = Math.PI / 180, dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
+  const x = Math.sin(dLa / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) ** 2;
+  return 2 * R0 * Math.asin(Math.sqrt(x));
+}
+// alleggerisce il percorso per salvarlo (Douglas-Peucker, tolleranza in metri)
+function simplify(pts, tol = 4) {
+  if (pts.length < 3) return pts.slice();
+  const lat0 = pts[0][0] * Math.PI / 180, P = pts.map((p) => [p[1] * 111320 * Math.cos(lat0), p[0] * 110540]);
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const st = [[0, pts.length - 1]];
+  while (st.length) {
+    const [a, b] = st.pop(); let md = 0, mi = -1;
+    const [x1, y1] = P[a], [x2, y2] = P[b], L = Math.hypot(x2 - x1, y2 - y1) || 1;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs((y2 - y1) * P[i][0] - (x2 - x1) * P[i][1] + x2 * y1 - y2 * x1) / L; if (d > md) { md = d; mi = i; } }
+    if (md > tol) { keep[mi] = 1; st.push([a, mi], [mi, b]); }
+  }
+  const out = pts.filter((_, i) => keep[i]).map((p) => [+p[0].toFixed(6), +p[1].toFixed(6)]);
+  return out.length > 700 ? out.filter((_, i) => i % Math.ceil(out.length / 700) === 0) : out;
+}
+// disegna il percorso in un riquadro (niente mappa: solo la forma, come gli adesivi delle app di corsa)
+function drawRoute(ctx, pts, x, y, w, h, { line = 10, color = '#fff', glow = '#ff7a00', dots = true } = {}) {
+  if (pts.length < 2) return;
+  const lat0 = pts[0][0] * Math.PI / 180, P = pts.map((p) => [p[1] * Math.cos(lat0), -p[0]]);
+  const xs = P.map((p) => p[0]), ys = P.map((p) => p[1]), minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys);
+  const sc = Math.min(w / (maxx - minx || 1e-9), h / (maxy - miny || 1e-9)), ox = x + (w - (maxx - minx) * sc) / 2, oy = y + (h - (maxy - miny) * sc) / 2;
+  const Q = P.map((p) => [ox + (p[0] - minx) * sc, oy + (p[1] - miny) * sc]);
+  ctx.save(); ctx.lineJoin = ctx.lineCap = 'round';
+  const path = () => { ctx.beginPath(); Q.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); };
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = line * 2.2; ctx.strokeStyle = glow; ctx.lineWidth = line * 1.6; path(); ctx.stroke(); }
+  ctx.shadowBlur = 0; ctx.strokeStyle = color; ctx.lineWidth = line; path(); ctx.stroke();
+  if (dots) { [[Q[0], '#35d07f'], [Q.at(-1), '#ff4d6d']].forEach(([q, c]) => { ctx.beginPath(); ctx.arc(q[0], q[1], line * 1.1, 0, 7); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = line * 0.4; ctx.strokeStyle = '#fff'; ctx.stroke(); }); }
+  ctx.restore();
+}
+const routeCanvas = (pts, w, h, opt) => { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; c.style.width = w + 'px'; c.style.height = h + 'px'; drawRoute(c.getContext('2d'), pts, 26, 26, w * 2 - 52, h * 2 - 52, { line: 6, ...opt }); return c; };
+
+// GPS: nell'app vera continua anche a schermo spento (plugin), nel browser solo a schermo acceso
+async function geoStart(onPos, onErr) {
+  if (NATIVE?.BackgroundGeolocation) {
+    return { native: await NATIVE.BackgroundGeolocation.addWatcher({ backgroundTitle: 'UN-TIMER', backgroundMessage: T('Sto registrando la tua corsa', 'Tracking your run'), requestPermissions: true, stale: false, distanceFilter: 3 },
+      (l, e) => (e ? onErr(e.code === 'NOT_AUTHORIZED' ? 'perm' : 'gps') : onPos({ lat: l.latitude, lon: l.longitude, acc: l.accuracy, t: l.time || Date.now() }))) };
+  }
+  if (!navigator.geolocation) { onErr('nogps'); return null; }
+  return { web: navigator.geolocation.watchPosition((p) => onPos({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, t: p.timestamp }), (e) => onErr(e.code === 1 ? 'perm' : 'gps'), { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }) };
+}
+function geoStop(w) { if (!w) return; if (w.native) NATIVE.BackgroundGeolocation.removeWatcher({ id: w.native }).catch(() => {}); if (w.web != null) navigator.geolocation.clearWatch(w.web); }
+const awake = (on) => { if (NATIVE?.KeepAwake) return on ? NATIVE.KeepAwake.keepAwake().catch(() => {}) : NATIVE.KeepAwake.allowSleep().catch(() => {}); if (on && navigator.wakeLock) navigator.wakeLock.request('screen').then((l) => (G && (G.lock = l))).catch(() => {}); else G?.lock?.release?.().catch(() => {}); };
+
+function runHome() {
+  const o = ropts(), routes = ls.get('routes', []), tgt = routes.find((r) => r.id === ls.get('rtarget', null));
+  if (G && !G.done) return (location.hash = '#corsa-live');
+  app.innerHTML = `<main class="page" style="--accent:${RUNM.col}">${back(T('CORSA', 'RUN'))}
+    <p class="muted">${T('GPS, tempi al km, percorsi salvati e selfie col percorso. Tutto resta sul tuo telefono.', 'GPS, km splits, saved routes and a selfie with your route. Everything stays on your phone.')}</p>
+    ${tgt ? `<div class="field rt"><label>${T('Percorso', 'Route')}</label><div class="rtrow"><span id="rtc"></span><div><b>${esc(tgt.name)}</b><span>${km(tgt.dist)} km${tgt.best ? ` · ${T('record', 'best')} ${fmt(tgt.best)}` : ''}</span></div><button id="rtx" aria-label="${T('Togli', 'Remove')}">✕</button></div></div>` : ''}
+    <label class="sw"><span>${T('Voce a ogni km (tempo e passo)', 'Voice every km (time and pace)')}</span><input type="checkbox" id="kmv" ${o.kmVoice ? 'checked' : ''}></label>
+    <label class="sw"><span>${T('Pausa automatica quando ti fermi', 'Auto-pause when you stop')}</span><input type="checkbox" id="ap" ${o.autopause ? 'checked' : ''}></label>
+    <button class="go" id="rgo">${T('VIA', 'GO')}</button>
+    <a class="ghost" href="#percorsi" style="text-align:center">🗺 ${T('I miei percorsi', 'My routes')}${routes.length ? ` (${routes.length})` : ''}</a>
+    <p class="muted small">${NATIVE ? T('Puoi spegnere lo schermo e mettere il telefono in tasca: la corsa continua.', 'You can lock the screen and pocket your phone: the run keeps going.') : T('Dal browser il GPS funziona solo a schermo acceso: per correre col telefono in tasca usa l\'app per iPhone o Android.', 'In the browser GPS only works with the screen on: to run with your phone in your pocket, use the iPhone or Android app.')}</p></main>`;
+  if (tgt) $('#rtc').append(routeCanvas(tgt.pts, 56, 56, { glow: null, dots: false, line: 5 }));
+  if ($('#rtx')) $('#rtx').onclick = () => { ls.set('rtarget', null); runHome(); };
+  $('#kmv').onchange = (e) => { o.kmVoice = e.target.checked; ls.set('ropts', o); };
+  $('#ap').onchange = (e) => { o.autopause = e.target.checked; ls.set('ropts', o); };
+  $('#rgo').onclick = runStart;
+}
+
+async function runStart() {
+  try { ac().resume(); } catch {}
+  if (window.speechSynthesis) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+  G = { pts: [], dist: 0, time: 0, splits: [], last: null, lastMove: 0, paused: false, auto: false, acc: null, err: null, t0: Date.now(), tick: Date.now(), target: ls.get('rtarget', null), o: ropts() };
+  G.watch = await geoStart(onGps, (e) => { G.err = e; drawLive(); });
+  G.iv = setInterval(runTick, 1000);
+  awake(true); coach('via') || say(T('Via!', 'Go!'));
+  location.hash = '#corsa-live';
+}
+function onGps(p) {
+  if (!G || G.done) return;
+  G.acc = p.acc; G.err = null;
+  if (p.acc > 35) return drawLive(); // segnale debole: lo mostro ma non lo uso
+  const pt = [p.lat, p.lon, Date.now()]; // orario d'arrivo: alcuni telefoni mandano orari GPS sballati
+  if (!G.last) { G.last = pt; G.pts.push(pt); G.lastMove = Date.now(); return drawLive(); }
+  const d = hav(G.last, pt), dt = Math.max(0.5, (pt[2] - G.last[2]) / 1000);
+  if (d < 3) return drawLive(); // fermo / rumore del GPS
+  if (d / dt > 12) return; // salto impossibile (oltre 43 km/h)
+  if (G.paused) { G.last = pt; return; }
+  G.lastMove = Date.now();
+  const before = G.dist; G.dist += d; G.last = pt; G.pts.push(pt);
+  // ogni km: tempo del km e voce
+  if (Math.floor(G.dist / 1000) > Math.floor(before / 1000)) {
+    const k = Math.floor(G.dist / 1000), split = G.time - G.splits.reduce((a, b) => a + b, 0); G.splits.push(split);
+    if (G.o.kmVoice) {
+      const v = (s) => (s >= 60 ? T(`${Math.floor(s / 60)} minuti e ${s % 60}`, `${Math.floor(s / 60)} minutes ${s % 60}`) : T(`${s} secondi`, `${s} seconds`));
+      say(T(`Chilometro ${k}. Tempo ${v(Math.round(G.time))}. Passo ${v(Math.round(split))}.`, `Kilometer ${k}. Time ${v(Math.round(G.time))}. Pace ${v(Math.round(split))}.`));
+      setTimeout(() => { coachAt = 0; coach('km'); }, 6500);
+    }
+    beep(1320, 300);
+  }
+  drawLive();
+}
+function runTick() {
+  if (!G || G.done) return;
+  const now = Date.now(), dt = (now - G.tick) / 1000; G.tick = now;
+  G.auto = G.o.autopause && !G.paused && G.last && now - G.lastMove > 12000;
+  if (!G.paused && !G.auto) G.time += dt;
+  if (location.hash === '#corsa-live') drawLive();
+}
+// passo degli ultimi ~30 secondi
+function curPace() {
+  const p = G.pts; if (p.length < 2) return '–:––';
+  const tEnd = p.at(-1)[2]; let d = 0, i = p.length - 1;
+  while (i > 0 && tEnd - p[i - 1][2] < 30000) { d += hav(p[i - 1], p[i]); i--; }
+  const sec = (tEnd - p[i][2]) / 1000; return d > 20 ? fmt(sec / (d / 1000)) : '–:––';
+}
+function runLive() {
+  if (!G) return (location.hash = '#corsa');
+  if (G.done) return (location.hash = '#corsa-fine');
+  const tgt = ls.get('routes', []).find((r) => r.id === G.target);
+  app.innerHTML = `<main class="run rlive" style="--accent:${RUNM.col}">
+    <header class="rtop"><button class="x" id="rhome" aria-label="Home">‹</button><b>${T('CORSA', 'RUN')}</b><span id="gps"></span></header>
+    <div class="clock"><small id="rst">${T('IN CORSA', 'RUNNING')}</small><div id="t">0:00</div>
+      <div class="rstats"><div><b id="rkm">0,00</b><span>km</span></div><div><b id="rpa">–:––</b><span>${T('passo medio', 'avg pace')}</span></div><div><b id="rcp">–:––</b><span>${T('passo ora', 'pace now')}</span></div></div>
+      ${tgt?.best ? `<p class="muted">${T('Record su', 'Best on')} ${esc(tgt.name)}: <b>${fmt(tgt.best)}</b></p>` : ''}</div>
+    <div class="rmap" id="rmap"></div>
+    <div class="rsplits" id="rsp"></div>
+    <div class="ctrl"><div class="row"><button id="rpause">${T('PAUSA', 'PAUSE')}</button><button id="rstop" class="fin stopd">${T('FINE', 'FINISH')}</button></div></div></main>`;
+  $('#rhome').onclick = () => (location.hash = '#home'); // la corsa continua: si torna dalla home
+  $('#rpause').onclick = () => { G.paused = !G.paused; $('#rpause').textContent = G.paused ? T('RIPRENDI', 'RESUME') : T('PAUSA', 'PAUSE'); G.paused ? coach('pausa') : coach('riprendi'); drawLive(); };
+  $('#rstop').onclick = async () => { if (await ask(T('Finisci la corsa?', 'Finish the run?'), { ok: T('Finisci', 'Finish') })) runFinish(); };
+  drawLive();
+}
+function drawLive() {
+  if (!G || location.hash !== '#corsa-live' || !$('#t')) return;
+  $('#t').textContent = fmt(G.time);
+  $('#rkm').textContent = km(G.dist); $('#rpa').textContent = pace(G.time, G.dist); $('#rcp').textContent = curPace();
+  $('#rst').textContent = G.paused ? T('IN PAUSA', 'PAUSED') : G.auto ? T('PAUSA AUTOMATICA', 'AUTO-PAUSED') : T('IN CORSA', 'RUNNING');
+  $('#gps').innerHTML = G.err ? `<i class="gbad">${{ perm: T('GPS negato', 'GPS denied'), nogps: T('Niente GPS', 'No GPS') }[G.err] || T('GPS…', 'GPS…')}</i>` : G.acc == null ? `<i class="gwait">GPS…</i>` : `<i class="${G.acc > 35 ? 'gbad' : G.acc > 15 ? 'gmid' : 'gok'}">GPS ±${Math.round(G.acc)} m</i>`;
+  const m = $('#rmap'); m.innerHTML = '';
+  if (G.pts.length > 1) m.append(routeCanvas(G.pts, (m.clientWidth || 340) - 24, (m.clientHeight || 180) - 24, { line: 5 }));
+  else m.innerHTML = `<p class="muted small">${G.err === 'perm' ? T('Permetti la posizione nelle impostazioni del telefono per registrare il percorso.', 'Allow location in your phone settings to record the route.') : T('Il percorso compare qui appena il GPS ti trova.', 'Your route shows up here once GPS finds you.')}</p>`;
+  $('#rsp').innerHTML = G.splits.map((s, i) => `<span><em>${i + 1} km</em>${fmt(s)}</span>`).join('');
+}
+function runFinish() {
+  G.done = true; clearInterval(G.iv); geoStop(G.watch); awake(false);
+  coach('fine') || say(T('Finito!', 'Done!'));
+  G.when = Date.now();
+  const pts = simplify(G.pts.map((p) => [p[0], p[1]]));
+  G.saved = pts;
+  // nel diario, come gli altri workout
+  const log = ls.get('log', []);
+  log.unshift({ id: G.when, m: 'run', c: { dist: Math.round(G.dist), time: Math.round(G.time) }, title: '', res: `${km(G.dist)} km · ${fmt(G.time)}`, dur: Math.round(G.time), laps: G.splits.map(Math.round), items: [], pts: log.filter((x) => x.pts).length < 60 ? pts : undefined, route: G.target || undefined });
+  ls.set('log', log.slice(0, 500));
+  // percorso già salvato: aggiorno record e storico
+  if (G.target) {
+    const rs = ls.get('routes', []), r = rs.find((x) => x.id === G.target);
+    if (r && G.dist > r.dist * 0.85) { G.prevBest = r.best; r.runs = [{ id: G.when, time: Math.round(G.time), dist: Math.round(G.dist) }, ...(r.runs || [])].slice(0, 50); if (!r.best || G.time < r.best) { r.best = Math.round(G.time); G.record = true; } ls.set('routes', rs); }
+  }
+  location.hash = '#corsa-fine';
+}
+function runEnd() {
+  if (!G?.done) return (location.hash = '#corsa');
+  const isSaved = G.target && ls.get('routes', []).some((r) => r.id === G.target);
+  const cmp = G.record ? `<p class="rec">🏆 ${T('Nuovo record sul percorso!', 'New route record!')}${G.prevBest ? ` (${T('prima', 'was')} ${fmt(G.prevBest)})` : ''}</p>` : G.prevBest ? `<p class="muted">${T('Record', 'Best')}: ${fmt(G.prevBest)} · ${T('oggi', 'today')} +${fmt(G.time - G.prevBest)}</p>` : '';
+  app.innerHTML = `<main class="page end" style="--accent:${RUNM.col}"><h1>${T('DAJE!', 'HELL YEAH!')}</h1>
+    <div class="res"><small>${T('Corsa', 'Run')} · ${when(G.when)}</small><b>${km(G.dist)} km</b>
+      <div class="rstats sm"><div><b>${fmt(G.time)}</b><span>${T('tempo', 'time')}</span></div><div><b>${pace(G.time, G.dist)}</b><span>${T('passo /km', 'pace /km')}</span></div></div>
+      ${cmp}<div class="rmap end" id="emap"></div>
+      ${G.splits.length ? `<div class="laps">${G.splits.map((s, i) => `<span><em>${i + 1} km</em>${fmt(s)}</span>`).join('')}</div>` : ''}
+      <span class="when">${T('Salvata nel diario', 'Saved to log')}</span></div>
+    <button class="go" id="selfie">📸 ${T('Fatti il selfie col percorso', 'Selfie with your route')}</button>
+    <div class="row2"><button class="add" id="card">🖼 ${T('Card senza foto', 'Card without photo')}</button>${isSaved ? '' : `<button class="add" id="rsave">🗺 ${T('Salva percorso', 'Save route')}</button>`}</div>
+    <input type="file" id="pic" accept="image/*" capture="user" hidden>
+    <div class="row"><button class="btn" id="again">${T('NUOVA CORSA', 'NEW RUN')}</button><a class="btn" href="#home">HOME</a></div></main>`;
+  const m = $('#emap'); if (G.saved.length > 1) m.append(routeCanvas(G.saved, (m.clientWidth || 320) - 24, 176, { line: 5 }));
+  $('#selfie').onclick = () => $('#pic').click();
+  $('#pic').onchange = (e) => { const f = e.target.files?.[0]; if (!f) return; const im = new Image(); im.onload = () => shareCard(im); im.src = URL.createObjectURL(f); };
+  $('#card').onclick = () => shareCard(null);
+  if ($('#rsave')) $('#rsave').onclick = async () => {
+    const name = await ask(T('Come chiami questo percorso?', 'Name this route'), { ok: T('Salva', 'Save'), input: T('Il mio giro', 'My loop') });
+    if (!name) return;
+    const rs = ls.get('routes', []), id = G.when;
+    rs.unshift({ id, name: name.slice(0, 40), pts: G.saved, dist: Math.round(G.dist), best: Math.round(G.time), runs: [{ id: G.when, time: Math.round(G.time), dist: Math.round(G.dist) }] });
+    ls.set('routes', rs); G.target = id; toast(T('Percorso salvato 🗺', 'Route saved 🗺')); runEnd();
+  };
+  $('#again').onclick = () => { G = null; location.hash = '#corsa'; };
+}
+
+// la card da condividere: foto (o sfondo scuro) + percorso + numeri + logo UN-TIMER
+async function shareCard(img) {
+  let fmtSel = 'story';
+  const draw = async () => {
+    const W = 1080, H = fmtSel === 'story' ? 1920 : 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('700 40px Montserrat'); } catch {}
+    if (img) { const s = Math.max(W / img.width, H / img.height), w = img.width * s, h = img.height * s; x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); }
+    else { const g = x.createRadialGradient(W * 0.5, H * 0.42, 50, W * 0.5, H * 0.42, H * 0.7); g.addColorStop(0, '#2a1606'); g.addColorStop(1, '#0c0c0e'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+    // velo scuro in basso per leggere i numeri
+    const gr = x.createLinearGradient(0, H * 0.38, 0, H); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.88)'); x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    const tg = x.createLinearGradient(0, 0, 0, 260); tg.addColorStop(0, 'rgba(0,0,0,.55)'); tg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = tg; x.fillRect(0, 0, W, 260);
+    // percorso
+    const by = H - (fmtSel === 'story' ? 330 : 250);
+    // con la foto il percorso sta in basso sopra i numeri (la faccia resta libera), senza foto al centro e grande
+    const rh = img ? H * (fmtSel === 'story' ? 0.17 : 0.13) : H * 0.42, ry = img ? by - 190 - rh : H * 0.16;
+    drawRoute(x, G.saved, img ? 70 : 120, ry, img ? W * 0.55 : W - 240, rh, { line: img ? 10 : 12, glow: '#ff7a00' });
+    x.fillStyle = '#fff'; x.textAlign = 'left'; x.font = '900 150px Montserrat, sans-serif'; x.fillText(km(G.dist), 70, by);
+    const kw = x.measureText(km(G.dist)).width; x.font = '900 60px Montserrat, sans-serif'; x.fillStyle = '#ff7a00'; x.fillText('KM', 90 + kw, by);
+    x.font = '800 30px Montserrat, sans-serif'; x.fillStyle = 'rgba(255,255,255,.7)';
+    [[T('TEMPO', 'TIME'), fmt(G.time)], [T('PASSO /KM', 'PACE /KM'), pace(G.time, G.dist)], [T('DATA', 'DATE'), new Date(G.when).toLocaleDateString(LOC(), { day: 'numeric', month: 'short' })]].forEach(([l, v], i) => {
+      const cx = 70 + i * 330; x.font = '800 28px Montserrat, sans-serif'; x.fillStyle = 'rgba(255,255,255,.65)'; x.fillText(l, cx, by + 80); x.font = '900 64px Montserrat, sans-serif'; x.fillStyle = '#fff'; x.fillText(v, cx, by + 150);
+    });
+    // logo UN + TIMER (in alto a sinistra) e "gratis per sempre"
+    x.save(); x.translate(70, 80); const ls_ = 0.17; x.scale(ls_, ls_); x.fillStyle = '#fff'; x.fill(new Path2D('M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z')); x.restore();
+    x.font = '900 34px Montserrat, sans-serif'; x.fillStyle = '#fff'; x.letterSpacing = '9px'; x.fillText('TIMER', 72, 80 + 516 * 0.17 + 44); x.letterSpacing = '0px';
+    x.textAlign = 'right'; x.font = '800 26px Montserrat, sans-serif'; x.fillStyle = 'rgba(255,255,255,.75)'; x.fillText(T('gratis per sempre', 'free forever'), W - 70, 120);
+    return c;
+  };
+  const box = Object.assign(document.createElement('div'), { className: 'ask cardv' });
+  box.innerHTML = `<div class="askbox"><div class="cprev"></div>
+    <div class="chips"><button data-f="story" class="on">${T('Storia 9:16', 'Story 9:16')}</button><button data-f="post">${T('Post 4:5', 'Post 4:5')}</button></div>
+    <div class="row"><button class="btn" data-a="0">${T('Chiudi', 'Close')}</button><button class="go" data-a="1">${T('Condividi', 'Share')}</button></div></div>`;
+  document.body.append(box);
+  let cv = await draw();
+  const show = () => { const p = box.querySelector('.cprev'); p.innerHTML = ''; cv.style.width = '100%'; cv.style.height = 'auto'; p.append(cv); };
+  show();
+  box.querySelectorAll('[data-f]').forEach((b) => (b.onclick = async () => { fmtSel = b.dataset.f; box.querySelectorAll('[data-f]').forEach((z) => z.classList.toggle('on', z === b)); cv = await draw(); show(); }));
+  box.querySelector('[data-a="0"]').onclick = () => box.remove();
+  box.querySelector('[data-a="1"]').onclick = async () => {
+    const data = cv.toDataURL('image/jpeg', 0.9), name = `untimer-corsa-${G.when}.jpg`;
+    try {
+      if (NATIVE?.Filesystem && NATIVE?.Share) { // app: salvo il file e apro la condivisione di sistema
+        const r = await NATIVE.Filesystem.writeFile({ path: name, data: data.split(',')[1], directory: 'CACHE' });
+        await NATIVE.Share.share({ title: 'UN-TIMER', files: [r.uri] }); return;
+      }
+      const blob = await (await fetch(data)).blob(), file = new File([blob], name, { type: 'image/jpeg' });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'UN-TIMER' }); return; }
+      const a = Object.assign(document.createElement('a'), { href: data, download: name }); document.body.append(a); a.click(); a.remove();
+    } catch (e) { if (e?.name !== 'AbortError') toast(T('Non sono riuscito a condividere', 'Could not share')); }
+  };
+}
+
+// i miei percorsi
+function routesPage() {
+  const rs = ls.get('routes', []);
+  app.innerHTML = `<main class="page" style="--accent:${RUNM.col}">${back(T('I MIEI PERCORSI', 'MY ROUTES'))}
+    ${rs.length ? `<div class="saved">${rs.map((r) => `<div class="sv rtv" style="--c:${RUNM.col}"><span class="rtc" data-c="${r.id}"></span><div class="lgx"><b>${esc(r.name)}</b><span>${km(r.dist)} km · ${T('record', 'best')} ${fmt(r.best)} · ${pl((r.runs || []).length, T('volta', 'run'), T('volte', 'runs'))}</span></div>
+      <button data-go="${r.id}" aria-label="${T('Corri', 'Run')}">▶</button><button data-del="${r.id}" aria-label="${T('Elimina', 'Delete')}">✕</button></div>`).join('')}</div>`
+    : `<p class="muted">${T('Ancora niente. Finisci una corsa e premi "Salva percorso": lo ritrovi qui, con il tuo record.', 'Nothing yet. Finish a run and tap "Save route": it shows up here with your best time.')}</p>`}</main>`;
+  rs.forEach((r) => app.querySelector(`[data-c="${r.id}"]`)?.append(routeCanvas(r.pts, 54, 54, { glow: null, dots: false, line: 5 })));
+  app.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => { ls.set('rtarget', +b.dataset.go); location.hash = '#corsa'; }));
+  app.querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
+    if (!(await ask(T('Eliminare questo percorso?', 'Delete this route?'), { ok: T('Elimina', 'Delete') }))) return;
+    ls.set('routes', ls.get('routes', []).filter((r) => r.id != b.dataset.del)); routesPage();
+  }));
+}
+
 // ---------- router ----------
 function route() {
   const h = location.hash.slice(1) || 'home';
@@ -645,6 +911,10 @@ function route() {
   if (h === 'workout') return workout();
   if (h === 'salvati') return savedPage();
   if (h === 'diario') return diary();
+  if (h === 'corsa') return runHome();
+  if (h === 'corsa-live') return runLive();
+  if (h === 'corsa-fine') return runEnd();
+  if (h === 'percorsi') return routesPage();
   if (h === 'impostazioni') return settings();
   home();
 }

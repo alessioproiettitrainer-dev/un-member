@@ -28,3 +28,7 @@ Il timer funziona già nel browser del PC (Chrome, Edge, Safari): tastiera inclu
 3. **Microsoft Store (facoltativo, gratis per gli sviluppatori singoli):** quando il sito è online, da pwabuilder.com genero il pacchetto per lo Store di Windows.
 
 Il Mac App Store non serve: su Mac basta il sito installato da Chrome/Edge (o "Aggiungi al Dock" di Safari).
+
+## Dalla versione 1.2: Corsa con GPS (App Store)
+- **Privacy dell'app su App Store Connect:** resta "Nessun dato raccolto" (posizione e foto restano sul telefono).
+- Le spiegazioni dei permessi (posizione, fotocamera, foto) sono già in italiano nell'app. Per la revisione, nelle note puoi scrivere: *"La posizione serve solo alla funzione Corsa avviata dall'utente (distanza, tempi, percorso), anche a schermo spento finché la corsa è attiva. La fotocamera serve per il selfie con il percorso. Nessun dato lascia il dispositivo."*

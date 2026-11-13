@@ -3,5 +3,8 @@
   "appName": "UN-TIMER",
   "webDir": "../untimer",
   "backgroundColor": "#0c0c0e",
-  "android": { "backgroundColor": "#0c0c0e" }
+  "android": {
+    "backgroundColor": "#0c0c0e",
+    "useLegacyBridge": true
+  }
 }

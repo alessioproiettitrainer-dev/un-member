@@ -2,6 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>UN-TIMER usa la posizione solo durante la Corsa, per misurare distanza, tempi e percorso. Resta sul tuo telefono.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Per continuare a registrare la corsa anche con lo schermo spento o il telefono in tasca. La posizione resta sul tuo telefono.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Per farti il selfie con il percorso della corsa. La foto resta sul tuo telefono.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Per scegliere una foto da usare nella card della corsa.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Per salvare la card della corsa nelle tue foto.</string>
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>

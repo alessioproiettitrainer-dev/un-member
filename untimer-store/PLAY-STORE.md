@@ -99,3 +99,8 @@ Plus:
 Una delle due:
 - **Più semplice:** Render → New → Static Site → repository `un-member`, Publish Directory `untimer` (gratis) → link `https://<nome>.onrender.com/privacy.html`. Fa anche da versione web del timer.
 - Oppure un **Documento Google** pubblico con lo stesso testo (Condividi → Chiunque abbia il link).
+
+## Dalla versione 1.2: Corsa con GPS
+- **Sicurezza dei dati:** resta "nessun dato raccolto". Posizione e foto vengono usate **solo sul telefono** e non escono mai dall'app: per Google non è "raccolta".
+- **Dichiarazione "servizio in primo piano" (Android 14+):** Play Console può chiedere perché l'app usa `FOREGROUND_SERVICE_LOCATION`. Risposta: *"Registrazione di una corsa avviata dall'utente: il GPS misura distanza e percorso anche a schermo spento finché la corsa è attiva; una notifica lo indica e l'utente la ferma con FINE."* Se chiede un video: registra lo schermo mentre premi VIA, spegni lo schermo, lo riaccendi e premi FINE (30 secondi bastano).
+- L'app **non** chiede la "posizione in background" (ACCESS_BACKGROUND_LOCATION): niente modulo speciale per quella.

@@ -153,6 +153,11 @@ Stesso metodo: dici il codice e poi la frase. Finché mancano, queste le legge i
 - [ ] **riparte 2** — Mancano dieci secondi, preparate!
 - [ ] **riparte 3** — Dieci secondi, rimettete in posizione!
 
+### Corsa: a ogni chilometro (dopo che il telefono ha detto tempo e passo)
+- [ ] **km 1** — Daje, n'antro chilometro!
+- [ ] **km 2** — Chilometro fatto, nun te fermà!
+- [ ] **km 3** — Un chilometro in più, vai così!
+
 ## Come registrare (15 minuti)
 1. **Dove:** una stanza piccola con cose morbide (camera da letto con tende chiuse, armadio aperto pieno di vestiti) oppure **la macchina parcheggiata** in una strada tranquilla. Niente bagno o cucina (fanno eco). Spegni ventilatori e condizionatore e chiudi le finestre.
 2. **Telefono:** app Registratore (Android) o Memo vocali (iPhone). Se si può scegliere: qualità alta / mono.

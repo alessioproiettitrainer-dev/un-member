@@ -69,7 +69,7 @@
   - loop senza "doppia immagine": `reframe.py` + `seam.py`;
   - il server non ricomprime le clip: caricare con `?raw=1`, altrimenti Render va in crash di memoria.
 - **Video da Drive:** ogni originale si scarica una volta sola. Subito si tiene una copia "master" (2560 px) in `/home/user/vids/master/` e si cancella il 4K. Riscaricare spesso dallo stesso Drive blocca i download per circa 24 ore.
-- **Clienti Kalos ↔ app:** si collegano **solo per email identica**, mai per nome. Kalos è **solo lettura**: mai modificare, mai aprire chat o schede.
+- **Clienti Kalos ↔ app:** si collegano **solo per email identica**, mai per nome. Kalos è **solo lettura**: mai modificare, mai aprire chat o schede. La sincronizzazione legge due liste (solo GET): low ticket + dalla lista "Clienti" (`/salesclients/fetchSalesClients`) i clienti `role: user` con `lowTicketPlan` che nel low ticket non ci sono (i 56 € con alimentazione) — ok di Alessio del 13/11.
 - **Email automatiche** (partono dall'app ogni mattina alle 10, dalla Gmail uncoach.info):
   - prova: 2° giorno, 4° giorno, ultimo giorno, "tutto ok?" 2-4 giorni dopo la fine;
   - "Ci manchi" a chi non apre l'app da più di 3 giorni: la prima dopo 4 giorni, poi ogni 7, al massimo 6 di fila, con 6 testi a rotazione (`followupMail` in Impostazioni);

@@ -684,10 +684,10 @@ const routeCanvas = (pts, w, h, opt) => { const c = document.createElement('canv
 async function geoStart(onPos, onErr) {
   if (NATIVE?.BackgroundGeolocation) {
     return { native: await NATIVE.BackgroundGeolocation.addWatcher({ backgroundTitle: 'UN-TIMER', backgroundMessage: T('Sto registrando la tua corsa', 'Tracking your run'), requestPermissions: true, stale: false, distanceFilter: 3 },
-      (l, e) => (e ? onErr(e.code === 'NOT_AUTHORIZED' ? 'perm' : 'gps') : onPos({ lat: l.latitude, lon: l.longitude, acc: l.accuracy, t: l.time || Date.now() }))) };
+      (l, e) => (e ? onErr(e.code === 'NOT_AUTHORIZED' ? 'perm' : 'gps') : onPos({ lat: l.latitude, lon: l.longitude, acc: l.accuracy, v: l.speed, t: l.time || Date.now() }))) };
   }
   if (!navigator.geolocation) { onErr('nogps'); return null; }
-  return { web: navigator.geolocation.watchPosition((p) => onPos({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, t: p.timestamp }), (e) => onErr(e.code === 1 ? 'perm' : 'gps'), { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }) };
+  return { web: navigator.geolocation.watchPosition((p) => onPos({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, v: p.coords.speed, t: p.timestamp }), (e) => onErr(e.code === 1 ? 'perm' : 'gps'), { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }) };
 }
 function geoStop(w) { if (!w) return; if (w.native) NATIVE.BackgroundGeolocation.removeWatcher({ id: w.native }).catch(() => {}); if (w.web != null) navigator.geolocation.clearWatch(w.web); }
 const awake = (on) => { if (NATIVE?.KeepAwake) return on ? NATIVE.KeepAwake.keepAwake().catch(() => {}) : NATIVE.KeepAwake.allowSleep().catch(() => {}); if (on && navigator.wakeLock) navigator.wakeLock.request('screen').then((l) => (G && (G.lock = l))).catch(() => {}); else G?.lock?.release?.().catch(() => {}); };
@@ -723,10 +723,19 @@ function onGps(p) {
   if (!G || G.done) return;
   G.acc = p.acc; G.err = null;
   if (p.acc > 35) return drawLive(); // segnale debole: lo mostro ma non lo uso
-  const pt = [p.lat, p.lon, Date.now()]; // orario d'arrivo: alcuni telefoni mandano orari GPS sballati
-  if (!G.last) { G.last = pt; G.pts.push(pt); G.lastMove = Date.now(); return drawLive(); }
+  const now = Date.now();
+  // tengo le letture degli ultimi 20 s: la posizione usata è la media delle ultime 5 (toglie il "ballo" del GPS)
+  const B = (G.buf = (G.buf || []).filter((b) => now - b[2] < 20000)); B.push([p.lat, p.lon, now]);
+  const avg = (a) => [a.reduce((x, b) => x + b[0], 0) / a.length, a.reduce((x, b) => x + b[1], 0) / a.length, now];
+  const pt = avg(B.slice(-5));
+  // partenza: aspetto un segnale buono (≤20 m) o 3 letture discrete, i primi punti del GPS ballano
+  if (!G.last) { G.warm = (G.warm || 0) + 1; if (p.acc > 20 && G.warm < 3) return drawLive(); G.last = pt; G.pts.push(pt); G.lastMove = now; return drawLive(); }
   const d = hav(G.last, pt), dt = Math.max(0.5, (pt[2] - G.last[2]) / 1000);
-  if (d < 3) return drawLive(); // fermo / rumore del GPS
+  // fermo: spostamento più piccolo dell'errore del GPS (5-20 m), velocità del telefono quasi zero,
+  // oppure in 15 s non mi sono allontanato di 10 m (seduto il GPS gira intorno allo stesso punto)
+  const min = Math.min(20, Math.max(5, p.acc * 0.8)), old = B.filter((b) => now - b[2] >= 12000);
+  const still = old.length >= 3 && hav(avg(old.slice(0, 3)), avg(B.slice(-3))) < 10;
+  if (d < min || still || (p.v != null && p.v >= 0 && p.v < 0.6 && d < min * 2)) return drawLive();
   if (d / dt > 12) return; // salto impossibile (oltre 43 km/h)
   if (G.paused) { G.last = pt; return; }
   G.lastMove = Date.now();

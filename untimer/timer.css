@@ -282,3 +282,15 @@ h2 { text-transform: uppercase; }
   .run.rlive { grid-template-columns: 1fr minmax(320px, 34vw); grid-template-areas: "top top" "clock side" "split ctrl"; }
   .rlive .rmap { grid-area: side; } .rlive .rsplits { grid-area: split; align-self: end; }
 }
+/* mappa sotto il percorso */
+.rmap { position: relative; }
+.rmap .mapgl { position: absolute; inset: 0; }
+.rmap.hasmap > canvas { visibility: hidden; }
+.rmap.end { height: 240px; padding: 0; }
+.rmap.big { height: min(52vh, 420px); flex: none; padding: 0; margin: 0 0 12px; }
+.rmap .maplibregl-ctrl-attrib { font: 600 9px Montserrat, sans-serif; background: rgba(0,0,0,.55) !important; color: #aaa; }
+.rmap .maplibregl-ctrl-attrib a { color: #ccc; }
+.rview .askbox { max-width: 560px; width: calc(100% - 24px); }
+.rview h3 { margin: 4px 0 8px; text-transform: uppercase; }
+.rtv .rtc, .rtv .lgx { cursor: pointer; }
+.rview .rstats { grid-template-columns: repeat(3, 1fr); }

@@ -641,7 +641,7 @@ const RUNM = { name: 'CORSA', col: '#3aa0ff' }; // non è tra i 4 timer, ma ha u
 const modeOf = (m) => (m === 'run' ? { ...RUNM, name: T('CORSA', 'RUN') } : MODES[m]);
 const km = (m) => (m / 1000).toFixed(2).replace('.', T(',', '.'));
 const pace = (sec, m) => (m > 30 ? fmt(sec / (m / 1000)) : '–:––'); // min/km
-const ropts = () => ({ kmVoice: true, autopause: true, ...ls.get('ropts', {}) });
+const ropts = () => ({ kmVoice: true, autopause: true, maps: true, ...ls.get('ropts', {}) });
 let G = null; // corsa in corso
 // distanza in metri tra due punti GPS
 function hav(a, b) {
@@ -700,6 +700,7 @@ function runHome() {
     ${tgt ? `<div class="field rt"><label>${T('Percorso', 'Route')}</label><div class="rtrow"><span id="rtc"></span><div><b>${esc(tgt.name)}</b><span>${km(tgt.dist)} km${tgt.best ? ` · ${T('record', 'best')} ${fmt(tgt.best)}` : ''}</span></div><button id="rtx" aria-label="${T('Togli', 'Remove')}">✕</button></div></div>` : ''}
     <label class="sw"><span>${T('Voce a ogni km (tempo e passo)', 'Voice every km (time and pace)')}</span><input type="checkbox" id="kmv" ${o.kmVoice ? 'checked' : ''}></label>
     <label class="sw"><span>${T('Pausa automatica quando ti fermi', 'Auto-pause when you stop')}</span><input type="checkbox" id="ap" ${o.autopause ? 'checked' : ''}></label>
+    ${MAPS_ON ? '' : '<!--'}<label class="sw"><span>${T('Mappa sotto il percorso (serve internet)', 'Map under your route (needs internet)')}</span><input type="checkbox" id="mp" ${o.maps ? 'checked' : ''}></label>${MAPS_ON ? '' : '-->'}
     <button class="go" id="rgo">${T('VIA', 'GO')}</button>
     <a class="ghost" href="#percorsi" style="text-align:center">🗺 ${T('I miei percorsi', 'My routes')}${routes.length ? ` (${routes.length})` : ''}</a>
     <p class="muted small">${NATIVE ? T('Puoi spegnere lo schermo e mettere il telefono in tasca: la corsa continua.', 'You can lock the screen and pocket your phone: the run keeps going.') : T('Dal browser il GPS funziona solo a schermo acceso: per correre col telefono in tasca usa l\'app per iPhone o Android.', 'In the browser GPS only works with the screen on: to run with your phone in your pocket, use the iPhone or Android app.')}</p></main>`;
@@ -707,6 +708,7 @@ function runHome() {
   if ($('#rtx')) $('#rtx').onclick = () => { ls.set('rtarget', null); runHome(); };
   $('#kmv').onchange = (e) => { o.kmVoice = e.target.checked; ls.set('ropts', o); };
   $('#ap').onchange = (e) => { o.autopause = e.target.checked; ls.set('ropts', o); };
+  if ($('#mp')) $('#mp').onchange = (e) => { o.maps = e.target.checked; ls.set('ropts', o); };
   $('#rgo').onclick = runStart;
 }
 
@@ -822,13 +824,14 @@ function runEnd() {
       ${G.splits.length ? `<div class="laps">${G.splits.map((s, i) => `<span><em>${i + 1} km</em>${fmt(s)}</span>`).join('')}</div>` : ''}
       <span class="when">${T('Salvata nel diario', 'Saved to log')}</span></div>
     <button class="go" id="selfie">📸 ${T('Fatti il selfie col percorso', 'Selfie with your route')}</button>
-    <div class="row2"><button class="add" id="card">🖼 ${T('Card senza foto', 'Card without photo')}</button>${isSaved ? '' : `<button class="add" id="rsave">🗺 ${T('Salva percorso', 'Save route')}</button>`}</div>
+    <div class="row2">${MAPS_ON ? `<button class="add" id="mcard">🗺 ${T('Card con mappa', 'Map card')}</button>` : ''}<button class="add" id="card">🖼 ${T('Card senza foto', 'Card without photo')}</button></div><div class="row2">${isSaved ? '' : `<button class="add" id="rsave">🗺 ${T('Salva percorso', 'Save route')}</button>`}</div>
     <input type="file" id="pic" accept="image/*" capture="user" hidden>
     <div class="row"><button class="btn" id="again">${T('NUOVA CORSA', 'NEW RUN')}</button><a class="btn" href="#home">HOME</a></div></main>`;
-  const m = $('#emap'); if (G.saved.length > 1) m.append(routeCanvas(G.saved, (m.clientWidth || 320) - 24, 176, { line: 5 }));
+  routeBox($('#emap'), G.saved, 240);
   $('#selfie').onclick = () => $('#pic').click();
   $('#pic').onchange = (e) => { const f = e.target.files?.[0]; if (!f) return; const im = new Image(); im.onload = () => shareCard(im); im.src = URL.createObjectURL(f); };
   $('#card').onclick = () => shareCard(null);
+  if ($('#mcard')) $('#mcard').onclick = () => shareCard('map');
   if ($('#rsave')) $('#rsave').onclick = async () => {
     const name = await ask(T('Come chiami questo percorso?', 'Name this route'), { ok: T('Salva', 'Save'), input: T('Il mio giro', 'My loop') });
     if (!name) return;
@@ -839,22 +842,83 @@ function runEnd() {
   $('#again').onclick = () => { G = null; location.hash = '#corsa'; };
 }
 
+// ---------- mappa sotto il percorso (solo con internet; senza rete resta il disegno) ----------
+// mappe gratuite OpenFreeMap (dati OpenStreetMap) + libreria MapLibre in vendor/, caricata solo quando serve
+const MAPSTYLE = 'https://tiles.openfreemap.org/styles/dark';
+// in prova: visibile solo aprendo l'app con ?mappe=1 (poi resta attiva su quel telefono), finché Alessio non dà l'ok
+const MAPS_ON = (() => { try { if (/[?&]mappe=1/.test(location.search)) localStorage.setItem('ut_mappe', '1'); return localStorage.getItem('ut_mappe') === '1'; } catch { return false; } })();
+let mapLib, mapStyle;
+const loadMap = () => mapLib || (mapLib = new Promise((ok, ko) => {
+  document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'vendor/maplibre-gl.css' }));
+  const s = Object.assign(document.createElement('script'), { src: 'vendor/maplibre-gl.js' });
+  s.onload = () => ok(window.maplibregl); s.onerror = () => { mapLib = null; ko(); }; document.head.append(s);
+}));
+async function mapInto(el, pts, { interactive = true, keep = false, pad = 36, line = 4.5, ratio } = {}) {
+  if (!MAPS_ON || !navigator.onLine || pts.length < 2 || !ropts().maps) return null;
+  let map;
+  try {
+    const ml = await loadMap();
+    mapStyle = mapStyle || (await (await fetch(MAPSTYLE)).json());
+    const ll = pts.map((p) => [p[1], p[0]]), b = ll.reduce((b, p) => b.extend(p), new ml.LngLatBounds(ll[0], ll[0]));
+    map = new ml.Map({ container: el, style: mapStyle, bounds: b, fitBoundsOptions: { padding: pad }, interactive, dragRotate: false, attributionControl: { compact: true }, preserveDrawingBuffer: keep, fadeDuration: 0, ...(ratio ? { pixelRatio: ratio } : {}) });
+    await new Promise((ok, ko) => { const t = setTimeout(ko, 9000); map.once('load', () => { clearTimeout(t); ok(); }); map.once('error', ko); });
+    el.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show'); // crediti chiusi (tasto ⓘ)
+    const lay = { 'line-join': 'round', 'line-cap': 'round' };
+    map.addSource('r', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: ll } } });
+    map.addSource('d', { type: 'geojson', data: { type: 'FeatureCollection', features: [[ll[0], '#35d07f'], [ll.at(-1), '#ff4d6d']].map(([c, k]) => ({ type: 'Feature', properties: { k }, geometry: { type: 'Point', coordinates: c } })) } });
+    map.addLayer({ id: 'rg', type: 'line', source: 'r', layout: lay, paint: { 'line-color': '#ff7a00', 'line-width': line * 3, 'line-blur': line * 2, 'line-opacity': 0.6 } });
+    map.addLayer({ id: 'rl', type: 'line', source: 'r', layout: lay, paint: { 'line-color': '#ffa040', 'line-width': line } });
+    map.addLayer({ id: 'rd', type: 'circle', source: 'd', paint: { 'circle-radius': line * 1.5, 'circle-color': ['get', 'k'], 'circle-stroke-width': line * 0.55, 'circle-stroke-color': '#fff' } });
+    return map;
+  } catch { try { map?.remove(); } catch {} return null; }
+}
+// riquadro: subito il disegno, poi la mappa ci va sopra se arriva
+function routeBox(el, pts, h, opt) {
+  el.innerHTML = ''; if (pts.length < 2) return;
+  el.append(routeCanvas(pts, (el.clientWidth || 320) - 24, h - 24, { line: 5 }));
+  const gl = Object.assign(document.createElement('div'), { className: 'mapgl' }); el.append(gl);
+  mapInto(gl, pts, opt).then((m) => (m ? el.classList.add('hasmap') : gl.remove()));
+}
+// percorso salvato a tutto schermo: mappa grande + record + storico
+function routeView(r) {
+  const box = Object.assign(document.createElement('div'), { className: 'ask rview' });
+  box.innerHTML = `<div class="askbox"><div class="rmap big" id="rvm"></div><h3>${esc(r.name)}</h3>
+    <div class="rstats sm"><div><b>${km(r.dist)}</b><span>km</span></div><div><b>${fmt(r.best)}</b><span>${T('record', 'best')}</span></div><div><b>${(r.runs || []).length}</b><span>${T('volte', 'runs')}</span></div></div>
+    <div class="laps">${(r.runs || []).slice(0, 8).map((x) => `<span><em>${new Date(x.id).toLocaleDateString(LOC(), { day: 'numeric', month: 'short' })}</em>${fmt(x.time)}</span>`).join('')}</div>
+    <div class="row"><button class="btn" data-a="0">${T('Chiudi', 'Close')}</button><button class="go" data-a="1">▶ ${T('Corri', 'Run')}</button></div></div>`;
+  document.body.append(box); routeBox(box.querySelector('#rvm'), r.pts, 300);
+  box.querySelector('[data-a="0"]').onclick = () => box.remove();
+  box.querySelector('[data-a="1"]').onclick = () => { box.remove(); ls.set('rtarget', r.id); location.hash = '#corsa'; };
+}
+// la mappa come sfondo della card (stessa misura della card, poi copiata nel canvas)
+async function mapImage(W, H, pts, padBottom) {
+  const el = Object.assign(document.createElement('div'), { style: `position:fixed;left:-3000px;top:0;width:${W / 2}px;height:${H / 2}px` }); document.body.append(el);
+  const m = await mapInto(el, pts, { interactive: false, keep: true, ratio: 2, line: 6, pad: { top: 170, left: 50, right: 50, bottom: padBottom / 2 } });
+  if (!m) { el.remove(); return null; }
+  await new Promise((ok) => { const t = setTimeout(ok, 8000); m.once('idle', () => { clearTimeout(t); ok(); }); });
+  const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').drawImage(m.getCanvas(), 0, 0, W, H);
+  m.remove(); el.remove(); return c;
+}
+
 // la card da condividere: foto (o sfondo scuro) + percorso + numeri + logo UN-TIMER
 async function shareCard(img) {
   let fmtSel = 'story';
   const draw = async () => {
     const W = 1080, H = fmtSel === 'story' ? 1920 : 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
     try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('700 40px Montserrat'); } catch {}
-    if (img) { const s = Math.max(W / img.width, H / img.height), w = img.width * s, h = img.height * s; x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); }
+    const mapBg = img === 'map' ? await mapImage(W, H, G.saved, (fmtSel === 'story' ? 520 : 420)) : null;
+    if (img === 'map' && !mapBg) toast(T('Mappa non disponibile senza internet', 'Map needs internet'));
+    if (mapBg) x.drawImage(mapBg, 0, 0);
+    else if (img && img !== 'map') { const s = Math.max(W / img.width, H / img.height), w = img.width * s, h = img.height * s; x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); }
     else { const g = x.createRadialGradient(W * 0.5, H * 0.42, 50, W * 0.5, H * 0.42, H * 0.7); g.addColorStop(0, '#2a1606'); g.addColorStop(1, '#0c0c0e'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
     // velo scuro in basso per leggere i numeri
-    const gr = x.createLinearGradient(0, H * 0.38, 0, H); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.88)'); x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    const gr = x.createLinearGradient(0, H * (mapBg ? 0.55 : 0.38), 0, H); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.88)'); x.fillStyle = gr; x.fillRect(0, 0, W, H);
     const tg = x.createLinearGradient(0, 0, 0, 260); tg.addColorStop(0, 'rgba(0,0,0,.55)'); tg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = tg; x.fillRect(0, 0, W, 260);
     // percorso
     const by = H - (fmtSel === 'story' ? 330 : 250);
     // con la foto il percorso sta in basso sopra i numeri (la faccia resta libera), senza foto al centro e grande
-    const rh = img ? H * (fmtSel === 'story' ? 0.17 : 0.13) : H * 0.42, ry = img ? by - 190 - rh : H * 0.16;
-    drawRoute(x, G.saved, img ? 70 : 120, ry, img ? W * 0.55 : W - 240, rh, { line: img ? 10 : 12, glow: '#ff7a00' });
+    const ph = img && img !== 'map', rh = ph ? H * (fmtSel === 'story' ? 0.17 : 0.13) : H * 0.42, ry = ph ? by - 190 - rh : H * 0.16;
+    if (!mapBg) drawRoute(x, G.saved, img && img !== 'map' ? 70 : 120, ry, ph ? W * 0.55 : W - 240, rh, { line: ph ? 10 : 12, glow: '#ff7a00' });
     x.fillStyle = '#fff'; x.textAlign = 'left'; x.font = '900 150px Montserrat, sans-serif'; x.fillText(km(G.dist), 70, by);
     const kw = x.measureText(km(G.dist)).width; x.font = '900 60px Montserrat, sans-serif'; x.fillStyle = '#ff7a00'; x.fillText('KM', 90 + kw, by);
     x.font = '800 30px Montserrat, sans-serif'; x.fillStyle = 'rgba(255,255,255,.7)';
@@ -865,6 +929,7 @@ async function shareCard(img) {
     x.save(); x.translate(70, 80); const ls_ = 0.17; x.scale(ls_, ls_); x.fillStyle = '#fff'; x.fill(new Path2D('M0 0H130V386H313V0H444V516H0Z M480 0H924V516H793V130H610V516H480Z')); x.restore();
     x.font = '900 34px Montserrat, sans-serif'; x.fillStyle = '#fff'; x.letterSpacing = '9px'; x.fillText('TIMER', 72, 80 + 516 * 0.17 + 44); x.letterSpacing = '0px';
     x.textAlign = 'right'; x.font = '800 26px Montserrat, sans-serif'; x.fillStyle = 'rgba(255,255,255,.75)'; x.fillText(T('gratis per sempre', 'free forever'), W - 70, 120);
+    if (mapBg) { x.font = '600 18px Montserrat, sans-serif'; x.fillStyle = 'rgba(255,255,255,.45)'; x.fillText('© OpenStreetMap · OpenFreeMap', W - 40, H - 30); }
     return c;
   };
   const box = Object.assign(document.createElement('div'), { className: 'ask cardv' });
@@ -900,6 +965,7 @@ function routesPage() {
     : `<p class="muted">${T('Ancora niente. Finisci una corsa e premi "Salva percorso": lo ritrovi qui, con il tuo record.', 'Nothing yet. Finish a run and tap "Save route": it shows up here with your best time.')}</p>`}</main>`;
   rs.forEach((r) => app.querySelector(`[data-c="${r.id}"]`)?.append(routeCanvas(r.pts, 54, 54, { glow: null, dots: false, line: 5 })));
   app.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => { ls.set('rtarget', +b.dataset.go); location.hash = '#corsa'; }));
+  app.querySelectorAll('.rtv .rtc, .rtv .lgx').forEach((e) => (e.onclick = () => routeView(rs.find((r) => r.id == e.closest('.rtv').querySelector('[data-go]').dataset.go))));
   app.querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
     if (!(await ask(T('Eliminare questo percorso?', 'Delete this route?'), { ok: T('Elimina', 'Delete') }))) return;
     ls.set('routes', ls.get('routes', []).filter((r) => r.id != b.dataset.del)); routesPage();

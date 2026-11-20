@@ -253,7 +253,8 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 // ---- contenuti per i membri -------------------------------------------------
-app.get('/api/settings', (req, res) => res.json(db.settings));
+// impostazioni pubbliche (le legge l'app): senza la lista email dei beta tester
+app.get('/api/settings', (req, res) => { const { trialBonus, ...pub } = db.settings; res.json(pub); });
 // registro degli errori dei telefoni (ultimi 300), per capire i problemi segnalati dai clienti
 app.post('/api/log', express.text({ type: '*/*', limit: '4kb' }), (req, res) => {
   let b = req.body && typeof req.body === 'object' ? req.body : {}; if (typeof req.body === 'string') try { b = JSON.parse(req.body); } catch {}
@@ -607,21 +608,33 @@ cm.get('/members/:id', (req, res) => {
   if (!u) return res.status(404).json({ error: 'Membro non trovato' });
   res.json({ ...card(u), blocked: blockedBy(req.user, u.id) });
 });
-// room: "general" oppure "dm-<idAltro>"
+// argomenti della community (come i "topic" di Telegram): li crea e li toglie Alessio dal pannello
+const topics = () => (Array.isArray(db.settings.topics) ? db.settings.topics : []).filter((t) => t?.id && t.title);
+const roomParam = (key) => (key.startsWith('topic:') ? `topic-${key.slice(6)}` : key); // chiave interna → indirizzo della stanza
+const isGroup = (key) => key === 'general' || key.startsWith('topic:');
+const roomLabel = (key) => (key === 'general' ? 'Generale' : key.startsWith('topic:') ? topics().find((t) => `topic:${t.id}` === key)?.title || 'Argomento' : 'Messaggio privato');
+// room: "general", "topic-<id>" oppure "dm-<idAltro>"
 function resolveRoom(req, res) {
   const r = req.params.room;
   if (r === 'general') return { key: 'general' };
+  if (r.startsWith('topic-')) { const t = topics().find((x) => x.id === r.slice(6)); if (!t) { res.status(404).json({ error: 'Argomento non trovato' }); return null; } return { key: `topic:${t.id}`, topic: t }; }
   const other = r.startsWith('dm-') && db.users.find((x) => x.id === r.slice(3));
   if (!other || other.id === req.user.id || (!inCommunity(other) && !isCoach(req.user))) { res.status(404).json({ error: 'Chat non trovata' }); return null; }
   return { key: dmKey(req.user.id, other.id), other };
 }
-const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from); return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, photo: m.photo && !m.deleted ? `/api/chatphotos/${m.photo}` : '', video: !!m.video, from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '' }; };
+const msgOut = (m) => { const u = db.users.find((x) => x.id === m.from);
+  // risposta a un messaggio (come WhatsApp): nome e inizio del messaggio citato
+  const q = m.replyTo && db.messages.find((x) => x.id === m.replyTo), qu = q && db.users.find((x) => x.id === q.from);
+  const reply = q ? { id: q.id, name: qu?.name || 'Ex membro', text: q.deleted ? 'Messaggio eliminato' : (q.photo ? `📷 ${q.text || 'Foto'}` : q.text).slice(0, 120) } : null;
+  return { id: m.id, ts: m.ts, text: m.deleted ? '' : m.text, deleted: !!m.deleted, photo: m.photo && !m.deleted ? `/api/chatphotos/${m.photo}` : '', video: !!m.video, from: m.from, name: u?.name || 'Ex membro', avatar: u?.community?.avatar ? `/api/avatars/${u.community.avatar}` : '', reply, likes: m.likes || [] }; };
 cm.get('/rooms', (req, res) => {
   const me_ = req.user.id, lr = req.user.lastRead || {};
-  const rooms = new Map([['general', { room: 'general', title: 'Chat di gruppo', last: null, unread: 0 }]]);
+  const rooms = new Map([['general', { room: 'general', title: 'Generale', emoji: '💬', group: true, last: null, unread: 0 }]]);
+  for (const t of topics()) rooms.set(`topic-${t.id}`, { room: `topic-${t.id}`, title: t.title, emoji: t.emoji || '#', desc: t.desc || '', group: true, last: null, unread: 0 });
   for (const m of db.messages) {
     let key;
     if (m.room === 'general') key = 'general';
+    else if (m.room.startsWith('topic:')) { key = `topic-${m.room.slice(6)}`; if (!rooms.has(key)) continue; }
     else if (m.room.startsWith('dm:') && m.room.split(':').includes(me_)) {
       const otherId = m.room.split(':').slice(1).find((x) => x !== me_);
       if (blockedBy(req.user, otherId)) continue;
@@ -629,19 +642,25 @@ cm.get('/rooms', (req, res) => {
       if (!rooms.has(key)) { const o = db.users.find((x) => x.id === otherId); rooms.set(key, { room: key, title: o?.name || 'Ex membro', avatar: o?.community?.avatar ? `/api/avatars/${o.community.avatar}` : '', last: null, unread: 0 }); }
     } else continue;
     const r = rooms.get(key);
-    r.last = { text: m.deleted ? 'Messaggio eliminato' : (m.photo ? `📷 ${m.text || 'Foto'}` : m.text).slice(0, 80), ts: m.ts, mine: m.from === me_ };
-    if (m.from !== me_ && m.ts > (lr[key] || 0) && !(key === 'general' && blockedBy(req.user, m.from))) r.unread++;
+    if (r.group && blockedBy(req.user, m.from)) continue;
+    r.last = { text: m.deleted ? 'Messaggio eliminato' : (m.photo ? `📷 ${m.text || 'Foto'}` : m.text).slice(0, 80), ts: m.ts, mine: m.from === me_, name: r.group ? (db.users.find((x) => x.id === m.from)?.name || '').split(' ')[0] : '' };
+    if (m.from !== me_ && m.ts > (lr[key] || 0)) r.unread++;
   }
-  res.json([...rooms.values()].sort((a, b) => (a.room === 'general' ? -1 : b.room === 'general' ? 1 : (b.last?.ts || 0) - (a.last?.ts || 0))));
+  // generale e argomenti nell'ordine scelto da Alessio; i privati dal più recente
+  const all = [...rooms.values()], groups = all.filter((r) => r.group), dms = all.filter((r) => !r.group).sort((a, b) => (b.last?.ts || 0) - (a.last?.ts || 0));
+  res.json([...groups, ...dms]);
 });
 cm.get('/chat/:room', (req, res) => {
   const r = resolveRoom(req, res);
   if (!r) return;
   const after = Number(req.query.after) || 0;
-  const list = db.messages.filter((m) => m.room === r.key && m.ts > after && !blockedBy(req.user, m.from)).slice(-200).map(msgOut);
+  // nuovi messaggi + quelli cambiati (cuori, eliminati) dopo l'ultimo controllo
+  const list = db.messages.filter((m) => m.room === r.key && (m.ts > after || (after && (m.ut || 0) > after)) && !blockedBy(req.user, m.from)).slice(-200).map(msgOut);
   (req.user.lastRead ||= {})[req.params.room] = Date.now();
-  res.json({ messages: list, other: r.other ? card(r.other) : null, blocked: r.other ? blockedBy(req.user, r.other.id) : false });
+  res.json({ messages: list, other: r.other ? card(r.other) : null, blocked: r.other ? blockedBy(req.user, r.other.id) : false, topic: r.topic ? { title: r.topic.title, emoji: r.topic.emoji || '#', desc: r.topic.desc || '' } : r.key === 'general' ? { title: 'Generale', emoji: '💬', desc: 'La chat di tutti: presentati, racconta i tuoi allenamenti, fai domande.' } : null });
 });
+// risposta valida solo a un messaggio della stessa stanza
+const replyOf = (req, r) => { const id = String(req.body?.replyTo || ''); const q = id && db.messages.find((x) => x.id === id && x.room === r.key); return q ? { replyTo: q.id } : {}; };
 cm.post('/chat/:room', (req, res) => {
   const r = resolveRoom(req, res);
   if (!r) return;
@@ -650,7 +669,7 @@ cm.post('/chat/:room', (req, res) => {
   if (r.other && (blockedBy(r.other, req.user.id) || blockedBy(req.user, r.other.id))) return res.status(403).json({ error: 'Non puoi scrivere a questo membro' });
   const last = db.messages.findLast?.((m) => m.from === req.user.id);
   if (last && Date.now() - last.ts < 1000) return res.status(429).json({ error: 'Piano, un messaggio alla volta' });
-  const m = { id: newId(), room: r.key, from: req.user.id, text, ts: Date.now() };
+  const m = { id: newId(), room: r.key, from: req.user.id, text, ts: Date.now(), ...replyOf(req, r) };
   db.messages.push(m);
   if (db.messages.length > 20000) for (const old of db.messages.splice(0, db.messages.length - 20000)) if (old.photo) fs.rm(path.join(DATA_DIR, 'chatphotos', old.photo), () => {});
   (req.user.lastRead ||= {})[req.params.room] = m.ts;
@@ -678,7 +697,7 @@ cm.post('/chat/:room/photo', chatPhotoUpload.single('file'), (req, res) => {
   if (r.other && (blockedBy(r.other, req.user.id) || blockedBy(req.user, r.other.id))) { drop(); return res.status(403).json({ error: 'Non puoi scrivere a questo membro' }); }
   const today_ = db.messages.filter((m) => m.from === req.user.id && (m.photo || m.hadPhoto) && Date.now() - m.ts < 864e5).length;
   if (today_ >= PHOTOS_PER_DAY) { drop(); return res.status(429).json({ error: `Puoi mandare al massimo ${PHOTOS_PER_DAY} foto al giorno` }); }
-  const m = { id: newId(), room: r.key, from: req.user.id, text: String(req.body?.text || '').trim().slice(0, 1000), photo: req.file.filename, ts: Date.now() };
+  const m = { id: newId(), room: r.key, from: req.user.id, text: String(req.body?.text || '').trim().slice(0, 1000), photo: req.file.filename, ts: Date.now(), ...replyOf(req, r) };
   db.messages.push(m);
   (req.user.lastRead ||= {})[req.params.room] = m.ts;
   save();
@@ -691,6 +710,24 @@ app.get('/api/chatphotos/:file', (req, res) => {
   if (!currentUser(req) && !isAdmin(req) && !staffOf(req)) return res.status(401).end();
   res.set('Cache-Control', 'private, max-age=604800');
   res.sendFile(path.join(PHOTO_DIR, path.basename(req.params.file)), (err) => err && res.status(404).end());
+});
+// ❤️ mi piace (come Instagram): metti/togli; a chi ha scritto arriva la notifica (una volta sola per persona)
+cm.post('/like/:id', (req, res) => {
+  const m = db.messages.find((x) => x.id === req.params.id && !x.deleted);
+  const me_ = req.user.id;
+  const visible = m && (m.room === 'general' || topics().some((t) => `topic:${t.id}` === m.room) || (m.room.startsWith('dm:') && m.room.split(':').includes(me_)));
+  if (!visible) return res.status(404).json({ error: 'Messaggio non trovato' });
+  const on = !(m.likes || []).includes(me_);
+  m.likes = on ? [...(m.likes || []), me_] : (m.likes || []).filter((x) => x !== me_);
+  m.ut = Date.now();
+  save();
+  res.json({ likes: m.likes });
+  const to = db.users.find((x) => x.id === m.from);
+  if (on && to && to.id !== me_ && !blockedBy(to, me_) && !(m.likeNotified || []).includes(me_)) {
+    (m.likeNotified ||= []).push(me_);
+    const text = (m.photo ? `📷 ${m.text || 'la tua foto'}` : m.text || '').slice(0, 80);
+    pushTo(to, { title: `❤️ ${isCoach(req.user) ? 'Alessio' : req.user.name} ha messo mi piace`, body: text, url: `/#/chat/${isGroup(m.room) ? roomParam(m.room) : `dm-${me_}`}`, tag: `like-${m.id}` }, 'chat');
+  }
 });
 cm.post('/report/:id', (req, res) => {
   const m = db.messages.find((x) => x.id === req.params.id);
@@ -818,14 +855,14 @@ crud('tips', () => ({ title: 'Nuovo consiglio', text: '', image: '', start: '', 
 crud('tutorials', () => ({ title: 'Nuovo tutorial', category: 'Swing', level: 'Tutti', minutes: '', videoUrl: '', description: '', exerciseId: '', published: false }));
 admin.get('/moderation', (req, res) => {
   const name = (id) => db.users.find((u) => u.id === id)?.name || 'Ex membro';
-  const reports = db.reports.map((r) => { const m = db.messages.find((x) => x.id === r.messageId); return m && { ...r, byName: name(r.by), message: { ...m, name: name(m.from), where: m.room === 'general' ? 'Chat di gruppo' : 'Messaggio privato' } }; }).filter(Boolean).reverse();
-  const general = db.messages.filter((m) => m.room === 'general').slice(-100).reverse().map((m) => ({ ...m, name: name(m.from) }));
+  const reports = db.reports.map((r) => { const m = db.messages.find((x) => x.id === r.messageId); return m && { ...r, byName: name(r.by), message: { ...m, name: name(m.from), where: roomLabel(m.room) } }; }).filter(Boolean).reverse();
+  const general = db.messages.filter((m) => isGroup(m.room)).slice(-150).reverse().map((m) => ({ ...m, name: name(m.from), where: roomLabel(m.room) }));
   const banned = db.users.filter((u) => u.community?.banned).map((u) => ({ id: u.id, name: u.name, email: u.email }));
   res.json({ reports, general, banned });
 });
 admin.delete('/moderation/messages/:id', (req, res) => {
   const m = db.messages.find((x) => x.id === req.params.id);
-  if (m) { m.deleted = true; m.text = ''; if (m.photo) { fs.rm(path.join(PHOTO_DIR, m.photo), () => {}); m.photo = ''; m.hadPhoto = true; } }
+  if (m) { m.deleted = true; m.text = ''; m.ut = Date.now(); if (m.photo) { fs.rm(path.join(PHOTO_DIR, m.photo), () => {}); m.photo = ''; m.hadPhoto = true; } }
   db.reports = db.reports.filter((r) => r.messageId !== req.params.id);
   save();
   res.json({ ok: true });
@@ -1391,13 +1428,17 @@ me.post('/push/test', async (req, res) => res.json({ sent: await pushTo(req.user
 function chatPush(from, r, m) {
   const body = (m.photo ? `📷 ${m.text || 'Foto'}` : m.text).slice(0, 120);
   if (r.other) return pushTo(r.other, { title: `💬 ${isCoach(from) ? 'Alessio' : from.name}`, body, url: `/#/chat/dm-${from.id}`, tag: `dm-${from.id}` }, 'chat');
-  if (r.key !== 'general') return;
+  // chi riceve una risposta lo sa subito (anche nei gruppi), poi non riceve anche l'avviso del gruppo
+  const q = m.replyTo && db.messages.find((x) => x.id === m.replyTo), to = q && db.users.find((x) => x.id === q.from);
+  if (to && to.id !== from.id && !blockedBy(to, from.id)) pushTo(to, { title: `↩️ ${isCoach(from) ? 'Alessio' : from.name} ti ha risposto`, body, url: `/#/chat/${r.other ? `dm-${from.id}` : roomParam(r.key)}`, tag: `reply-${m.id}` }, 'chat');
+  if (!isGroup(r.key)) return;
+  const label = roomLabel(r.key), param = roomParam(r.key);
   const coach = isCoach(from), gap = (coach ? 30 : 180) * 60e3, now = Date.now();
   for (const u of db.users) {
     const p = u.push;
-    if (u.id === from.id || (!p?.subs?.length && !p?.ios?.length) || !inCommunity(u) || !canUse(u) || blockedBy(u, from.id) || (u.lastRead?.general || 0) >= m.ts || now - (p.lastGroup || 0) < gap) continue;
+    if (u.id === from.id || u.id === to?.id || (!p?.subs?.length && !p?.ios?.length) || !inCommunity(u) || !canUse(u) || blockedBy(u, from.id) || (u.lastRead?.[param] || 0) >= m.ts || now - (p.lastGroup || 0) < gap) continue;
     p.lastGroup = now;
-    pushTo(u, { title: coach ? '📣 Alessio nella chat di gruppo' : '💬 Chat di gruppo', body: coach ? body : `${from.name}: ${body}`, url: '/#/community/chat', tag: 'group' }, 'group');
+    pushTo(u, { title: coach ? `📣 Alessio in ${label}` : `💬 ${label}`, body: coach ? body : `${from.name}: ${body}`, url: `/#/chat/${param}`, tag: 'group' }, 'group');
   }
 }
 const pushState = (u) => ({ subs: (u.push?.subs || []).map((x) => x.endpoint), ios: u.push?.ios || [], hour: u.push?.hour ?? 9, off: u.push?.off || [] });

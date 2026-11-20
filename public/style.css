@@ -701,3 +701,19 @@ body.qt-open { overflow: hidden; }
 .qt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 2px; }
 .qt-grid .qt-btn { font-size: 12px; min-height: 48px; }
 @media (min-width: 760px) and (orientation: landscape) { .qt { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: auto 1fr; align-content: start; max-width: 1100px; margin: 0 auto; } .qt-top { grid-column: 1 / -1; } .qt-cam { max-height: 80dvh; } .qt-body { margin-top: 0; } .qt-final .qt-body { grid-column: 1 / -1; max-width: 420px; justify-self: center; } }
+
+/* community: gruppi per argomento, risposte, cuori */
+.room.topic .temoji { flex: 0 0 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: var(--card-2); }
+.msg.mine { flex-direction: row-reverse; }
+.quote { display: block; width: 100%; text-align: left; border-left: 3px solid var(--accent); background: rgba(255, 255, 255, .06); border-radius: 8px; padding: 5px 8px; margin: 2px 0 6px; font-size: 12.5px; color: inherit; }
+.msg.mine .quote { border-left-color: var(--accent-ink); background: rgba(0, 0, 0, .12); }
+.quote b { display: block; font-size: 12px; }
+.quote span { display: block; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heart { align-self: center; flex: none; font-size: 15px; line-height: 1; padding: 6px 4px; opacity: .45; display: flex; align-items: center; gap: 3px; }
+.heart.has, .heart.on { opacity: 1; }
+.heart i { font-style: normal; font-size: 11px; font-weight: 800; color: var(--muted); }
+.heart.on { animation: hpop .25s ease; }
+@keyframes hpop { 50% { transform: scale(1.35); } }
+.msg.flash .bub { box-shadow: 0 0 0 2px var(--accent); transition: box-shadow .3s; }
+.replybar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--card); border-left: 3px solid var(--accent); flex: none; }
+.replybar b { font-size: 12.5px; color: var(--accent); }

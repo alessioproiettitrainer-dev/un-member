@@ -424,6 +424,19 @@ function loadModPhotos() {
     try { const r = await fetch(img.dataset.modphoto, { headers: authHeaders() }); img.src = URL.createObjectURL(await r.blob()); } catch {}
   });
 }
+// argomenti dei gruppi della community (come i topic di Telegram): li aggiunge, rinomina, sposta e toglie Alessio
+function topicsBox() {
+  const list = S.settings.topics || [];
+  return `<div class="h2" style="margin-top:0">Gruppi della community</div>
+    <div class="muted small" style="margin-bottom:10px">Oltre a "Generale" (che c'è sempre), i gruppi per argomento: Calisthenics, Kettlebell, Alimentazione… Togliendo un gruppo i suoi messaggi spariscono dall'app.</div>
+    ${list.map((x, i) => `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px">
+      <input type="text" data-topic="${i}" data-k="emoji" value="${esc(x.emoji || '')}" placeholder="🔥" style="width:52px;text-align:center">
+      <div style="flex:1;min-width:0"><input type="text" data-topic="${i}" data-k="title" value="${esc(x.title)}" placeholder="Nome del gruppo"><input type="text" data-topic="${i}" data-k="desc" value="${esc(x.desc || '')}" placeholder="Di cosa si parla (facoltativo)" style="margin-top:4px;font-size:13px"></div>
+      <button class="sbtn ghost" data-act="topic-up" data-i="${i}" title="Sposta su" ${i ? '' : 'disabled'}>↑</button>
+      <button class="sbtn ghost danger" data-act="topic-del" data-i="${i}" title="Togli">✕</button></div>`).join('') || '<div class="muted small" style="margin-bottom:8px">Nessun gruppo per argomento: c\'è solo "Generale".</div>'}
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="sbtn" data-act="topic-add">+ Aggiungi gruppo</button><button class="sbtn acc" data-act="topic-save">Salva gruppi</button></div>`;
+}
+const readTopics = () => (S.settings.topics || []).map((x, i) => { const v = (k) => document.querySelector(`[data-topic="${i}"][data-k="${k}"]`)?.value.trim() ?? x[k] ?? ''; return { id: x.id, emoji: v('emoji'), title: v('title'), desc: v('desc') }; });
 function moderationView() {
   const { reports, general, banned } = S.mod;
   const t = (ts) => new Date(ts).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -433,11 +446,11 @@ function moderationView() {
         <div style="margin:8px 0"><b>${esc(r.message.name)}:</b> ${r.message.photo ? modPhoto(r.message.photo) : ''}${esc(r.message.text) || (r.message.photo ? '' : '<i class="muted">già eliminato</i>')}</div>
         <div class="row" style="gap:6px;flex-wrap:wrap"><button class="sbtn danger" data-act="mod-del" data-id="${r.message.id}">Elimina messaggio</button>
           <button class="sbtn" data-act="mod-ignore" data-id="${r.id}">Ignora</button><button class="sbtn ghost danger" data-act="mod-ban" data-id="${r.message.from}" data-ban="1">Escludi ${esc(r.message.name)}</button></div></div>`).join('') || '<div class="muted">Nessuna segnalazione. 👍</div>'}
-      <div class="h2">Ultimi messaggi nella chat di gruppo</div>
-      ${general.map((m) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div style="min-width:0"><span class="muted small">${t(m.ts)}</span> <b>${esc(m.name)}:</b> ${m.deleted ? '<i class="muted">eliminato</i>' : `${m.photo ? modPhoto(m.photo) : ''}${esc(m.text)}`}</div>
+      <div class="h2">Ultimi messaggi nei gruppi</div>
+      ${general.map((m) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);gap:8px"><div style="min-width:0"><span class="muted small">${t(m.ts)} · ${esc(m.where || 'Generale')}</span> <b>${esc(m.name)}:</b> ${m.deleted ? '<i class="muted">eliminato</i>' : `${m.photo ? modPhoto(m.photo) : ''}${esc(m.text)}`}</div>
         ${m.deleted ? '' : `<button class="sbtn ghost danger" data-act="mod-del" data-id="${m.id}">✕</button>`}</div>`).join('') || '<div class="muted">Ancora nessun messaggio.</div>'}
     </div>
-    <div class="panel"><div class="h2" style="margin-top:0">Esclusi dalla community</div>
+    <div class="panel">${S.role === 'owner' ? topicsBox() : ''}<div class="h2" style="margin-top:${S.role === 'owner' ? '24px' : '0'}">Esclusi dalla community</div>
       <div class="muted small" style="margin-bottom:10px">Chi è escluso continua ad allenarsi con l'app, ma non vede la community e non può scrivere. I messaggi privati non sono visibili ai moderatori, se non quando vengono segnalati.</div>
       ${banned.map((u) => `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><b>${esc(u.name)}</b><div class="muted small">${esc(u.email)}</div></div><button class="sbtn" data-act="mod-ban" data-id="${u.id}" data-ban="0">Riammetti</button></div>`).join('') || '<div class="muted">Nessuno.</div>'}
     </div></div>`;
@@ -973,6 +986,10 @@ root.addEventListener('click', async (e) => {
       }
       case 'pend-del': await call('DELETE', `/api/admin/pending/${encodeURIComponent(t.dataset.email)}`); delete S.pending[t.dataset.email]; break;
       case 'staff-del': if (!confirm('Rimuovere questo delegato?')) return; await call('DELETE', `/api/admin/staff/${t.dataset.id}`); S.staff = S.staff.filter((y) => y.id !== t.dataset.id); break;
+      case 'topic-add': S.settings.topics = [...readTopics(), { id: Math.random().toString(36).slice(2, 10), emoji: '💬', title: '', desc: '' }]; break;
+      case 'topic-up': { const l = readTopics(), i = Number(t.dataset.i); [l[i - 1], l[i]] = [l[i], l[i - 1]]; S.settings.topics = l; break; }
+      case 'topic-del': { const l = readTopics(), x = l[Number(t.dataset.i)]; if (x.title && !confirm(`Togliere il gruppo "${x.title}"? I suoi messaggi spariscono dall'app.`)) return; l.splice(Number(t.dataset.i), 1); S.settings.topics = l; S.settings = await call('PUT', '/api/admin/settings', { topics: l }); toast('Gruppo tolto'); break; }
+      case 'topic-save': { const l = readTopics().filter((x) => x.title); S.settings = await call('PUT', '/api/admin/settings', { topics: l }); toast('Gruppi salvati'); break; }
       case 'mod-del': if (!confirm('Eliminare il messaggio per tutti?')) return; await call('DELETE', `/api/admin/moderation/messages/${t.dataset.id}`); S.mod = await call('GET', '/api/admin/moderation'); toast('Messaggio eliminato'); break;
       case 'mod-ignore': await call('DELETE', `/api/admin/moderation/reports/${t.dataset.id}`); S.mod = await call('GET', '/api/admin/moderation'); break;
       case 'mod-ban': {

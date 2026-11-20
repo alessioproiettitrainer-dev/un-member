@@ -601,7 +601,7 @@ async function programView(pid) {
       <a class="wo locked" href="#/w/${pid}/${w.id}"><div class="num">🔒</div>
         <div><div class="t">${esc(w.title)}</div><div class="muted small">${lockText(w)}</div></div><div class="go">›</div></a>` : `
       <a class="wo ${done.has(w.id) ? 'done' : ''}" href="#/w/${pid}/${w.id}"><div class="num">${done.has(w.id) ? '✓' : i + 1}</div>
-        <div><div class="t">${esc(w.title)}${w.optional ? ' <span class="pill opt">Opzionale</span>' : ''}</div><div class="muted small">~${Math.round(estimateSeconds(w) / 60)} min${w.description ? ` · ${esc(w.description)}` : ''}</div></div><div class="go">›</div></a>`)).join('')).join('')}`);
+        <div><div class="t">${esc(w.title)}${w.optional ? ' <span class="pill opt">Opzionale</span>' : ''}</div><div class="muted small">~${Math.round(estimateSeconds(w) / 60)} min${w.introUrl ? ' · ▶ video' : ''}${w.description ? ` · ${esc(shortDesc(w.description))}` : ''}</div></div><div class="go">›</div></a>`)).join('')).join('')}`);
   document.getElementById('setmine').onclick = async () => { ME = await api('/api/me', 'PUT', { activeProgramId: pid }); toast('Programma impostato'); programView(pid); };
 }
 
@@ -616,8 +616,10 @@ async function workoutView(pid, wid) {
   const used = new Set((w.phases || []).flatMap((ph) => (ph.blocks || []).flatMap((b) => (b.items || []).map((it) => it.exerciseId))));
   const mySubs = [...used].filter((id) => subs[id] && p.exercises[subs[id]]);
   page('train', `<a class="back" href="#/p/${pid}">‹ ${esc(p.title)}</a>
-    <div class="h1">${esc(w.title)}</div><div class="muted">${esc(w.description || '')}</div>
-    <div class="row" style="margin:12px 0 18px"><span class="pill accent">~${Math.round(estimateSeconds(w) / 60)} min</span></div>
+    <div class="h1">${esc(w.title)}</div>
+    <div class="row" style="margin:8px 0 14px"><span class="pill accent">~${Math.round(estimateSeconds(w) / 60)} min</span></div>
+    ${ytId(w.introUrl) || w.introUrl ? `<button class="introvid" id="introvid">${ytId(w.introUrl) ? `<img src="https://i.ytimg.com/vi/${ytId(w.introUrl)}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="iv-play">▶</span><span class="iv-lab">Guarda la spiegazione</span></button>` : ''}
+    ${w.description ? `<div class="card wdesc"><b>Come funziona</b><div class="txt">${esc(w.description)}</div></div>` : ''}
     ${mySubs.length ? `<div class="card subcard"><b>Le tue varianti</b><div class="muted small">Le hai scelte tu nel player con "più facile / più difficile":</div>
       ${mySubs.map((id) => `<div class="small" style="margin-top:6px">${esc(ex(subs[id]).name)} <span class="muted">al posto di</span> ${esc(ex(id).name)}</div>`).join('')}
       <button class="btn block" style="margin-top:10px" id="resetsubs">↺ Torna agli esercizi originali</button></div>` : ''}
@@ -630,6 +632,7 @@ async function workoutView(pid, wid) {
     <button class="btn block" style="margin-top:10px" id="markdone">✓ Segna come fatto</button>
     <div class="muted small" style="text-align:center;margin-top:6px">Ti sei allenato seguendo la scheda senza il player? Segnalo qui, anche in un giorno passato.</div>`);
   document.getElementById('markdone').onclick = () => markDone(p, w);
+  document.getElementById('introvid')?.addEventListener('click', () => videoViewer(w.introUrl));
   // tocca un esercizio: si apre la sua demo in loop con la descrizione
   $app.querySelectorAll('[data-demo]').forEach((b) => (b.onclick = () => {
     const e = ex(b.dataset.demo), emb = !e.video && embedUrl(e.videoUrl, { loop: true });
@@ -1318,6 +1321,19 @@ async function welcomeDone() {
   if (ME.welcomeSeen === src) return;
   ME.welcomeSeen = src;
   try { await api('/api/me/welcome', 'PUT', { seen: src }); } catch { /* riprova la prossima volta */ }
+}
+// YouTube: id del video (per copertina e player) e testo corto per gli elenchi
+const ytId = (url) => (String(url || '').match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/) || [])[1] || '';
+const shortDesc = (t) => { const s = String(t || '').split(/\n/)[0].trim(); return s.length > 70 ? s.slice(0, 68) + '…' : s; };
+// video a tutto schermo dentro l'app (YouTube/Vimeo incorporato, altrimenti si apre fuori)
+function videoViewer(url) {
+  const emb = embedUrl(url);
+  if (!emb) { if (url) window.open(url, '_blank'); return; }
+  const m = document.createElement('div');
+  m.className = 'photoview welcomeview';
+  m.innerHTML = `<iframe src="${esc(emb + (emb.includes('?') ? '&' : '?') + 'autoplay=1')}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="Video"></iframe><button class="icon" aria-label="Chiudi">✕</button>`;
+  m.querySelector('.icon').onclick = () => m.remove();
+  document.body.append(m);
 }
 function welcomePlayer() {
   const emb = !SETTINGS.welcomeVideo && embedUrl(SETTINGS.welcomeUrl);

@@ -619,7 +619,10 @@ function workoutEditor(w, wi) {
       <div class="grid2"><div class="f"><label>Titolo</label><input type="text" data-b="${P}.title" value="${esc(w.title)}"></div>
         <div class="f"><label>${stagesTxt(S.draft) ? 'Fase' : 'Settimana'}</label><input type="number" min="0" data-b="${P}.week" value="${esc(w.week)}"></div></div>
       <label class="chk"><input type="checkbox" data-b="${P}.optional" ${w.optional ? 'checked' : ''}> Opzionale (in "Oggi" vengono proposti prima gli allenamenti principali; nel programma ha l'etichetta "Opzionale")</label>
-      <div class="f"><label>Descrizione</label><input type="text" data-b="${P}.description" value="${esc(w.description)}"></div>
+      <div class="f"><label>Descrizione</label><textarea data-b="${P}.description" rows="5" placeholder="Cosa si fa, come, a cosa stare attenti. Es: 4 giri, tra un giro e l'altro 1 minuto di recupero. Se non riesci a chiudere le ripetizioni, scendi di peso.">${esc(w.description || '')}</textarea>
+        <div class="muted small">Scrivi pure lungo, anche andando a capo: nell'app si vede tutto sopra l'allenamento. Nell'elenco del programma si vede solo l'inizio.</div></div>
+      <div class="f"><label>Video spiegazione (facoltativo, link YouTube)</label><input type="text" data-b="${P}.introUrl" value="${esc(w.introUrl || '')}" placeholder="https://youtu.be/…">
+        <div class="muted small">Un video breve in cui spieghi l'allenamento: nell'app compare il riquadro "Guarda la spiegazione" con la copertina di YouTube. Meglio "non in elenco" su YouTube.</div></div>
       ${(w.phases || []).map((ph, pi) => phaseEditor(ph, `${P}.phases.${pi}`)).join('')}
       <div class="row" style="margin-top:12px">${Object.entries(PHASE_TYPES).map(([k, v]) => `<button class="sbtn" data-act="ph-add" data-path="${P}" data-type="${k}">+ ${v}</button>`).join('')}</div>
     </div>` : ''}</div>`;

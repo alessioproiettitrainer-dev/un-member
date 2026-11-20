@@ -1156,26 +1156,58 @@ function paywallView() {
 
 // ---- tutorial --------------------------------------------------------------------
 const trainTabs = (on) => `<div class="seg"><a href="#/train" class="${on === 'programs' ? 'on' : ''}">Programmi</a><a href="#/tutorials" class="${on === 'tutorials' ? 'on' : ''}">Tutorial</a></div>`;
+// ---- tutorial: aree con copertina (dalla categoria), percorso numerato, visti ✓, ricerca --------------
+const tutThumb = (t) => t.cover || (ytId(t.videoUrl) ? `https://i.ytimg.com/vi/${ytId(t.videoUrl)}/hqdefault.jpg` : '');
+const tutSort = (a, b) => (Number(a.order) || 999) - (Number(b.order) || 999) || String(a.title).localeCompare(b.title);
+function tutAreas(list) {
+  const m = new Map();
+  for (const t of list.slice().sort(tutSort)) { const k = t.category || 'Altro'; if (!m.has(k)) m.set(k, []); m.get(k).push(t); }
+  // prima l'area con il tutorial numero più basso (è quella "Inizia da qui")
+  return [...m.entries()].map(([name, items]) => ({ name, items, first: Math.min(...items.map((t) => Number(t.order) || 999)) })).sort((a, b) => a.first - b.first || a.name.localeCompare(b.name));
+}
+const tutRow = (t, i, seen) => `<a class="tutrow" href="#/tutorial/${t.id}"><div class="tth">${tutThumb(t) ? `<img src="${esc(tutThumb(t))}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="tplay">▶</span>${seen.has(t.id) ? '<span class="tok">✓</span>' : ''}${t.minutes ? `<span class="tdur">${esc(t.minutes)} min</span>` : ''}</div>
+  <div style="min-width:0">${i ? `<span class="tnum">${i}</span>` : ''}<b>${esc(t.title)}</b><div class="muted small">${[t.level !== 'Tutti' && t.level, seen.has(t.id) && 'visto'].filter(Boolean).map(esc).join(' · ') || esc(t.category || '')}</div></div></a>`;
 async function tutorialsView(cat) {
   const list = await api('/api/tutorials');
-  const cats = [...new Set(list.map((t) => t.category).filter(Boolean))];
-  const shown = list.filter((t) => !cat || t.category === cat);
+  const seen = new Set(ME.tutSeen || []);
+  const areas = tutAreas(list);
+  if (cat) { // dentro un'area: copertina grande e percorso numerato
+    const a = areas.find((x) => x.name === cat);
+    if (!a) return (location.hash = '#/tutorials');
+    const done = a.items.filter((t) => seen.has(t.id)).length;
+    return page('train', `<a class="back" href="#/tutorials">‹ Tutorial</a>
+      <div class="tarea-hero">${tutThumb(a.items[0]) ? `<img src="${esc(tutThumb(a.items[0]))}" alt="" onerror="this.remove()">` : ''}<div class="t"><b>${esc(a.name)}</b><span>${a.items.length} tutorial${done ? ` · ${done} ${done === 1 ? 'visto' : 'visti'}` : ''}</span></div></div>
+      ${a.items.map((t, i) => tutRow(t, i + 1, seen)).join('')}`);
+  }
   page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('tutorials')}
-    ${cats.length > 1 ? `<div class="chips"><a href="#/tutorials" class="${!cat ? 'on' : ''}">Tutti</a>${cats.map((c) => `<a href="#/tutorials/${encodeURIComponent(c)}" class="${c === cat ? 'on' : ''}">${esc(c)}</a>`).join('')}</div>` : ''}
-    ${shown.map((t) => `<a class="tut" href="#/tutorial/${t.id}"><div class="play">▶</div><div><div class="t">${esc(t.title)}</div>
-      <div class="muted small">${[t.category, t.level, t.minutes && `${t.minutes} min`].filter(Boolean).map(esc).join(' · ')}</div></div></a>`).join('') || '<div class="empty">🎬 I tutorial approfonditi sugli esercizi più tecnici arrivano a breve.</div>'}`);
+    ${list.length ? `<input type="search" class="tsearch" id="tsearch" placeholder="🔍 Cerca un esercizio (es. swing, muscle up)…">
+    <div id="tres"></div>
+    <div class="tareas" id="tareas">${areas.map((a, i) => { const done = a.items.filter((t) => seen.has(t.id)).length;
+      return `<a class="tarea ${i === 0 && areas.length > 2 ? 'big' : ''}" href="#/tutorials/${encodeURIComponent(a.name)}">${tutThumb(a.items[0]) ? `<img src="${esc(tutThumb(a.items[0]))}" alt="" loading="lazy" onerror="this.remove()">` : ''}${i === 0 && areas.length > 2 ? '<span class="ttag">Inizia da qui</span>' : ''}
+        <div class="t"><b>${esc(a.name)}</b><span>${a.items.length} tutorial${done ? ` · ${done} ${done === 1 ? 'visto' : 'visti'}` : ''}</span><div class="tbar"><i style="width:${Math.round((done / a.items.length) * 100)}%"></i></div></div></a>`; }).join('')}</div>`
+    : '<div class="empty">🎬 I tutorial approfonditi sugli esercizi più tecnici arrivano a breve.</div>'}`);
+  const q = document.getElementById('tsearch');
+  if (q) q.oninput = () => {
+    const v = q.value.trim().toLowerCase();
+    document.getElementById('tareas').hidden = !!v;
+    document.getElementById('tres').innerHTML = !v ? '' : list.filter((t) => `${t.title} ${t.category} ${t.exerciseName} ${t.description}`.toLowerCase().includes(v)).sort(tutSort).map((t) => tutRow(t, 0, seen)).join('') || '<div class="empty">Nessun tutorial trovato.</div>';
+  };
 }
 async function tutorialView(id) {
-  const t = (await api('/api/tutorials')).find((x) => x.id === id);
+  const list = await api('/api/tutorials'), t = list.find((x) => x.id === id);
   if (!t) throw new Error('Tutorial non trovato');
   const emb = embedUrl(t.videoUrl);
-  page('train', `<a class="back" href="#/tutorials">‹ Tutorial</a>
-    <div class="row"><span class="pill accent">${esc(t.category)}</span>${t.level ? `<span class="pill">${esc(t.level)}</span>` : ''}${t.minutes ? `<span class="pill">${esc(t.minutes)} min</span>` : ''}</div>
-    <div class="h1" style="font-size:28px">${esc(t.title)}</div>
-    ${emb ? `<div class="video wide" style="margin:12px 0"><iframe src="${esc(emb)}" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="${esc(t.title)}"></iframe></div>` : ''}
-    <a class="btn block" href="${esc(t.videoUrl)}" target="_blank" rel="noopener">Apri il video a schermo intero ↗</a>
-    ${t.description ? `<div class="card" style="margin-top:12px;white-space:pre-line">${esc(t.description)}</div>` : ''}
-    ${t.exerciseName ? `<div class="muted small">Esercizio: <b>${esc(t.exerciseName)}</b></div>` : ''}`);
+  const area = tutAreas(list).find((a) => a.name === (t.category || 'Altro'));
+  const next = area && area.items[area.items.indexOf(area.items.find((x) => x.id === id)) + 1];
+  page('train', `<a class="back" href="#/tutorials/${encodeURIComponent(t.category || 'Altro')}">‹ ${esc(t.category || 'Tutorial')}</a>
+    <div class="h1" style="font-size:26px;margin-top:6px">${esc(t.title)}</div>
+    <div class="row" style="margin:6px 0 12px">${t.level ? `<span class="pill">${esc(t.level)}</span>` : ''}${t.minutes ? `<span class="pill">${esc(t.minutes)} min</span>` : ''}</div>
+    ${emb ? `<div class="video wide" style="margin:0 0 12px"><iframe src="${esc(emb)}" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="${esc(t.title)}"></iframe></div>` : `<a class="btn block" href="${esc(t.videoUrl)}" target="_blank" rel="noopener">▶ Apri il video</a>`}
+    ${t.description ? `<div class="card wdesc"><b>Punti chiave</b><div class="txt">${esc(t.description)}</div></div>` : ''}
+    ${t.exerciseName ? `<div class="muted small" style="margin-top:8px">Esercizio: <b>${esc(t.exerciseName)}</b></div>` : ''}
+    ${next ? `<div class="h2">Il prossimo</div>${tutRow(next, 0, new Set(ME.tutSeen || []))}` : ''}`);
+  // aperto = visto (spunta nelle aree)
+  if (!(ME.tutSeen || []).includes(id)) api(`/api/me/tutorial-seen/${id}`, 'POST', {}).then((r) => (ME.tutSeen = r.tutSeen)).catch(() => {});
 }
 
 // ---- community ---------------------------------------------------------------

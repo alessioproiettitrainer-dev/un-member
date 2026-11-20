@@ -401,12 +401,14 @@ function userDetail(u) {
 
 function tutorialsView() {
   return `<div class="panel"><div class="row" style="justify-content:space-between"><div class="h2" style="margin:0">Tutorial</div><button class="sbtn acc" data-act="bd-new" data-kind="tutorials">+ Nuovo tutorial</button></div>
-    <div class="muted small" style="margin:6px 0 12px">Video lunghi di tecnica, linkati da YouTube, Google Drive o Vimeo. I membri li trovano in Allenamenti → Tutorial; se colleghi un esercizio, nel player compare il tasto "Guarda il tutorial".</div>
+    <div class="muted small" style="margin:6px 0 12px">Video lunghi di tecnica, linkati da YouTube, Google Drive o Vimeo. Nell'app sono divisi in aree per <b>Categoria</b> (Swing, Clean, Calisthenics…), con la copertina presa da YouTube in automatico; dentro ogni area vanno in ordine di <b>Ordine nel percorso</b>. L'area con il tutorial numero 1 più basso compare in grande con "Inizia da qui". Se colleghi un esercizio, nel player compare il tasto "Guarda il tutorial".</div>
     ${S.tutorials.map((x) => `<div class="block">
       <div class="grid2"><div class="f"><label>Titolo</label><input type="text" data-bd="tutorials.${x.id}.title" value="${esc(x.title)}"></div>
         <div class="f"><label>Categoria</label><input type="text" data-bd="tutorials.${x.id}.category" value="${esc(x.category)}" placeholder="Swing, Squat, Mobilità…" list="tcats"></div>
         <div class="f"><label>Livello</label><select data-bd="tutorials.${x.id}.level">${['Tutti', 'Principiante', 'Intermedio', 'Avanzato'].map((l) => `<option ${x.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-        <div class="f"><label>Durata (min)</label><input type="number" min="0" data-bd="tutorials.${x.id}.minutes" value="${esc(x.minutes)}"></div></div>
+        <div class="f"><label>Durata (min)</label><input type="number" min="0" data-bd="tutorials.${x.id}.minutes" value="${esc(x.minutes)}"></div>
+        <div class="f"><label>Ordine nel percorso (1, 2, 3…)</label><input type="number" min="0" data-bd="tutorials.${x.id}.order" value="${esc(x.order ?? '')}" placeholder="1 = il primo da guardare"></div>
+        <div class="f"><label>Copertina (facoltativa, link immagine)</label><input type="text" data-bd="tutorials.${x.id}.cover" value="${esc(x.cover || '')}" placeholder="vuoto = quella di YouTube"></div></div>
       <div class="f"><label>Link del video (YouTube, Google Drive o Vimeo)</label><input type="text" data-bd="tutorials.${x.id}.videoUrl" value="${esc(x.videoUrl)}" placeholder="https://youtu.be/…">
         ${x.videoUrl && !embedUrl(x.videoUrl) ? '<div class="small danger">Link non riconosciuto</div>' : ''}</div>
       <div class="f"><label>Descrizione: punti chiave ed errori comuni</label><textarea data-bd="tutorials.${x.id}.description" rows="4">${esc(x.description)}</textarea></div>

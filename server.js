@@ -348,6 +348,12 @@ me.use((req, res, next) => {
   next();
 });
 me.get('/', (req, res) => res.json(publicUser(req.user)));
+// tutorial visti dal membro (spunta ✓ e barra di avanzamento delle aree)
+me.post('/tutorial-seen/:id', (req, res) => {
+  if (!db.tutorials.some((t) => t.id === req.params.id)) return res.status(404).end();
+  const u = req.user; u.tutSeen = [...new Set([...(u.tutSeen || []), req.params.id])].slice(-500);
+  save(); res.json({ tutSeen: u.tutSeen });
+});
 // ogni minuto l'app dice "sono aperta" (e se c'è un allenamento in corso): serve a non pubblicare modifiche mentre qualcuno si allena
 const LIVE = new Map(); // id → { at, workout } (solo in memoria, non nel db)
 me.post('/ping', (req, res) => { LIVE.set(req.user.id, { at: Date.now(), workout: String(req.body?.workout || '').slice(0, 80) }); res.json({ ok: true }); });

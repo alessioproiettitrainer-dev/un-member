@@ -725,3 +725,30 @@ body.qt-open { overflow: hidden; }
 .introvid .iv-lab { position: absolute; left: 14px; bottom: 12px; font-weight: 900; text-transform: uppercase; font-size: 14px; letter-spacing: .4px; text-shadow: 0 2px 8px rgba(0, 0, 0, .8); }
 .wdesc b { display: block; margin-bottom: 6px; color: var(--accent); text-transform: uppercase; font-size: 13px; letter-spacing: .5px; }
 .wdesc .txt { color: #d4d4d8; line-height: 1.6; }
+
+/* tutorial: aree con copertina, percorso numerato */
+.tsearch { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; margin: 4px 0 14px; }
+.tareas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tarea { position: relative; aspect-ratio: 1 / 1.05; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #2a1608, #16161a); text-decoration: none; color: #fff; }
+.tarea.big { grid-column: span 2; aspect-ratio: 2 / 1; }
+.tarea img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.58); }
+.tarea .t { position: absolute; left: 12px; right: 12px; bottom: 10px; }
+.tarea b { display: block; font-weight: 900; text-transform: uppercase; font-size: 15px; line-height: 1.1; }
+.tarea span { font-size: 11px; font-weight: 700; color: #d4d4d8; }
+.tbar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .2); margin-top: 6px; }
+.tbar i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+.ttag { position: absolute; top: 10px; left: 10px; background: var(--accent); color: var(--accent-ink); font-size: 10px; font-weight: 900; padding: 4px 9px; border-radius: 99px; text-transform: uppercase; }
+.tarea-hero { position: relative; margin: 8px -16px 10px; height: 180px; background: linear-gradient(135deg, #2a1608, #16161a); overflow: hidden; }
+.tarea-hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.55); }
+.tarea-hero .t { position: absolute; left: 16px; bottom: 14px; }
+.tarea-hero b { display: block; font-weight: 900; font-size: 28px; text-transform: uppercase; }
+.tarea-hero span { font-size: 12px; font-weight: 700; color: #d4d4d8; }
+.tutrow { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: inherit; }
+.tth { position: relative; flex: 0 0 128px; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: linear-gradient(135deg, #2a1608, #16161a); }
+.tth img { width: 100%; height: 100%; object-fit: cover; }
+.tth .tplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; border-radius: 50%; background: rgba(0, 0, 0, .55); display: grid; place-items: center; font-size: 12px; }
+.tth .tok { position: absolute; left: 5px; top: 5px; width: 20px; height: 20px; border-radius: 50%; background: var(--ok); color: #04210f; font-size: 11px; font-weight: 900; display: grid; place-items: center; }
+.tth .tdur { position: absolute; right: 5px; bottom: 5px; background: rgba(0, 0, 0, .75); font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 5px; }
+.tutrow b { display: block; font-size: 14.5px; }
+.tnum { color: var(--accent); font-weight: 900; font-size: 12px; }
+@media (min-width: 760px) and (orientation: landscape) { .tareas { grid-template-columns: repeat(3, 1fr); } .tarea.big { grid-column: span 3; aspect-ratio: 3 / 1; } }

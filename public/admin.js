@@ -593,6 +593,8 @@ function programEditor(p) {
         <div class="muted small">Con le fasi, nel campo "Fase" di ogni allenamento metti 1, 2, 3…: gli allenamenti di una fase si ripetono ogni settimana per tutta la sua durata, poi si sblocca la fase dopo. Vuoto = settimane normali.</div></div>
       <div class="f"><label>Tipo</label><select data-b="kind"><option value="base" ${p.kind !== 'cycle' ? 'selected' : ''}>Programma fisso (sempre disponibile)</option><option value="cycle" ${p.kind === 'cycle' ? 'selected' : ''}>Programma del mese (dura N settimane da una data)</option></select></div>
       <div class="f"><label>Categoria (sezione in Allenamenti)</label><select data-b="category">${[['kettlebell', 'Kettlebell'], ['trx', 'TRX'], ['calisthenics', 'Calisthenics'], ['quick', '20 Minuti Training']].map(([v, l]) => `<option value="${v}" ${(p.category || 'kettlebell') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="f"><label>Mostra anche in</label><div class="row" style="gap:10px;flex-wrap:wrap">${[['kettlebell', 'Kettlebell'], ['trx', 'TRX'], ['calisthenics', 'Calisthenics'], ['quick', '20 Minuti Training']].filter(([v]) => v !== (p.category || 'kettlebell')).map(([v, l]) => `<label class="chk"><input type="checkbox" data-palso="${v}" ${(p.alsoIn || []).includes(v) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+        <div class="muted small">Il programma compare anche in queste sezioni di Allenamenti, oltre che nella sua categoria.</div></div>
       <div class="f"><label>Attrezzatura che serve</label><div class="row" style="gap:10px;flex-wrap:wrap">${[['kb1', '1 kettlebell'], ['kb2', '2 kettlebell'], ['trx', 'TRX'], ['bar', 'Sbarra / parallele'], ['band', 'Elastici'], ['bw', 'Corpo libero']].map(([v, l]) => `<label class="chk"><input type="checkbox" data-peq="${v}" ${(p.equipment || []).includes(v) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
         <div class="muted small">Chi non ha questi attrezzi vede il programma in fondo, tra "serve altra attrezzatura". Il questionario lo usa per consigliare da dove partire.</div></div>
       ${p.kind === 'cycle' ? `<div class="f"><label>Inizio del ciclo</label><input type="date" data-b="startDate" value="${esc(p.startDate)}"></div>
@@ -704,6 +706,7 @@ function parentOf(path) {
 root.addEventListener('toggle', (e) => { if (e.target.classList?.contains('daily')) S.dailyOpen = e.target.open; }, true); // la tabella per giorno resta aperta
 root.addEventListener('input', (e) => {
   const t = e.target;
+  if (t.dataset.palso && S.draft) { const e = new Set(S.draft.alsoIn || []); t.checked ? e.add(t.dataset.palso) : e.delete(t.dataset.palso); S.draft.alsoIn = [...e]; S.dirty = true; return; }
   if (t.dataset.peq && S.draft) { const e = new Set(S.draft.equipment || []); t.checked ? e.add(t.dataset.peq) : e.delete(t.dataset.peq); S.draft.equipment = [...e]; S.dirty = true; return; }
   if (t.dataset.b && S.draft) {
     const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : Number(t.value)) : t.value;

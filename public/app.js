@@ -545,14 +545,16 @@ async function trainView() {
   const mine = (p) => (p.id === (ME.activeProgramId || (current[0] || base[0])?.id) ? '<span class="pill ok">Il tuo programma</span>' : '');
   // programmi fissi raggruppati per attrezzo; quelli che chiedono un attrezzo che il membro non ha finiscono in fondo
   const ok = base.filter((p) => canDo(p)), other = base.filter((p) => !canDo(p));
-  const cats = Object.keys(CAT_LABEL).filter((c) => ok.some((p) => (p.category || 'kettlebell') === c));
+  // un programma sta nella sua categoria e anche in quelle scelte in "Mostra anche in" (alsoIn)
+  const inCat = (p, c) => (p.category || 'kettlebell') === c || (p.alsoIn || []).includes(c);
+  const cats = Object.keys(CAT_LABEL).filter((c) => ok.some((p) => inCat(p, c)));
   const curOk = current.filter((p) => canDo(p)), curOther = current.filter((p) => !canDo(p));
   // ogni sezione è una riga che scorre di lato, così anche con tanti programmi la pagina resta corta
   const row = (cards) => `<div class="hscroll">${cards.join('')}</div>`;
   const monthCard = (p) => programCard(p, `<span class="pill">Settimana ${cycleWeek(p)} di ${p.weeks}</span>${mine(p)}`);
   page('train', `<div class="h1">Allena<em>menti</em></div>${trainTabs('programs')}
     ${curOk.length ? `<div class="h2">Programma del mese</div><div class="muted small" style="margin:-6px 0 10px">Allenamenti nuovi ogni settimana, per intermedi e avanzati</div>${row(curOk.map(monthCard))}` : ''}
-    ${cats.map((c) => { const ps = ok.filter((p) => (p.category || 'kettlebell') === c); return `<div class="h2 rowhead">${CAT_LABEL[c]}${ps.length > 1 ? `<span class="muted small">${ps.length} programmi · scorri →</span>` : ''}</div>${CAT_SUB[c] ? `<div class="muted small" style="margin:-6px 0 10px">${CAT_SUB[c]}</div>` : ''}${row(ps.map((p) => programCard(p, mine(p))))}`; }).join('')}
+    ${cats.map((c) => { const ps = ok.filter((p) => inCat(p, c)); return `<div class="h2 rowhead">${CAT_LABEL[c]}${ps.length > 1 ? `<span class="muted small">${ps.length} programmi · scorri →</span>` : ''}</div>${CAT_SUB[c] ? `<div class="muted small" style="margin:-6px 0 10px">${CAT_SUB[c]}</div>` : ''}${row(ps.map((p) => programCard(p, mine(p))))}`; }).join('')}
     ${!ok.length && !curOk.length && (other.length || curOther.length) ? '<div class="card"><b>Per ora non ci sono programmi con la tua attrezzatura</b><div class="muted small">Stanno arrivando anche i programmi con il TRX. Intanto qui sotto trovi gli altri: per la maggior parte serve almeno un kettlebell.</div></div>' : ''}
     ${other.length || curOther.length ? `<details class="otherprogs" ${!ok.length && !curOk.length ? 'open' : ''}><summary>Altri programmi · serve altra attrezzatura (${other.length + curOther.length})</summary>
       <div class="muted small" style="margin:6px 0 10px">In base alle tue risposte non hai l'attrezzatura per questi. Se nel frattempo l'hai presa, aggiornala dal Profilo.</div>

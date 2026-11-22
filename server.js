@@ -272,7 +272,7 @@ const summary = (p) => ({
   id: p.id, title: p.title, subtitle: p.subtitle, level: p.level, weeks: p.weeks, kind: p.kind || 'base',
   startDate: p.startDate || '', endDate: cycleEnd(p),
   description: p.description, cover: p.cover, workoutCount: (p.workouts || []).length,
-  equipment: p.equipment || [], category: p.category || 'kettlebell',
+  equipment: p.equipment || [], category: p.category || 'kettlebell', alsoIn: p.alsoIn || [],
 });
 
 app.get('/api/programs', member, active, (req, res) => {

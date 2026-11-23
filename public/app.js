@@ -347,7 +347,14 @@ function stageOf(p, week) { const st = stagesOf(p); let end = 0; for (let i = 0;
 const stageRange = (p, k) => { const st = stagesOf(p), a = 1 + st.slice(0, k - 1).reduce((x, y) => x + y, 0); return [a, a + (st[k - 1] || 1) - 1]; };
 // fase (o settimana) in corso: nei cicli dalla data, negli altri l'ultima sbloccata
 const curUnit = (p) => { const cw = cycleWeek(p); if (cw) return stagesOf(p).length ? stageOf(p, cw) : cw; return stagesOf(p).length ? Math.max(0, ...p.workouts.filter((w) => !w.locked).map((w) => Number(w.week) || 0)) : 0; };
-const cycleWeek = (p) => (p.kind === 'cycle' && p.startDate ? Math.floor((Date.now() - new Date(p.startDate).getTime()) / (7 * DAY)) + 1 : 0);
+// settimana in corso del ciclo, mai oltre le settimane del programma né oltre l'ultima che ha allenamenti (cicli allungati)
+const cycleWeek = (p) => {
+  if (p.kind !== 'cycle' || !p.startDate) return 0;
+  let w = Math.floor((Date.now() - new Date(p.startDate).getTime()) / (7 * DAY)) + 1;
+  if (Number(p.weeks) > 0) w = Math.min(w, Number(p.weeks));
+  if (p.workouts?.length && !stagesOf(p).length) w = Math.min(w, Math.max(1, ...p.workouts.map((x) => Number(x.week) || 1)));
+  return Math.max(1, w);
+};
 function sortPrograms(list) {
   const t = todayIso();
   const current = list.filter((p) => p.kind === 'cycle' && p.startDate <= t && (!p.endDate || p.endDate > t));
@@ -586,6 +593,7 @@ async function programView(pid) {
   const p = await getProgram(pid);
   const done = new Set(ME.history.filter((h) => h.programId === pid).map((h) => h.workoutId));
   const wk = curUnit(p), fasi = stagesOf(p).length > 0;
+  const tw = p.kind === 'cycle' && p.trialWeek ? Number(p.trialWeek) : 0; // in prova, nel mensile la settimana aperta va in cima
   const byWeek = new Map();
   // nei cicli le settimane future non compaiono proprio
   for (const w of p.workouts.filter((x) => !(x.locked && x.lockReason === 'cycle'))) {
@@ -599,7 +607,7 @@ async function programView(pid) {
     <div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}${equipPill(p)}${cycleWeek(p) ? `<span class="pill">Settimana ${cycleWeek(p)}</span>` : ''}${fasi && wk ? `<span class="pill">Fase ${wk} di ${stagesOf(p).length}</span>` : ''}</div>
     <div class="h1">${esc(p.title)}</div><div class="muted pdesc">${esc(p.description)}</div>
     <button class="btn ${isMine ? '' : 'primary'} block" style="margin-top:14px" id="setmine" ${isMine ? 'disabled' : ''}>${isMine ? '✓ È il tuo programma' : 'Segui questo programma'}</button>
-    ${[...byWeek].sort((a, b) => a[0] - b[0]).map(([k, ws]) => `<div class="h2">${!k ? 'Allenamenti' : fasi ? `Fase ${k}${k === wk ? ' · <em>in corso</em>' : ''}<div class="muted small" style="text-transform:none;font-weight:600;margin-top:2px">${(([a, b]) => (a === b ? `Settimana ${a}` : `Settimane ${a}-${b}`))(stageRange(p, k))}: ripeti questi allenamenti ogni settimana</div>` : `Settimana ${k}${k === wk ? ' · <em>questa settimana</em>' : ''}`}</div>` + ws.map((w, i) => (w.locked ? `
+    ${[...byWeek].sort((a, b) => (tw ? (b[0] === tw) - (a[0] === tw) : 0) || a[0] - b[0]).map(([k, ws]) => `<div class="h2">${!k ? 'Allenamenti' : fasi ? `Fase ${k}${k === wk ? ' · <em>in corso</em>' : ''}<div class="muted small" style="text-transform:none;font-weight:600;margin-top:2px">${(([a, b]) => (a === b ? `Settimana ${a}` : `Settimane ${a}-${b}`))(stageRange(p, k))}: ripeti questi allenamenti ogni settimana</div>` : `Settimana ${k}${tw && k === tw ? ' · <em>la tua settimana di prova</em>' : k === wk ? ' · <em>questa settimana</em>' : ''}`}</div>` + ws.map((w, i) => (w.locked ? `
       <a class="wo locked" href="#/w/${pid}/${w.id}"><div class="num">🔒</div>
         <div><div class="t">${esc(w.title)}</div><div class="muted small">${lockText(w)}</div></div><div class="go">›</div></a>` : `
       <a class="wo ${done.has(w.id) ? 'done' : ''}" href="#/w/${pid}/${w.id}"><div class="num">${done.has(w.id) ? '✓' : i + 1}</div>

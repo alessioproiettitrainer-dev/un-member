@@ -77,8 +77,11 @@ function stageOf(p, week) {
 }
 const stageStart = (p, k) => (stagesOf(p).length ? 1 + stagesOf(p).slice(0, k - 1).reduce((a, b) => a + b, 0) : k);
 function trialWeek(p) {
-  if (p.kind === 'cycle' && p.startDate) return Math.max(1, Math.floor((Date.now() - new Date(p.startDate).getTime()) / (7 * 864e5)) + 1);
-  return 1;
+  if (p.kind !== 'cycle' || !p.startDate) return 1;
+  // settimana in corso del ciclo, ma mai oltre l'ultima che ha allenamenti (se il ciclo è stato allungato, in prova si vede l'ultima)
+  const cur = Math.max(1, Math.floor((Date.now() - new Date(p.startDate).getTime()) / (7 * 864e5)) + 1);
+  const last = stagesOf(p).length ? stagesOf(p).reduce((a, b) => a + b, 0) : Math.max(1, ...(p.workouts || []).map((w) => Number(w.week) || 1));
+  return Math.min(cur, last);
 }
 // L'accesso si somma: se è ancora attivo, i mesi partono dalla scadenza attuale.
 // chi era in prova e riceve il primo abbonamento = convertito (per il contatore "prove → abbonati")

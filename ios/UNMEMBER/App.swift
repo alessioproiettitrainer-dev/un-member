@@ -84,6 +84,7 @@ final class WebVC: UIViewController, WKNavigationDelegate, WKUIDelegate, WKScrip
         let cfg = WKWebViewConfiguration()
         cfg.allowsInlineMediaPlayback = true                 // video degli esercizi dentro la pagina, non a schermo intero
         cfg.mediaTypesRequiringUserActionForPlayback = []    // i video partono da soli, come sul sito
+        cfg.allowsAirPlayForMediaPlayback = false            // con Duplica schermo il video resta anche sul telefono (non va solo sulla TV)
         cfg.websiteDataStore = .default()                    // login e impostazioni restano salvati
         cfg.applicationNameForUserAgent = "UNMEMBER-iOS"
         cfg.userContentController.add(self, name: "unmember") // "ponte" per le notifiche (vedi iosAsk in public/app.js)

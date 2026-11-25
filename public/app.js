@@ -649,7 +649,7 @@ async function workoutView(pid, wid) {
     const m = document.createElement('div');
     m.className = 'demosheet';
     m.innerHTML = `<div class="card"><div class="row between"><div class="h2" style="margin:0">${esc(e.name)}</div><button class="icon" data-close aria-label="Chiudi">✕</button></div>
-      <div class="demovid">${e.videoBox || e.video ? `<video src="${esc(e.videoBox || e.video)}" autoplay muted loop playsinline onloadedmetadata="this.classList.toggle('land', this.videoWidth / this.videoHeight > 1.2)"></video>` : emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : '<div class="muted" style="padding:40px;text-align:center">Video non ancora caricato</div>'}</div>
+      <div class="demovid">${e.videoBox || e.video ? `<video src="${esc(e.videoBox || e.video)}" autoplay muted loop playsinline disableremoteplayback x-webkit-airplay="deny" onloadedmetadata="this.classList.toggle('land', this.videoWidth / this.videoHeight > 1.2)"></video>` : emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>` : '<div class="muted" style="padding:40px;text-align:center">Video non ancora caricato</div>'}</div>
       ${e.cues ? `<div class="muted" style="margin-top:10px">${esc(e.cues)}</div>` : ''}${e.muscles ? `<div class="small" style="margin-top:8px"><b style="color:var(--accent)">Muscoli:</b> ${esc(e.muscles)}</div>` : ''}</div>`;
     m.onclick = (ev) => { if (ev.target === m || ev.target.closest('[data-close]')) m.remove(); };
     document.body.append(m);
@@ -657,7 +657,7 @@ async function workoutView(pid, wid) {
   const rs = document.getElementById('resetsubs');
   if (rs) rs.onclick = () => { for (const id of mySubs) delete subs[id]; try { localStorage.setItem('subs', JSON.stringify(subs)); } catch {} toast('Esercizi originali ripristinati'); workoutView(pid, wid); };
 }
-const thumb = (e) => (e.video ? `<video class="thumb" src="${esc(e.video)}#t=0.5" muted playsinline preload="metadata"></video>` : '<div class="thumb"></div>');
+const thumb = (e) => (e.video ? `<video class="thumb" src="${esc(e.video)}#t=0.5" muted playsinline disableremoteplayback x-webkit-airplay="deny" preload="metadata"></video>` : '<div class="thumb"></div>');
 
 // "Segna come fatto": allenamento fatto per conto suo (anche ieri o lunedì), finisce nel calendario e nello storico
 function markDone(p, w) {
@@ -1383,7 +1383,7 @@ function welcomePlayer() {
   const m = document.createElement('div');
   m.className = 'photoview welcomeview';
   m.innerHTML = `${emb ? `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="Video di benvenuto"></iframe>`
-    : `<video src="${esc(SETTINGS.welcomeVideo)}" controls autoplay playsinline></video>`}<button class="icon" aria-label="Chiudi">✕</button>`;
+    : `<video src="${esc(SETTINGS.welcomeVideo)}" controls autoplay playsinline disableremoteplayback x-webkit-airplay="deny"></video>`}<button class="icon" aria-label="Chiudi">✕</button>`;
   const v = m.querySelector('video');
   if (v) v.addEventListener('ended', () => { welcomeDone(); setTimeout(() => m.remove(), 600); });
   else welcomeDone(); // dei link esterni non sappiamo quando finiscono: basta averlo aperto

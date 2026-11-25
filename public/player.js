@@ -83,6 +83,7 @@ async function keepAwake() {
     const v = document.createElement('video');
     v.src = '/nosleep.mp4'; v.muted = true; v.loop = true; v.playsInline = true;
     v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    v.disableRemotePlayback = true; v.setAttribute('x-webkit-airplay', 'deny'); // con Duplica schermo il video non va solo sulla TV
     v.style.cssText = 'position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1';
     document.body.append(v);
     P.nosleep = v;
@@ -362,7 +363,7 @@ function variantButtons(item) {
 // (tre video insieme fanno scattare i modelli meno recenti).
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function videoEl(e) {
-  if (e.video) return `<video src="${esc(e.video)}" autoplay muted loop playsinline preload="auto"></video>`;
+  if (e.video) return `<video src="${esc(e.video)}" autoplay muted loop playsinline disableremoteplayback x-webkit-airplay="deny" preload="auto"></video>`;
   const emb = embedUrl(e.videoUrl, { loop: true });
   if (emb) return `<iframe src="${esc(emb)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="${esc(e.name)}"></iframe>`;
   return `<div class="novid">${esc(e.name)}<br><span class="muted">video demo non caricato</span></div>`;
@@ -509,7 +510,7 @@ function render() {
   const afterGroup = afterIt && next && !next.video && next.items[0] === afterIt && group(next) ? next.items : null;
   const afterTxt = afterGroup ? afterGroup.map((it) => `<div class="agrp"><span>${esc(it.reps || (it.time ? it.time + ' sec' : ''))}</span> <b>${esc(exOf(it.exerciseId).name)}</b></div>`).join('')
     : afterIt ? `<span>${esc(afterIt.reps || (afterIt.time ? afterIt.time + ' sec' : ''))}</span><b>${esc(exOf(afterIt.exerciseId).name)}</b>` : `<b>${esc(after.trim())}</b>`;
-  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt">${afterTxt}</div></div>` : '';
+  const afterPill = after ? `<div class="nextcard">${afterVid ? `<video class="athumb" src="${esc(afterVid)}#t=1" muted playsinline disableremoteplayback x-webkit-airplay="deny" preload="metadata"></video>` : '<div class="athumb"></div>'}<div class="atxt">${afterTxt}</div></div>` : '';
   const oldVideos = [...P.root.querySelectorAll('video')];
   P.root.innerHTML = `<div class="player tz${P.tz} ${mode === 'rest' ? 'resting' : mode === 'soon' ? 'soon' : ''}">
     <div class="p-top">
@@ -533,8 +534,8 @@ function render() {
         ${g?.finished ? '' : variantButtons(focusItem)}
         ${!g?.finished && P.p.tutorials?.[focusItem.exerciseId] ? `<button class="tutbtn" data-act="tut" data-ex="${esc(focusItem.exerciseId)}">▶ Guarda il tutorial</button>` : ''}
       </div>
-      ${g && !g.finished && splitOf(s) ? `<div class="video sq split n${items.length}">${items.map((it) => { const e = exOf(it.exerciseId), src = e.videoBox || e.video; return src ? `<video src="${esc(src)}" autoplay muted loop playsinline preload="auto"></video>` : '<div></div>'; }).join('')}</div>`
-        : `<div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline preload="auto"></video>` : videoEl(fe)}${badge}</div>`}
+      ${g && !g.finished && splitOf(s) ? `<div class="video sq split n${items.length}">${items.map((it) => { const e = exOf(it.exerciseId), src = e.videoBox || e.video; return src ? `<video src="${esc(src)}" autoplay muted loop playsinline disableremoteplayback x-webkit-airplay="deny" preload="auto"></video>` : '<div></div>'; }).join('')}</div>`
+        : `<div class="video sq">${fe.videoBox ? `<video src="${esc(fe.videoBox)}" autoplay muted loop playsinline disableremoteplayback x-webkit-airplay="deny" preload="auto"></video>` : videoEl(fe)}${badge}</div>`}
       ${afterPill ? `<div class="nexthead">Dopo</div>${afterPill}` : '<div class="nexthead" style="visibility:hidden">Dopo</div><div class="nextcard" style="visibility:hidden"><div class="athumb"></div></div>'}
       ${upList()}
     </div>

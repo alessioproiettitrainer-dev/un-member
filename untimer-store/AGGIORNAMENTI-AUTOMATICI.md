@@ -25,3 +25,9 @@ github.com/alessioproiettitrainer-dev/un-member → **Settings** → **Secrets a
 - **Android:** GitHub → Actions → **UN-TIMER Android** → Run workflow → traccia `alpha` (test chiuso) oppure `production` → in circa 5 minuti è su Google Play. Il numero di versione lo mette GitHub da solo (100 + numero dell'avvio).
 - **iPhone/iPad:** GitHub → Actions → **UN-TIMER iOS** → Run workflow → carica = `si` → arriva su TestFlight.
 - Oppure dimmi "aggiorna" e li avvio io.
+
+## Dalla versione 1.3: aggiornamenti senza passare dagli store
+L'app 1.3 contiene un "aggiornatore": quando la apri con internet controlla sul sito un-timer.onrender.com se c'è un timer nuovo, lo scarica e lo usa dall'apertura dopo. Se qualcosa non parte, torna da sola alla versione precedente.
+- Arriva così tutto quello che è "contenuto": schermate, testi, voci, timer, calcoli della corsa, card.
+- Va ancora caricata sugli store solo una versione che cambia la parte "telefono" (permessi nuovi, plugin nuovi come la fotocamera del Quality Test).
+- Non devi fare niente: quando Claude salva le modifiche sul ramo, il sito si aggiorna e le app le prendono da sole.

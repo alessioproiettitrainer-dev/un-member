@@ -69,6 +69,27 @@ const pickVoice = () => {
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
 // nell'app Android (Capacitor) la voce del browser non c'è: si usa quella del telefono con il plugin
 const NATIVE = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins : null;
+
+// ---------- aggiornamenti automatici (solo app iPhone/Android) ----------
+// il sito pubblica update/latest.json + lo zip di questa cartella; l'app lo scarica in sottofondo
+// e lo usa alla prossima apertura (mai durante un timer o una corsa). Se il nuovo non parte, torna da sola al precedente.
+const UPD = 'https://un-timer.onrender.com/update/latest.json';
+const vnum = (v) => String(v || '0').split('.').map((n) => parseInt(n) || 0);
+const vge = (a, b) => { const x = vnum(a), y = vnum(b); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return true; };
+(async () => {
+  const U = NATIVE?.CapacitorUpdater; if (!U) return;
+  try { await U.notifyAppReady(); } catch {}
+  const pend = ls.get('updnext', null);
+  if (pend) { ls.set('updnext', null); ls.set('upd', pend.v); try { await U.set({ id: pend.id }); return; } catch {} } // ricarica col contenuto nuovo
+  if (!navigator.onLine) return;
+  try {
+    const L = await (await fetch(`${UPD}?t=${Date.now()}`, { cache: 'no-store' })).json();
+    if (!L.version || !L.url || !L.checksum || L.version === ls.get('upd', null)) return;
+    if (L.min && !vge((await U.getBuiltinVersion()).version, L.min)) return; // serve l'app nuova dallo store
+    const b = await U.download({ url: L.url, version: L.version, checksum: L.checksum });
+    ls.set('updnext', { id: b.id, v: L.version });
+  } catch {}
+})();
 function say(t) {
   if (!opts().voice || !t) return;
   if (NATIVE?.TextToSpeech) {

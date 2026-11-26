@@ -110,7 +110,7 @@ const THUMBS = path.join(UPLOADS, 'thumbs');
 const thumbQ = [];
 let thumbBusy = 0;
 function thumbNext() {
-  if (thumbBusy >= 2 || !thumbQ.length) return;
+  if (thumbBusy >= 1 || !thumbQ.length) return;
   const { src, out, done } = thumbQ.shift();
   thumbBusy++;
   require('child_process').execFile(FFMPEG, ['-y', '-loglevel', 'error', '-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', 'scale=200:-2', '-q:v', '5', out], { timeout: 30000 }, (err) => { thumbBusy--; done(!err && fs.existsSync(out)); thumbNext(); });
@@ -1140,13 +1140,20 @@ const upload = multer({
 // pesano 1-2 MB, partono subito sul telefono dei clienti e vanno in loop puliti.
 let FFMPEG = null;
 try { FFMPEG = require('ffmpeg-static'); } catch {}
+// una compressione alla volta e con poca memoria (thread 1, lookahead corto): il server ha 512 MB, un video 4K/HEVC del telefono lo mandava in crash
+let compressChain = Promise.resolve();
 function compressVideo(src, keepAudio = false) {
+  const job = compressChain.then(() => compressVideo1(src, keepAudio));
+  compressChain = job.catch(() => {});
+  return job;
+}
+function compressVideo1(src, keepAudio) {
   return new Promise((resolve) => {
     if (!FFMPEG) return resolve(null);
     const out = src.replace(/\.[^.]+$/, '') + '-720.mp4';
     const { execFile } = require('child_process');
-    execFile(FFMPEG, ['-y', '-threads', '2', '-i', src, '-vf', "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'", '-r', '30',
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', ...(keepAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']), '-threads', '2', '-movflags', '+faststart', out],
+    execFile(FFMPEG, ['-y', '-threads', '1', '-i', src, '-vf', "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'", '-r', '30',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-x264-params', 'rc-lookahead=10:ref=2', '-pix_fmt', 'yuv420p', ...(keepAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']), '-threads', '1', '-movflags', '+faststart', out],
     { timeout: 10 * 60 * 1000 }, (err) => resolve(err ? null : out));
   });
 }

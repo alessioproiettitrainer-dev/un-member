@@ -605,7 +605,9 @@ async function programView(pid) {
   page('train', `<a class="back" href="#/train">‹ Allenamenti</a>
     ${p.cover ? `<div class="prog"><div class="cover" style="background-image:url('${esc(p.cover)}')"></div></div>` : ''}
     <div class="row"><span class="pill accent">${esc(p.level)}</span>${p.weeks ? `<span class="pill">${esc(p.weeks)} settimane</span>` : ''}${equipPill(p)}${cycleWeek(p) ? `<span class="pill">Settimana ${cycleWeek(p)}</span>` : ''}${fasi && wk ? `<span class="pill">Fase ${wk} di ${stagesOf(p).length}</span>` : ''}</div>
-    <div class="h1">${esc(p.title)}</div><div class="muted pdesc">${esc(p.description)}</div>
+    <div class="h1">${esc(p.title)}</div>
+    ${ytId(p.introUrl) || p.introUrl ? `<button class="introvid" id="introvid" style="margin-top:10px">${ytId(p.introUrl) ? `<img src="https://i.ytimg.com/vi/${ytId(p.introUrl)}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="iv-play">▶</span><span class="iv-lab">Guarda la presentazione</span></button>` : ''}
+    <div class="muted pdesc">${esc(p.description)}</div>
     <button class="btn ${isMine ? '' : 'primary'} block" style="margin-top:14px" id="setmine" ${isMine ? 'disabled' : ''}>${isMine ? '✓ È il tuo programma' : 'Segui questo programma'}</button>
     ${[...byWeek].sort((a, b) => (tw ? (b[0] === tw) - (a[0] === tw) : 0) || a[0] - b[0]).map(([k, ws]) => `<div class="h2">${!k ? 'Allenamenti' : fasi ? `Fase ${k}${k === wk ? ' · <em>in corso</em>' : ''}<div class="muted small" style="text-transform:none;font-weight:600;margin-top:2px">${(([a, b]) => (a === b ? `Settimana ${a}` : `Settimane ${a}-${b}`))(stageRange(p, k))}: ripeti questi allenamenti ogni settimana</div>` : `Settimana ${k}${tw && k === tw ? ' · <em>la tua settimana di prova</em>' : k === wk ? ' · <em>questa settimana</em>' : ''}`}</div>` + ws.map((w, i) => (w.locked ? `
       <a class="wo locked" href="#/w/${pid}/${w.id}"><div class="num">🔒</div>
@@ -613,6 +615,7 @@ async function programView(pid) {
       <a class="wo ${done.has(w.id) ? 'done' : ''}" href="#/w/${pid}/${w.id}"><div class="num">${done.has(w.id) ? '✓' : i + 1}</div>
         <div><div class="t">${esc(w.title)}${w.optional ? ' <span class="pill opt">Opzionale</span>' : ''}</div><div class="muted small">~${Math.round(estimateSeconds(w) / 60)} min${w.introUrl ? ' · ▶ video' : ''}${w.description ? ` · ${esc(shortDesc(w.description))}` : ''}</div></div><div class="go">›</div></a>`)).join('')).join('')}`);
   document.getElementById('setmine').onclick = async () => { ME = await api('/api/me', 'PUT', { activeProgramId: pid }); toast('Programma impostato'); programView(pid); };
+  document.getElementById('introvid')?.addEventListener('click', () => videoViewer(p.introUrl)); // video presentazione del programma
 }
 
 async function workoutView(pid, wid) {

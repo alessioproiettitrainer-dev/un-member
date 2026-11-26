@@ -602,6 +602,7 @@ function programEditor(p) {
           <div class="muted small">${cycleInfo(p) ? `Visibile ai membri dal ${esc(fmtDate(p.startDate))} al ${esc(fmtDate(cycleInfo(p).last))}, poi va in archivio.` : 'Se la lasci vuota: inizio + settimane.'}</div></div>` : ''}
       <div class="f"><label>Copertina</label><input type="file" accept="image/*" data-upload="cover">${p.cover ? `<img src="${esc(p.cover)}" style="width:100%;border-radius:10px;margin-top:6px">` : ''}</div></div>
     <div class="f"><label>Descrizione</label><textarea data-b="description">${esc(p.description)}</textarea></div>
+    <div class="f"><label>Video presentazione del programma (facoltativo, link YouTube)</label><input type="text" data-b="introUrl" value="${esc(p.introUrl || '')}" placeholder="https://youtu.be/…"></div>
     <label class="chk"><input type="checkbox" data-b="published" ${p.published ? 'checked' : ''}> Pubblicato (visibile agli utenti)</label>
     <div class="h2" style="margin-top:22px">Allenamenti</div>
     ${(p.workouts || []).map((w, wi) => workoutEditor(w, wi)).join('')}

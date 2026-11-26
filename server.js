@@ -105,6 +105,26 @@ const DEFAULT_NUTRITION = { kcal: '', p: 30, c: 40, f: 30, by: 'user', note: '' 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use('/uploads', express.static(UPLOADS, { maxAge: '7d' }));
+// miniature delle liste: una foto piccola presa dal video (fatta la prima volta e poi tenuta), invece di caricare il video intero
+const THUMBS = path.join(UPLOADS, 'thumbs');
+const thumbQ = [];
+let thumbBusy = 0;
+function thumbNext() {
+  if (thumbBusy >= 2 || !thumbQ.length) return;
+  const { src, out, done } = thumbQ.shift();
+  thumbBusy++;
+  require('child_process').execFile(FFMPEG, ['-y', '-loglevel', 'error', '-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', 'scale=200:-2', '-q:v', '5', out], { timeout: 30000 }, (err) => { thumbBusy--; done(!err && fs.existsSync(out)); thumbNext(); });
+}
+app.get('/thumbs/:name', (req, res) => {
+  const m = /^([\w-]+)\.jpg$/.exec(req.params.name), src = m && path.join(UPLOADS, m[1] + '.mp4');
+  if (!m || !fs.existsSync(src)) return res.status(404).end();
+  const out = path.join(THUMBS, m[1] + '.jpg'), send = () => res.sendFile(out, { maxAge: '30d' });
+  if (fs.existsSync(out)) return send();
+  if (!FFMPEG) return res.status(404).end();
+  fs.mkdirSync(THUMBS, { recursive: true });
+  thumbQ.push({ src, out, done: (ok) => (ok ? send() : res.status(404).end()) });
+  thumbNext();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 // riconoscimento dei movimenti per il Quality Test (gira sul telefono): libreria da node_modules, niente CDN esterni
 app.use('/vendor/mediapipe', express.static(path.join(__dirname, 'node_modules/@mediapipe/tasks-vision'), { maxAge: '30d' }));

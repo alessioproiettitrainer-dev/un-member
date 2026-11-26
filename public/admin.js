@@ -133,7 +133,7 @@ function exercisesView() {
       <button class="sbtn" style="width:100%;margin:6px 0" data-act="clips-zip">⬇ Scarica tutte le clip nuove (.zip)</button>
       <input type="search" id="exlistq" class="listq" placeholder="🔍 Cerca per nome o categoria…" value="${esc(S.exQ || '')}" autocomplete="off">
       ${S.exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).map((x) => `<button class="it ${x.id === S.exId ? 'on' : ''}" data-ex="${x.id}" ${exMatch(x, S.exQ) ? '' : 'hidden'}>
-        ${x.video ? `<video class="thumb" src="${esc(x.video)}#t=0.5" muted preload="metadata"></video>` : '<div class="thumb"></div>'}
+        ${x.video ? (/^\/uploads\/[\w-]+\.mp4$/.test(x.video) ? `<img class="thumb" loading="lazy" src="${x.video.replace('/uploads/', '/thumbs/').replace(/\.mp4$/, '.jpg')}" alt="">` : `<video class="thumb" src="${esc(x.video)}#t=0.5" muted preload="metadata"></video>`) : '<div class="thumb"></div>'}
         <div><div style="font-weight:800">${esc(x.name)}</div><div class="meta">${esc(x.category || '')}${x.video ? '' : ' · senza video'}</div></div></button>`).join('') || '<div class="muted small" style="padding:8px">Nessun esercizio ancora.</div>'}
     </div>
     <div class="panel">${e ? `<button class="sbtn mback" data-act="ex-back">‹ Torna all\'elenco</button>

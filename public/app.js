@@ -657,7 +657,10 @@ async function workoutView(pid, wid) {
   const rs = document.getElementById('resetsubs');
   if (rs) rs.onclick = () => { for (const id of mySubs) delete subs[id]; try { localStorage.setItem('subs', JSON.stringify(subs)); } catch {} toast('Esercizi originali ripristinati'); workoutView(pid, wid); };
 }
-const thumb = (e) => (e.video ? `<video class="thumb" src="${esc(e.video)}#t=0.5" muted playsinline disableremoteplayback x-webkit-airplay="deny" preload="metadata"></video>` : '<div class="thumb"></div>');
+// miniatura: foto piccola fatta dal server (/thumbs), molto più leggera del video
+const thumb = (e) => (!e.video ? '<div class="thumb"></div>'
+  : /^\/uploads\/[\w-]+\.mp4$/.test(e.video) ? `<img class="thumb" loading="lazy" src="${e.video.replace('/uploads/', '/thumbs/').replace(/\.mp4$/, '.jpg')}" alt="">`
+  : `<video class="thumb" src="${esc(e.video)}#t=0.5" muted playsinline disableremoteplayback x-webkit-airplay="deny" preload="metadata"></video>`);
 
 // "Segna come fatto": allenamento fatto per conto suo (anche ieri o lunedì), finisce nel calendario e nello storico
 function markDone(p, w) {

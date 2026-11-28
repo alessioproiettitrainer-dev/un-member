@@ -1209,6 +1209,15 @@ async function tutorialsView(cat) {
     document.getElementById('tres').innerHTML = !v ? '' : list.filter((t) => `${t.title} ${t.category} ${t.exerciseName} ${t.description}`.toLowerCase().includes(v)).sort(tutSort).map((t) => tutRow(t, 0, seen)).join('') || '<div class="empty">Nessun tutorial trovato.</div>';
   };
 }
+// schermo intero girato in orizzontale (Android/PC; su iPhone c'è il tasto schermo intero di YouTube, che gira da solo)
+const canFull = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+async function landscapeFull(el) {
+  if (!el) return;
+  try { await (el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen()); } catch { return; }
+  try { await screen.orientation.lock('landscape'); } catch { /* non supportato: resta come gira il telefono */ }
+  const off = () => { if (!document.fullscreenElement && !document.webkitFullscreenElement) { try { screen.orientation.unlock(); } catch {} document.removeEventListener('fullscreenchange', off); document.removeEventListener('webkitfullscreenchange', off); } };
+  document.addEventListener('fullscreenchange', off); document.addEventListener('webkitfullscreenchange', off);
+}
 async function tutorialView(id) {
   const list = await api('/api/tutorials'), t = list.find((x) => x.id === id);
   if (!t) throw new Error('Tutorial non trovato');
@@ -1218,10 +1227,15 @@ async function tutorialView(id) {
   page('train', `<a class="back" href="#/tutorials/${encodeURIComponent(t.category || 'Altro')}">‹ ${esc(t.category || 'Tutorial')}</a>
     <div class="h1" style="font-size:26px;margin-top:6px">${esc(t.title)}</div>
     <div class="row" style="margin:6px 0 12px">${t.level ? `<span class="pill">${esc(t.level)}</span>` : ''}${t.minutes ? `<span class="pill">${esc(t.minutes)} min</span>` : ''}</div>
-    ${emb ? `<div class="video wide" style="margin:0 0 12px"><iframe src="${esc(emb)}" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="${esc(t.title)}"></iframe></div>` : `<a class="btn block" href="${esc(t.videoUrl)}" target="_blank" rel="noopener">▶ Apri il video</a>`}
+    ${emb ? `<div class="video wide" style="margin:0 0 12px"><iframe src="${esc(emb)}" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen title="${esc(t.title)}"></iframe></div>${canFull() ? '<button class="btn block" id="tfull" style="margin:-4px 0 12px">⛶ Guarda in orizzontale</button>' : ''}` : `<a class="btn block" href="${esc(t.videoUrl)}" target="_blank" rel="noopener">▶ Apri il video</a>`}
     ${t.description ? `<div class="card wdesc"><b>Punti chiave</b><div class="txt">${esc(t.description)}</div></div>` : ''}
     ${t.exerciseName ? `<div class="muted small" style="margin-top:8px">Esercizio: <b>${esc(t.exerciseName)}</b></div>` : ''}
     ${next ? `<div class="h2">Il prossimo</div>${tutRow(next, 0, new Set(ME.tutSeen || []))}` : ''}`);
+  document.getElementById('tfull')?.addEventListener('click', () => landscapeFull($app.querySelector('.video.wide')));
+  // giri il telefono: si porta il video in cima allo schermo
+  const vw = $app.querySelector('.video.wide'), mq = matchMedia('(orientation: landscape) and (max-height: 500px)');
+  const toVid = () => { if (mq.matches && document.body.contains(vw)) vw.scrollIntoView({ block: 'start' }); };
+  if (vw) { mq.addEventListener('change', toVid); toVid(); }
   // aperto = visto (spunta nelle aree)
   if (!(ME.tutSeen || []).includes(id)) api(`/api/me/tutorial-seen/${id}`, 'POST', {}).then((r) => (ME.tutSeen = r.tutSeen)).catch(() => {});
 }

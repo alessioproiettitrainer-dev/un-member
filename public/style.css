@@ -209,6 +209,10 @@ a { color: inherit; }
 .sbtn.on { background: rgba(255, 122, 0, .18); color: var(--accent); }
 .video iframe { width: 100%; height: 100%; border: 0; display: block; }
 .video.wide { aspect-ratio: 16/9; height: auto; min-height: 0; }
+/* telefono girato: il video del tutorial riempie lo schermo sopra la barra in basso */
+@media (orientation: landscape) and (max-height: 500px) { .video.wide { height: calc(100dvh - 100px); width: auto; max-width: 100%; margin-inline: auto !important; } }
+.video.wide:fullscreen { aspect-ratio: auto; width: 100vw; height: 100vh; border-radius: 0; margin: 0; }
+.video.wide:-webkit-full-screen { aspect-ratio: auto; width: 100vw; height: 100vh; border-radius: 0; margin: 0; }
 .tip .tvid { position: relative; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; margin-bottom: 10px; background: #000; }
 .tip .tvid iframe { width: 100%; height: 100%; border: 0; }
 
